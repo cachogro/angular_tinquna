@@ -1,0 +1,113 @@
+<div class="blank-layout-container justify-content-center align-items-center bg-light">
+  <div class="position-relative row w-100 h-100 bg-gredient justify-content-center">
+    <div class="col-lg-4 d-flex align-items-center">
+      <mat-card class="cardWithShadow boxed-auth">
+        <mat-card-content class="p-32">
+          <div class="text-center">
+            <a [routerLink]="['/dashboard']">
+             <img src="./assets/images/logos/logo.svg" class="align-middle m-2" style="width: 390px; height: 95px;" alt="logo" />
+
+            </a>
+            <h2 class="f-s-22 f-w-600 m-t-8 m-b-4">Sistema Tinkuriquna</h2>
+            <!-- <span class="d-block text-muted f-s-14">Ingresa con tu usuario para continuar</span> -->
+          </div>
+
+          <!-- <div class="row m-t-24 custom-row">
+            <div class="col-6">
+              <button mat-stroked-button type="button" class="w-100">
+                <div class="d-flex align-items-center">
+                  <img src="/assets/images/svgs/google-icon.svg" alt="google" width="16" class="m-r-8" />
+                  <span class="d-none d-lg-block">Sign in with Google</span>
+                </div>
+              </button>
+            </div>
+            <div class="col-6">
+              <button mat-stroked-button type="button" class="w-100 d-flex align-items-center">
+                <div class="d-flex align-items-center">
+                  <img src="/assets/images/svgs/facebook-icon.svg" alt="facebook" width="40" class="m-r-4" />
+                  <span class="d-none d-lg-block">Sign in with FB</span>
+                </div>
+              </button>
+            </div>
+          </div> -->
+
+          <div class="or-border m-t-30">Ingresa con tu usuario para continuar</div>
+
+          @if (errorMessage) {
+            <div class="login-error-banner m-t-16" role="alert">
+              <mat-icon class="f-s-18">error_outline</mat-icon>
+              <span>{{ errorMessage }}</span>
+            </div>
+          }
+
+          <form class="m-t-30" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+            <mat-label class="f-s-14 f-w-600 m-b-12 d-block">Usuario</mat-label>
+            <mat-form-field appearance="outline" class="w-100" color="primary">
+              <mat-icon matPrefix class="m-r-4 text-muted">person_outline</mat-icon>
+              <input matInput formControlName="uname" autocomplete="username" placeholder="ej. grover.ch" />
+              @if (f.uname.hasError('required') && f.uname.touched) {
+                <mat-error>El usuario es obligatorio</mat-error>
+              }
+              @if (f.uname.hasError('minlength') && f.uname.touched) {
+                <mat-error>Debe tener al menos 6 caracteres</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-label class="f-s-14 f-w-600 m-b-12 d-block">Contraseña</mat-label>
+            <mat-form-field appearance="outline" class="w-100" color="primary">
+              <mat-icon matPrefix class="m-r-4 text-muted">lock_outline</mat-icon>
+              <input
+                matInput
+                formControlName="password"
+                autocomplete="current-password"
+                [type]="hidePassword ? 'password' : 'text'"
+              />
+              <button
+                mat-icon-button
+                matSuffix
+                type="button"
+                tabindex="-1"
+                [attr.aria-label]="hidePassword ? 'Mostrar contraseña' : 'Ocultar contraseña'"
+                (click)="togglePasswordVisibility($event)"
+              >
+                <mat-icon class="f-s-18">{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
+              @if (f.password.hasError('required') && f.password.touched) {
+                <mat-error>La contraseña es obligatoria</mat-error>
+              }
+            </mat-form-field>
+
+            <div class="d-flex align-items-center m-b-12">
+              <mat-checkbox color="primary">Recordarme en este dispositivo</mat-checkbox>
+              <a [routerLink]="['/']" class="text-primary f-w-600 text-decoration-none m-l-auto f-s-14">
+                ¿Olvidaste tu contraseña?
+              </a>
+            </div>
+
+            <button
+              mat-flat-button
+              color="primary"
+              type="submit"
+              class="w-100 login-submit-btn"
+              [disabled]="loading"
+            >
+              @if (loading) {
+                <mat-spinner diameter="20" class="d-inline-block m-r-8"></mat-spinner>
+                <span>Ingresando...</span>
+              } @else {
+                <span>Iniciar sesión</span>
+              }
+            </button>
+          </form>
+
+          <span class="d-block f-w-500 text-center m-t-24">
+            ¿Nuevo en Sistema Tinkuriquna?
+            <a [routerLink]="['/authentication/register']" class="text-decoration-none text-primary f-w-500 f-s-14">
+              Crea una cuenta
+            </a>
+          </span>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div>

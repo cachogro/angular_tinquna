@@ -1,0 +1,21 @@
+.login-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(244, 67, 54, 0.08);
+  color: #f44336;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.login-submit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  ::ng-deep .mat-mdc-progress-spinner circle {
+    stroke: currentColor;
+  }
+}

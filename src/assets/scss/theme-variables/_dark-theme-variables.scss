@@ -1,0 +1,26 @@
+.dark-theme {
+  color-scheme: dark;
+  --mat-sys-background: #141a21;
+  --mat-sys-surface-bright: #1e1e1e;
+  --mat-sys-surface: #1e293b;
+  --mat-sys-surface-container: #2d2d2d;
+  --mat-sys-surface-container-low: #242424;
+  --mat-sys-surface-container-lowest: #1a1a1a;
+  --mat-sys-on-background: #ffffff;
+  --mat-sys-outline: #444444;
+  --mat-sys-outline-variant: #555555;
+  --mat-form-field-outlined-hover-outline-color: #27F5B0;
+  --mat-checkbox-unselected-hover-state-layer-color: #46f2b9;
+  --mat-menu-item-hover-state-layer-color: #333333;
+  --mat-button-toggle-state-layer-color: #333333;
+  --mat-option-focus-state-layer-color: #333333;
+  --mat-option-hover-state-layer-color: #333333;
+  --mat-slide-toggle-unselected-track-color: #555555;
+  --mat-stepper-header-focus-state-layer-color: #333333;
+  --mat-stepper-header-hover-state-layer-color: #333333;
+  --mat-dialog-supporting-text-color: var(--mat-sys-on-background);
+  --mat-expansion-header-hover-state-layer-color: #333333;
+  --mat-sys-on-surface: #ffffff;
+  --mat-sys-surface: #1e293b; 
+  
+}

@@ -1,0 +1,64 @@
+<div class="blue_theme" [class.light-theme]="!isDarkMode()" [class.dark-theme]="isDarkMode()" dir="ltr">
+
+
+  <!-- <app-topstrip></app-topstrip> -->
+
+  <mat-sidenav-container class="mainWrapper" autosize autoFocus>
+    <!-- ============================================================== -->
+    <!-- Vertical Sidebar -->
+    <!-- ============================================================== -->
+    <mat-sidenav #leftsidenav [mode]="isOver ? 'over' : 'side'" [opened]="!isOver"
+      (openedChange)="onSidenavOpenedChange($event)" (closedStart)="onSidenavClosedStart()" class="sidebarNav">
+      <div class="flex-layout">
+        <app-sidebar (toggleMobileNav)="sidenav.toggle()" [showToggle]="isOver"></app-sidebar>
+        <ng-scrollbar class="position-relative" style="height: 100%">
+          <mat-nav-list class="sidebar-list">
+            @for(item of navItems; track item) {
+            <app-nav-item [item]="item" (notify)="sidenav.toggle()">
+            </app-nav-item>
+            }
+          </mat-nav-list>
+        </ng-scrollbar>
+      </div>
+    </mat-sidenav>
+
+    <!-- ============================================================== -->
+    <!-- Main Content -->
+    <!-- ============================================================== -->
+    <mat-sidenav-content class="contentWrapper" #content>
+      <!-- ============================================================== -->
+      <!-- VerticalHeader -->
+      <!-- ============================================================== -->
+      <app-header [showToggle]="!isOver" (toggleCollapsed)="toggleCollapsed()" (toggleMobileNav)="sidenav.toggle()"
+        (toggleTheme)="toggleTheme()" [isDark]="isDarkMode()">
+
+
+
+
+
+
+      </app-header>
+
+      <div class="body-wrapper">
+        <main class="pageWrapper maxWidth">
+          <!-- ============================================================== -->
+          <!-- Outlet -->
+          <!-- ============================================================== -->
+          <router-outlet></router-outlet>
+        </main>
+      </div>
+
+      <div class="p-16 p-t-8 p-b-30 text-center">
+        Diseñado y desarrollado por:GLCC <a class="text-decoration-none"
+          target="_blank">GLCC</a>
+      </div>
+    </mat-sidenav-content>
+
+  </mat-sidenav-container>
+</div>
+
+<!-- 
+<button mat-fab color="primary" (click)="toggleTheme()"
+  style="position: fixed; bottom: 20px; right: 20px; z-index: 1000;">
+  <mat-icon>{{ isDarkMode() ? 'light_mode' : 'dark_mode' }}</mat-icon>
+</button> -->
