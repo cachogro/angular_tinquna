@@ -46,6 +46,13 @@ export const routes: Routes = [
         loadChildren: () =>
           import('./pages/extra/extra.routes').then((m) => m.ExtraRoutes),
       },
+      {
+        path: 'configuraciones',
+        loadChildren: () =>
+          import('./pages/configurations/configuration.routes').then(
+            (m) => m.ConfiguracionesRoutes,
+          ),
+      },
     ],
   },
   {

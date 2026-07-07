@@ -1,3 +1,4 @@
+import { RolCodigo } from 'src/app/core/auth/models/auth.models';
 import { NavItem } from './nav-item/nav-item';
 
 export const navItems: NavItem[] = [
@@ -11,19 +12,19 @@ export const navItems: NavItem[] = [
   },
 
   {
-    navCap: 'Ui Components',
-    divider: true
+    navCap: 'Comercio Interno',
+    divider: true,
   },
-  {
-    displayName: 'Badge',
-    iconName: 'solar:archive-minimalistic-line-duotone',
-    route: '/ui-components/badge',
-  },
-  {
-    displayName: 'Chips',
-    iconName: 'solar:danger-circle-line-duotone',
-    route: '/ui-components/chips',
-  },
+  // {
+  //   displayName: 'Badge',
+  //   iconName: 'solar:archive-minimalistic-line-duotone',
+  //   route: '/ui-components/badge',
+  // },
+  // {
+  //   displayName: 'Panel de Usuarios',
+  //   iconName: 'solar:danger-circle-line-duotone',
+  //   route: '/ui-components/users',
+  // },
   {
     displayName: 'Lists',
     iconName: 'solar:bookmark-square-minimalistic-line-duotone',
@@ -44,36 +45,32 @@ export const navItems: NavItem[] = [
     iconName: 'solar:file-text-line-duotone',
     route: '/ui-components/forms',
   },
-  {
-    displayName: 'Tables',
-    iconName: 'solar:tablet-line-duotone',
-    route: '/ui-components/tables',
-  },
 
+  // {
+  //   displayName: 'Tables',
+  //   iconName: 'solar:tablet-line-duotone',
+  //   route: '/ui-components/tables',
+  // },
 
+  // {
+  //   divider: true,
+  //   navCap: 'Pages',
+  // },
 
-
-  {
-    divider: true,
-    navCap: 'Pages',
-  },
-  
-
-
-  {
-    navCap: 'Extra',
-    divider: true
-  },
-  {
-    displayName: 'Icons',
-    iconName: 'solar:sticker-smile-circle-2-line-duotone',
-    route: '/extra/icons',
-  },
-  {
-    displayName: 'Sample Page',
-    iconName: 'solar:planet-3-line-duotone',
-    route: '/extra/sample-page',
-  },
+  // {
+  //   navCap: 'Extra',
+  //   divider: true
+  // },
+  // {
+  //   displayName: 'Icons',
+  //   iconName: 'solar:sticker-smile-circle-2-line-duotone',
+  //   route: '/extra/icons',
+  // },
+  // {
+  //   displayName: 'Sample Page',
+  //   iconName: 'solar:planet-3-line-duotone',
+  //   route: '/extra/sample-page',
+  // },
 
   // {
   //   divider: true,
@@ -95,43 +92,101 @@ export const navItems: NavItem[] = [
   //       chipClass: 'bg-light-secondary text-secondary',
   //       chipContent: 'PRO',
   //     },
-    
 
+  //   ],
+  // },
+
+  // {
+  //   divider: true,
+  //   navCap: 'Auth',
+  // },
+  // {
+  //   displayName: 'Login',
+  //   iconName: 'solar:lock-keyhole-minimalistic-line-duotone',
+  //   route: '/authentication',
+  //   children: [
+  //     {
+  //       displayName: 'Login',
+  //        subItemIcon: true,
+  //       iconName: 'solar:round-alt-arrow-right-line-duotone',
+  //       route: '/authentication/login',
+  //     },
+  //   ],
+  // },
+  // {
+  //   displayName: 'Register',
+  //   iconName: 'solar:user-plus-rounded-line-duotone',
+  //   route: '/authentication',
+  //   children: [
+  //     {
+  //       displayName: 'Register',
+  //        subItemIcon: true,
+  //       iconName: 'solar:round-alt-arrow-right-line-duotone',
+  //       route: '/authentication/register',
+  //     },
   //   ],
   // },
 
   {
     divider: true,
-    navCap: 'Auth',
+    navCap: 'Configuraciones',
   },
   {
-    displayName: 'Login',
+    displayName: 'Configuraciones',
     iconName: 'solar:lock-keyhole-minimalistic-line-duotone',
     route: '/authentication',
     children: [
       {
-        displayName: 'Login',
-         subItemIcon: true,
+        displayName: 'Gestion de Usuarios',
+        subItemIcon: true,
         iconName: 'solar:round-alt-arrow-right-line-duotone',
-        route: '/authentication/login',
+        route: '/configuraciones/gestion-usuarios',
       },
-    ],
-  },
-  {
-    displayName: 'Register',
-    iconName: 'solar:user-plus-rounded-line-duotone',
-    route: '/authentication',
-    children: [
       {
-        displayName: 'Register',
-         subItemIcon: true,
+        displayName: 'Parametricas',
+        subItemIcon: true,
         iconName: 'solar:round-alt-arrow-right-line-duotone',
-        route: '/authentication/register',
+        route: '/configuraciones/parametricas',
       },
     ],
   },
+   {
+    divider: true,
+    navCap: 'usuarios',
+  },
 
+  {
+    displayName: 'Panel de Usuarios',
+    iconName: 'solar:danger-circle-line-duotone',
+    route: '/ui-components/users',
+    roles: [RolCodigo.ADMINISTRADOR, RolCodigo.OPERADOR], // <-- NUEVO
+    // children: [
+    //   {
+    //     displayName: 'panel USER',
+    //     subItemIcon: true,
+    //     iconName: 'solar:round-alt-arrow-right-line-duotone',
+    //     route: '/configuraciones/gestion-usuarios',
+    //   },
+    //   {
+    //     displayName: 'Parametricas',
+    //     subItemIcon: true,
+    //     iconName: 'solar:round-alt-arrow-right-line-duotone',
+    //     route: '/configuraciones/parametricas',
+    //   },
+    // ],
+  },
 
-
-  
+  // {
+  //   displayName: 'Register',
+  //   iconName: 'solar:user-plus-rounded-line-duotone',
+  //   route: '/authentication',
+  //   children: [
+  //     {
+  //       displayName: 'Register',
+  //        subItemIcon: true,
+  //       iconName: 'solar:round-alt-arrow-right-line-duotone',
+  //       route: '/authentication/register',
+  //     },
+  //   ],
+  // },
 ];
