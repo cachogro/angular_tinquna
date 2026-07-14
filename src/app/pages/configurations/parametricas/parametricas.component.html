@@ -1,16 +1,70 @@
-<mat-card class="cardWithShadow theme-card">
-    <mat-card-header>
-    <mat-card-title class="m-b-0">Form</mat-card-title>
+<mat-card class="card mat-elevation-z8 my-4">
+  <mat-card-header>
+    <mat-card-title class="m-b-0">Parametricas</mat-card-title>
   </mat-card-header>
+  <mat-card-content class="b-t-1">
 
+    <div class="row">
 
-    <mat-card-content class="b-t-1">
+      <div class="col-lg-4 col-sm-6">
+        <mat-card class="b-1 shadow-none">
+          <mat-card-header>
+            <mat-card-title>Registrar Codificación</mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="b-t-1" style="display: flex; justify-content: flex-end;">
+            <button
+              mat-flat-button
+              color="primary"
+              matTooltip="registrar nueva codificacion"
+              (click)="abrirNuevaCodificacion()"
+            >
+              Nueva Codificación
+            </button>
+          </mat-card-content>
+        </mat-card>
+      </div>
 
+      <div class="col-lg-4 col-sm-6">
+        <mat-card class="b-1 shadow-none">
+          <mat-card-header>
+            <mat-card-title>Registrar ley</mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="b-t-1" style="display: flex; justify-content: flex-end;">
+            <button mat-flat-button color="primary" matTooltip="Info about the action" disabled>
+              Nueva Ley
+            </button>
+          </mat-card-content>
+        </mat-card>
+      </div>
 
+      <div class="col-lg-4 col-sm-6">
+        <mat-card class="b-1 shadow-none">
+          <mat-card-header>
+            <mat-card-title>Registro de ingenios</mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="b-t-1" style="display: flex; justify-content: flex-end;">
+            <button mat-flat-button color="primary" matTooltip="Info about the action" disabled>
+              Nuevo Ingenio
+            </button>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </div>
 
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>Codificaciones registradas</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <app-codificaciones-table></app-codificaciones-table>
+      </mat-card-content>
+    </mat-card>
 
-        
-    </mat-card-content>
+    <!--
+      A futuro, cuando implementes Ley e Ingenio:
+      - habilita su botón (quita el `disabled`) y agrégale (click)="abrirNuevaLey()" / (click)="abrirNuevoIngenio()"
+      - agrega su propia mat-card con <app-leyes-table></app-leyes-table>, <app-ingenios-table></app-ingenios-table>
+    -->
 
-
+  </mat-card-content>
 </mat-card>

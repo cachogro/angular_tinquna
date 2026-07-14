@@ -1,0 +1,132 @@
+<h2 mat-dialog-title>{{ esEdicion ? 'Editar recepción' : 'Nueva recepción de mineral' }}</h2>
+
+<mat-dialog-content>
+  @if (cargandoCatalogos()) {
+    <div class="dialog-loading">
+      <mat-spinner diameter="32"></mat-spinner>
+      <span>Cargando catálogos...</span>
+    </div>
+  } @else {
+    <form [formGroup]="form" class="registro-form">
+      <div class="registro-form__grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Codificación</mat-label>
+          <mat-select formControlName="idCodificacion">
+            @for (cod of codificaciones(); track cod.id) {
+              <mat-option [value]="cod.id">{{ cod.codigo }} — {{ cod.nombre }}</mat-option>
+            }
+          </mat-select>
+          @if (f.idCodificacion.hasError('required') && f.idCodificacion.touched) {
+            <mat-error>Selecciona una codificación</mat-error>
+          }
+        </mat-form-field>
+
+
+
+
+
+        <mat-form-field appearance="outline">
+          <mat-label>Proveedor</mat-label>
+          <input
+            type="text"
+            matInput
+            [formControl]="$any(proveedorControl)"
+            [matAutocomplete]="autoProveedor"
+            placeholder="Escribe nombre, apellido o carnet..."
+          />
+          <mat-autocomplete #autoProveedor="matAutocomplete" [displayWith]="displayProveedor">
+            @for (opcion of (filtroProveedores | async); track opcion.id) {
+              <mat-option [value]="opcion" style="font-size: 13px">
+                {{ opcion.nombres }} {{ opcion.apellidoPaterno }} {{ opcion.apellidoMaterno }} — {{ opcion.numeroDocumento }}
+              </mat-option>
+            }
+          </mat-autocomplete>
+          @if (proveedorControl.hasError('required') && proveedorControl.touched) {
+            <mat-error>Selecciona un proveedor</mat-error>
+          }
+          @if (proveedorControl.hasError('proveedorInvalido') && proveedorControl.touched) {
+            <mat-error>Selecciona un proveedor de la lista</mat-error>
+          }
+        </mat-form-field>
+
+
+
+
+        
+
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha de operación</mat-label>
+          <input matInput [matDatepicker]="picker" formControlName="fechaOperacion" />
+          <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+          <mat-datepicker #picker></mat-datepicker>
+          @if (f.fechaOperacion.hasError('required') && f.fechaOperacion.touched) {
+            <mat-error>Obligatorio</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>N° de sacos</mat-label>
+          <input matInput type="number" formControlName="numeroSacos" />
+          @if (f.numeroSacos.hasError('required') && f.numeroSacos.touched) {
+            <mat-error>Obligatorio</mat-error>
+          }
+          @if (f.numeroSacos.hasError('min') && f.numeroSacos.touched) {
+            <mat-error>Debe ser mayor a 0</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Peso neto (kg)</mat-label>
+          <input matInput type="number" step="0.001" formControlName="pesoNeto" />
+          @if (f.pesoNeto.hasError('required') && f.pesoNeto.touched) {
+            <mat-error>Obligatorio</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Ley (%)</mat-label>
+          <input matInput type="number" step="0.01" formControlName="ley" />
+          @if (f.ley.hasError('required') && f.ley.touched) {
+            <mat-error>Obligatorio</mat-error>
+          }
+          @if (f.ley.hasError('max') && f.ley.touched) {
+            <mat-error>No puede superar 100</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Anticipo</mat-label>
+          <input matInput type="number" step="0.01" formControlName="anticipo" />
+          @if (f.anticipo.hasError('required') && f.anticipo.touched) {
+            <mat-error>Obligatorio</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Total valor bruto</mat-label>
+          <input matInput type="number" step="0.01" formControlName="totalValorBruto" />
+          @if (f.totalValorBruto.hasError('required') && f.totalValorBruto.touched) {
+            <mat-error>Obligatorio</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="registro-form__full">
+          <mat-label>Observaciones</mat-label>
+          <textarea matInput rows="2" formControlName="observaciones"></textarea>
+        </mat-form-field>
+      </div>
+    </form>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-stroked-button (click)="cancelar()" [disabled]="guardando()">Cancelar</button>
+  <button mat-flat-button color="primary" (click)="guardar()" [disabled]="guardando() || cargandoCatalogos()">
+    @if (guardando()) {
+      <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
+      <span>Guardando...</span>
+    } @else {
+      <span>{{ esEdicion ? 'Guardar cambios' : 'Registrar recepción' }}</span>
+    }
+  </button>
+</mat-dialog-actions>

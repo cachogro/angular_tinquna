@@ -3,7 +3,8 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, shareReplay } from 'rxjs';
 import { APP_CONFIG } from 'src/app/config';
-import { CatalogoItem } from '../models/catalogos.models';
+import { CatalogoItem } from '../gestion-usuarios/models/catalogos.models';
+
 
 @Injectable({ providedIn: 'root' })
 export class CatalogosService {

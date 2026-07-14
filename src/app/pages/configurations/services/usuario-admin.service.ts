@@ -9,7 +9,7 @@ import {
   RegistrarUsuarioRequest,
   UsuarioAdmin,
   UsuariosPaginados,
-} from '../models/usuario-admin.models';
+} from '../gestion-usuarios/models/usuario-admin.models';
 
 @Injectable({ providedIn: 'root' })
 export class UsuarioAdminService {

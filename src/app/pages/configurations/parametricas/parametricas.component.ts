@@ -1,32 +1,49 @@
-import { Component } from '@angular/core';
-import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { CommonModule } from '@angular/common';
+import { Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatRadioModule } from '@angular/material/radio';
-import { MatSelectModule } from '@angular/material/select';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatTooltipModule } from '@angular/material/tooltip';
+
+import { CodificacionFormDialogComponent } from './codificaciones/codificacion-form-dialog/codificacion-form-dialog.component';
+import { CodificacionesTableComponent } from './codificaciones/codificaciones-table/codificaciones-table.component';
+
+// A futuro, cuando implementes Ley e Ingenio, importa aquí sus modales
+// y sus tablas, siguiendo exactamente el mismo patrón que Codificación:
+// import { LeyFormDialogComponent } from './leyes/ley-form-dialog/ley-form-dialog.component';
+// import { LeyesTableComponent } from './leyes/leyes-table/leyes-table.component';
 
 @Component({
   selector: 'app-parametricas',
+  standalone: true,
   imports: [
-
-  MatFormFieldModule,
-    MatSelectModule,
-    FormsModule,
-    ReactiveFormsModule,
-    MatRadioModule,
+    CommonModule,
     MatButtonModule,
     MatCardModule,
-    //MatInputModule,
-   // MatCheckboxModule,
+    MatDialogModule,
+    MatTooltipModule,
+    CodificacionesTableComponent,
+    // LeyesTableComponent,
+    // IngeniosTableComponent,
   ],
   templateUrl: './parametricas.component.html',
-  styleUrl: './parametricas.component.scss',
 })
 export class ParametricasComponent {
+  private readonly dialog = inject(MatDialog);
 
+  abrirNuevaCodificacion(): void {
+    this.dialog.open(CodificacionFormDialogComponent, {
+      width: '860px',
+      autoFocus: false,
+    });
+  }
+
+  // A futuro:
+  // abrirNuevaLey(): void {
+  //   this.dialog.open(LeyFormDialogComponent, { width: '560px', autoFocus: false });
+  // }
+  //
+  // abrirNuevoIngenio(): void {
+  //   this.dialog.open(IngenioFormDialogComponent, { width: '560px', autoFocus: false });
+  // }
 }
-
-

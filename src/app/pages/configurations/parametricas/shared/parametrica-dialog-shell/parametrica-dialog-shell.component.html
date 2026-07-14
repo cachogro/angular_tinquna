@@ -1,0 +1,22 @@
+<div class="parametrica-dialog">
+  <div mat-dialog-title class="parametrica-dialog__header">
+    <h2 class="parametrica-dialog__titulo">{{ titulo }}</h2>
+    <button
+      mat-icon-button
+      mat-dialog-close
+      type="button"
+      matTooltip="Cerrar"
+      class="parametrica-dialog__cerrar"
+    >
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <mat-dialog-content class="parametrica-dialog__content">
+    <ng-content></ng-content>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end" class="parametrica-dialog__actions">
+    <ng-content select="[dialog-actions]"></ng-content>
+  </mat-dialog-actions>
+</div>

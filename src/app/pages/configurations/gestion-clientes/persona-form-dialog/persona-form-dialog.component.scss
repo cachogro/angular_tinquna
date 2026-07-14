@@ -1,0 +1,36 @@
+.dialog-loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 32px;
+  justify-content: center;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.persona-form {
+  min-width: 480px;
+}
+
+.persona-form__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 4px 16px;
+}
+
+.persona-form__full {
+  grid-column: 1 / -1;
+}
+
+.btn-spinner {
+  display: inline-block;
+}
+
+.btn-spinner ::ng-deep circle {
+  stroke: currentColor;
+}
+
+@media (max-width: 600px) {
+  .persona-form {
+    min-width: 0;
+  }
+}

@@ -85,3 +85,10 @@
 .btn-spinner ::ng-deep circle {
   stroke: currentColor;
 }
+
+.actions-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  /* Opcional: los centra verticalmente si tienen distinta altura */
+}

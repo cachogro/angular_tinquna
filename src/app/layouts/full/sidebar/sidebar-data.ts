@@ -15,16 +15,11 @@ export const navItems: NavItem[] = [
     navCap: 'Comercio Interno',
     divider: true,
   },
-  // {
-  //   displayName: 'Badge',
-  //   iconName: 'solar:archive-minimalistic-line-duotone',
-  //   route: '/ui-components/badge',
-  // },
-  // {
-  //   displayName: 'Panel de Usuarios',
-  //   iconName: 'solar:danger-circle-line-duotone',
-  //   route: '/ui-components/users',
-  // },
+  {
+    displayName: 'Badge',
+    iconName: 'solar:archive-minimalistic-line-duotone',
+    route: '/ui-components/badge',
+  },
   {
     displayName: 'Lists',
     iconName: 'solar:bookmark-square-minimalistic-line-duotone',
@@ -41,9 +36,9 @@ export const navItems: NavItem[] = [
     route: '/ui-components/tooltips',
   },
   {
-    displayName: 'Forms',
+    displayName: 'Recepcion de Minerales',
     iconName: 'solar:file-text-line-duotone',
-    route: '/ui-components/forms',
+    route: '/ui-components/recepcion-minerales',
   },
 
   // {
@@ -148,33 +143,40 @@ export const navItems: NavItem[] = [
         iconName: 'solar:round-alt-arrow-right-line-duotone',
         route: '/configuraciones/parametricas',
       },
+
+        {
+        displayName: 'Gestion Clientes',
+        subItemIcon: true,
+        iconName: 'solar:round-alt-arrow-right-line-duotone',
+        route: '/configuraciones/gestion-clientes',
+      },
     ],
   },
-   {
-    divider: true,
-    navCap: 'usuarios',
-  },
+  //  {
+  //   divider: true,
+  //   navCap: 'usuarios',
+  // },
 
-  {
-    displayName: 'Panel de Usuarios',
-    iconName: 'solar:danger-circle-line-duotone',
-    route: '/ui-components/users',
-    roles: [RolCodigo.ADMINISTRADOR, RolCodigo.OPERADOR], // <-- NUEVO
-    // children: [
-    //   {
-    //     displayName: 'panel USER',
-    //     subItemIcon: true,
-    //     iconName: 'solar:round-alt-arrow-right-line-duotone',
-    //     route: '/configuraciones/gestion-usuarios',
-    //   },
-    //   {
-    //     displayName: 'Parametricas',
-    //     subItemIcon: true,
-    //     iconName: 'solar:round-alt-arrow-right-line-duotone',
-    //     route: '/configuraciones/parametricas',
-    //   },
-    // ],
-  },
+  // {
+  //   displayName: 'Panel de Usuarios',
+  //   iconName: 'solar:danger-circle-line-duotone',
+  //   route: '/ui-components/users',
+  //   roles: [RolCodigo.ADMINISTRADOR, RolCodigo.OPERADOR], // <-- NUEVO
+  //   // children: [
+  //   //   {
+  //   //     displayName: 'panel USER',
+  //   //     subItemIcon: true,
+  //   //     iconName: 'solar:round-alt-arrow-right-line-duotone',
+  //   //     route: '/configuraciones/gestion-usuarios',
+  //   //   },
+  //   //   {
+  //   //     displayName: 'Parametricas',
+  //   //     subItemIcon: true,
+  //   //     iconName: 'solar:round-alt-arrow-right-line-duotone',
+  //   //     route: '/configuraciones/parametricas',
+  //   //   },
+  //   // ],
+  // },
 
   // {
   //   displayName: 'Register',

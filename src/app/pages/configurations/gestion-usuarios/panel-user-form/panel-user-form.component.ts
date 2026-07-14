@@ -21,12 +21,15 @@ import { forkJoin } from 'rxjs';
 import { AuthService } from 'src/app/core/auth/services/auth.service';
 import { CatalogoItem } from '../models/catalogos.models';
 import { obtenerRolUsuario } from '../models/usuario-admin.models';
-import { CatalogosService } from '../services/catalogos.service';
-import { UsuarioAdminService } from '../services/usuario-admin.service';
+import { UsuarioAdminService } from '../../services/usuario-admin.service';
+import { CatalogosService } from '../../services/catalogos.service';
+import { MatCardModule } from '@angular/material/card';
+
 
 @Component({
   selector: 'app-panel-user-form',
   imports: [
+    MatCardModule,
     CommonModule,
     ReactiveFormsModule,
     RouterModule,
@@ -157,7 +160,7 @@ export class PanelUserFormComponent implements OnInit {
   }
 
   cancelar(): void {
-    this.router.navigate(['/ui-components/users']);
+    this.router.navigate(['/configuraciones/gestion-usuarios']);
   }
 
   guardar(): void {

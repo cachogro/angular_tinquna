@@ -1,0 +1,26 @@
+// .parametricas-card,
+// .listado-card {
+//   max-width: 700px;
+//   margin: 24px auto;
+// }
+
+.listado-card {
+  margin-top: 16px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.sin-datos {
+  text-align: center;
+  color: rgba(0, 0, 0, 0.5);
+  padding: 16px 0;
+}

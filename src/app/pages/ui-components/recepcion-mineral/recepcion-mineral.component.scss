@@ -1,0 +1,138 @@
+.recepcion-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.recepcion-page__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.recepcion-page__title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.recepcion-page__subtitle {
+  margin: 2px 0 0;
+  color: rgba(0, 0, 0, 0.6);
+  font-size: 13px;
+}
+
+.recepcion-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.recepcion-toolbar__search {
+  flex: 1 1 220px;
+  min-width: 200px;
+}
+
+.recepcion-toolbar__clear {
+  color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.recepcion-table-wrapper {
+  min-height: 200px;
+}
+
+.recepcion-loading,
+.recepcion-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 56px 24px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.recepcion-table {
+  width: 100%;
+}
+
+.operacion-cell__codigo {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.operacion-cell__fecha {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.55);
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+    vertical-align: middle;
+  }
+}
+
+.proveedor-cell__nombre {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.proveedor-cell__doc {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.detalle-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.estado-chip {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  min-height: 24px !important;
+}
+
+.estado-chip--pendiente {
+  background: rgba(255, 159, 67, 0.15) !important;
+  color: #ff9f43 !important;
+}
+
+.estado-chip--proceso {
+  background: rgba(0, 207, 232, 0.15) !important;
+  color: #00879c !important;
+}
+
+.estado-chip--aprobado {
+  background: rgba(40, 199, 111, 0.15) !important;
+  color: #28c76f !important;
+}
+
+.estado-chip--liquidado {
+  background: rgba(115, 103, 240, 0.15) !important;
+  color: #7367f0 !important;
+}
+
+.estado-chip--rechazado {
+  background: rgba(234, 84, 85, 0.15) !important;
+  color: #ea5455 !important;
+}
+
+.acciones-header {
+  text-align: right;
+}
+
+.acciones-cell {
+  text-align: right;
+  white-space: nowrap;
+}

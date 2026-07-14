@@ -1,0 +1,33 @@
+.parametrica-dialog {
+  display: flex;
+  flex-direction: column;
+  min-width: 320px;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0 0 8px 0;
+  }
+
+  &__titulo {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 600;
+  }
+
+  &__content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  &__actions {
+    margin-top: 12px;
+    gap: 8px;
+  }
+}
+
+.full-width {
+  width: 100%;
+}
