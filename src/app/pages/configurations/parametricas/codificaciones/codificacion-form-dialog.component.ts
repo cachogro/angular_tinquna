@@ -15,16 +15,19 @@ import {
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatInputModule } from '@angular/material/input'; 
+import { MatInputModule } from '@angular/material/input';
 
 import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog/confirm-dialog.component';
 import { MatDialog } from '@angular/material/dialog';
 
-import { Codificacion, Mineral } from '../../models/parametricas.models';
-import { ParametricaDialogShellComponent } from '../../shared/parametrica-dialog-shell/parametrica-dialog-shell.component';
-import { ParametricasService } from '../../../services/parametricas.service';
+import { Codificacion, Mineral } from '../models/parametricas.models';
+import { ParametricaDialogShellComponent } from '../shared/parametrica-dialog-shell.component';
+import { ParametricasService } from '../../services/parametricas.service';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTableModule } from '@angular/material/table';
+import { MatCardModule } from '@angular/material/card';
 
-/** Datos que se le pasan al modal al abrirlo. Si viene `codificacion`, es edición */
 export interface CodificacionDialogData {
   codificacion?: Codificacion;
 }
@@ -42,24 +45,35 @@ export interface CodificacionDialogData {
     MatDialogModule,
     MatSnackBarModule,
     ParametricaDialogShellComponent,
+    MatTableModule,
+    MatIconModule,
+    MatTooltipModule,
+    MatCardModule,
   ],
   templateUrl: './codificacion-form-dialog.component.html',
+  styleUrl: './codificacion-form-dialog.component.scss',
 })
 export class CodificacionFormDialogComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly parametricasService = inject(ParametricasService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
-  private readonly dialogRef = inject(MatDialogRef<CodificacionFormDialogComponent>);
-  private readonly data = inject<CodificacionDialogData>(MAT_DIALOG_DATA, {
-    optional: true,
-  }) ?? {};
+  private readonly dialogRef = inject(
+    MatDialogRef<CodificacionFormDialogComponent>,
+  );
+  private readonly data =
+    inject<CodificacionDialogData>(MAT_DIALOG_DATA, { optional: true }) ?? {};
 
   minerales: Mineral[] = [];
   guardando = false;
+  columnas = ['codigo', 'nombre', 'acciones'];
+
+  // Ahora es estado propio del componente, no depende solo de `data`.
+  // Así el mismo modal puede pasar de "nuevo" a "edición" y viceversa.
+  codificacionEditando: Codificacion | null = null;
 
   get modoEdicion(): boolean {
-    return !!this.data.codificacion;
+    return !!this.codificacionEditando;
   }
 
   form: FormGroup = this.fb.group({
@@ -71,7 +85,6 @@ export class CodificacionFormDialogComponent implements OnInit {
   ngOnInit(): void {
     this.cargarMinerales();
 
-    // Arma el "nombre" automáticamente según los minerales seleccionados
     this.form.get('minerales')!.valueChanges.subscribe((ids: number[]) => {
       const nombre = this.minerales
         .filter((m) => ids?.includes(m.id))
@@ -79,19 +92,17 @@ export class CodificacionFormDialogComponent implements OnInit {
         .join(', ');
       this.form.get('nombre')!.setValue(nombre, { emitEvent: false });
     });
-  }
 
+    this.parametricasService.cargarCodificaciones();
+
+    if (this.data.codificacion) {
+      this.editar(this.data.codificacion);
+    }
+  }
   private cargarMinerales(): void {
     this.parametricasService.obtenerMinerales().subscribe({
       next: (data) => {
         this.minerales = data.filter((m) => m.activo !== false);
-
-        if (this.modoEdicion) {
-          this.form.patchValue({
-            codigo: this.data.codificacion!.codigo,
-            minerales: this.data.codificacion!.minerales.map((m) => m.id),
-          });
-        }
       },
       error: () =>
         this.snackBar.open('Error al cargar los minerales', 'Cerrar', {
@@ -99,20 +110,18 @@ export class CodificacionFormDialogComponent implements OnInit {
         }),
     });
   }
-
-  /** Se ejecuta al hacer submit: primero confirma, luego persiste */
   guardar(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
-
     const codigo = this.form.get('codigo')!.value;
     const nombre = this.form.get('nombre')!.value;
-
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       data: {
-        title: this.modoEdicion ? 'Actualizar codificación' : 'Crear codificación',
+        title: this.modoEdicion
+          ? 'Actualizar codificación'
+          : 'Crear codificación',
         message: this.modoEdicion
           ? `¿Confirmas actualizar la codificación "${codigo}" con los minerales: ${nombre}?`
           : `¿Confirmas crear la codificación "${codigo}" con los minerales: ${nombre}?`,
@@ -122,7 +131,6 @@ export class CodificacionFormDialogComponent implements OnInit {
         icon: this.modoEdicion ? 'edit' : 'add_circle_outline',
       },
     });
-
     dialogRef.afterClosed().subscribe((confirmado: boolean) => {
       if (confirmado) {
         this.persistir();
@@ -133,17 +141,19 @@ export class CodificacionFormDialogComponent implements OnInit {
   private persistir(): void {
     this.guardando = true;
     const { codigo, nombre, minerales } = this.form.getRawValue();
-
     const request$ =
-      this.modoEdicion && this.data.codificacion
+      this.modoEdicion && this.codificacionEditando
         ? this.parametricasService.actualizarCodificacion({
-            id: this.data.codificacion.id,
+            id: this.codificacionEditando.id,
             codigo,
             nombre,
             minerales,
           })
-        : this.parametricasService.crearCodificacion({ codigo, nombre, minerales });
-
+        : this.parametricasService.crearCodificacion({
+            codigo,
+            nombre,
+            minerales,
+          });
     request$.subscribe({
       next: () => {
         this.snackBar.open(
@@ -154,10 +164,9 @@ export class CodificacionFormDialogComponent implements OnInit {
           { duration: 3000 },
         );
         this.guardando = false;
-        // Cierra el modal indicando que hubo cambios (por si el que abre
-        // quiere reaccionar a esto, aunque la tabla ya se refresca sola
-        // vía el signal del servicio)
-        this.dialogRef.close(true);
+        // Ya NO cerramos el modal: la tabla vive adentro, así que solo
+        // limpiamos el formulario para dejarlo listo para un nuevo registro.
+        this.limpiar();
       },
       error: (err) => {
         this.snackBar.open(
@@ -170,7 +179,30 @@ export class CodificacionFormDialogComponent implements OnInit {
     });
   }
 
+  /** Pone el formulario en modo edición con los datos de la fila seleccionada */
+  editar(codificacion: Codificacion): void {
+    this.codificacionEditando = codificacion;
+    this.form.patchValue({
+      codigo: codificacion.codigo,
+      minerales: codificacion.minerales.map((m) => m.id),
+    });
+  }
+
+  /** Limpia el formulario y sale del modo edición, sin cerrar el modal */
+  limpiar(): void {
+    this.form.reset({ codigo: '', nombre: '', minerales: [] });
+    this.codificacionEditando = null;
+  }
+
   cancelar(): void {
-    this.dialogRef.close(false);
+    this.limpiar();
+  }
+
+  get codificaciones(): Codificacion[] {
+    return this.parametricasService.codificaciones();
+  }
+
+  get cargando(): boolean {
+    return this.parametricasService.cargandoCodificaciones();
   }
 }

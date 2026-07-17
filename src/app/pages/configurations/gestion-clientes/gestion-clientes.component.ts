@@ -55,7 +55,14 @@ export class GestionClientesComponent implements OnInit {
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
 
-  readonly displayedColumns = ['persona', 'documento', 'tipos', 'estado', 'acciones'];
+  readonly displayedColumns = [
+    'id',
+    'persona',
+    'documento',
+    'tipos',
+    'estado',
+    'acciones',
+  ];
 
   readonly personas = signal<PersonaCI[]>([]);
   readonly total = signal(0);
@@ -116,9 +123,13 @@ export class GestionClientesComponent implements OnInit {
         },
         error: () => {
           this.loading.set(false);
-          this.snackBar.open('No se pudo cargar el listado de personas', 'Cerrar', {
-            duration: 4000,
-          });
+          this.snackBar.open(
+            'No se pudo cargar el listado de personas',
+            'Cerrar',
+            {
+              duration: 4000,
+            },
+          );
         },
       });
   }
@@ -176,16 +187,20 @@ export class GestionClientesComponent implements OnInit {
         this.personaService.cambiarEstado(persona.id, activar).subscribe({
           next: (actualizada) => {
             this.personas.update((lista) =>
-              lista.map((p) => (p.id === persona.id ? actualizada : p))
+              lista.map((p) => (p.id === persona.id ? actualizada : p)),
             );
             this.snackBar.open(
-              activar ? 'Persona activada correctamente' : 'Persona desactivada correctamente',
+              activar
+                ? 'Persona activada correctamente'
+                : 'Persona desactivada correctamente',
               'Cerrar',
-              { duration: 3000 }
+              { duration: 3000 },
             );
           },
           error: () => {
-            this.snackBar.open('No se pudo cambiar el estado', 'Cerrar', { duration: 4000 });
+            this.snackBar.open('No se pudo cambiar el estado', 'Cerrar', {
+              duration: 4000,
+            });
           },
         });
       });

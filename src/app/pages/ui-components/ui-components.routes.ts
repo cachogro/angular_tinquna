@@ -1,12 +1,7 @@
 import { Routes } from '@angular/router';
 
 // ui
-import { AppBadgeComponent } from './badge/badge.component';
-import { AppListsComponent } from './lists/lists.component';
-import { AppMenuComponent } from './menu/menu.component';
-import { AppTooltipsComponent } from './tooltips/tooltips.component';
 import { AppFormsComponent } from './forms/forms.component';
-import { AppTablesComponent } from './tables/tables.component';
 
 import { roleGuard } from 'src/app/core/auth/guards/role.guard';
 import { RolCodigo } from 'src/app/core/auth/models/auth.models';
@@ -19,39 +14,13 @@ export const UiComponentsRoutes: Routes = [
     path: '',
     children: [
       {
-        path: 'badge',
-        component: AppBadgeComponent,
-      },
-      // {
-      //   path: 'users',
-      //   component: PanelUsersComponent,
-      // },
-      {
-        path: 'lists',
-        component: AppListsComponent,
-      },
-      {
-        path: 'menu',
-        component: AppMenuComponent,
-      },
-      {
-        path: 'tooltips',
-        component: AppTooltipsComponent,
-      },
-      {
         path: 'forms',
         component: AppFormsComponent,
       },
       {
-        path: 'tables',
-        component: AppTablesComponent,
-      },
-
-        {
         path: 'recepcion-minerales',
         component: RecepcionMineralComponent,
       },
-
 
       // {
       //   // <-- NUEVO: 'users' pasa de ruta simple a grupo con hijos
@@ -75,10 +44,6 @@ export const UiComponentsRoutes: Routes = [
       //     },
       //   ],
       // },
-
-
-
-
     ],
   },
 ];

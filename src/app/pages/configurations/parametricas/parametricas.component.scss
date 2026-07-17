@@ -1,26 +1,52 @@
-// .parametricas-card,
-// .listado-card {
-//   max-width: 700px;
-//   margin: 24px auto;
-// }
-
-.listado-card {
-  margin-top: 16px;
+.curso-card {
+  border-radius: 16px;
+  overflow: hidden;
+  border: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  height: 85%;
 }
 
-.full-width {
-  width: 100%;
-}
+.card-header {
+  height: 64px;
+  color: white;
+  font-size: 24px;
+  font-weight: 500;
 
-.acciones {
   display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 8px;
+  align-items: center;
+  padding: 0 20px;
+  gap: 10px;
 }
 
-.sin-datos {
-  text-align: center;
-  color: rgba(0, 0, 0, 0.5);
-  padding: 16px 0;
+.header-purple {
+  background: linear-gradient(135deg, #5b5cf6, #4c4cff);
+}
+
+.header-pink {
+  background: linear-gradient(135deg, #f06292, #f45c84);
+}
+
+.header-yellow {
+  background: #f6c000;
+}
+
+.card-footer {
+  border-top: 1px solid #e0e0e0;
+  display: flex !important;
+  width: 100%;
+  padding: 10 !important;
+  /* Elimina márgenes internos por defecto de Material */
+ // margin: 0 !important;
+}
+
+.mat-mdc-card .mdc-card__actions {
+  padding: 11px !important;
+}
+
+/* Fuerza al botón a tomar todo el ancho */
+.card-footer button {
+  width: 100% !important;
+  display: block;
+  border-radius: 0 0 12px 12px;
+  /* Redondea solo las esquinas inferiores si la tarjeta es curva */
 }

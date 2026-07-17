@@ -1,70 +1,63 @@
-<mat-card class="card mat-elevation-z8 my-4">
+<mat-card class="card mat-elevation-z8 my-4  ">
   <mat-card-header>
     <mat-card-title class="m-b-0">Parametricas</mat-card-title>
   </mat-card-header>
   <mat-card-content class="b-t-1">
 
     <div class="row">
-
       <div class="col-lg-4 col-sm-6">
-        <mat-card class="b-1 shadow-none">
-          <mat-card-header>
-            <mat-card-title>Registrar Codificación</mat-card-title>
+        <mat-card class="b-1 curso-card">
+          <mat-card-header class="card-header header-purple">
+            <!-- <mat-icon>qr_code</mat-icon> -->
+            <mat-card-title>Codificación</mat-card-title>
           </mat-card-header>
-          <mat-card-content class="b-t-1" style="display: flex; justify-content: flex-end;">
-            <button
-              mat-flat-button
-              color="primary"
-              matTooltip="registrar nueva codificacion"
-              (click)="abrirNuevaCodificacion()"
-            >
+          <mat-card-content class="b-t-1" style="display: flex; justify-content: flex-start;">
+            <p>
+              Panel de Registro Codificación
+            </p>
+          </mat-card-content>
+          <mat-card-actions class="card-footer">
+            <button matButton style="width: 100%; font-weight: bold;" matTooltip="registrar nueva codificacion" (click)="abrirNuevaCodificacion()">
               Nueva Codificación
             </button>
-          </mat-card-content>
+          </mat-card-actions>
         </mat-card>
       </div>
-
       <div class="col-lg-4 col-sm-6">
-        <mat-card class="b-1 shadow-none">
-          <mat-card-header>
-            <mat-card-title>Registrar ley</mat-card-title>
+        <mat-card class="b-1 curso-card">
+          <mat-card-header class="card-header header-yellow">
+            <mat-card-title>Cotización</mat-card-title>
           </mat-card-header>
-          <mat-card-content class="b-t-1" style="display: flex; justify-content: flex-end;">
-            <button mat-flat-button color="primary" matTooltip="Info about the action" disabled>
-              Nueva Ley
+          <mat-card-content class="b-t-1" style="display: flex; justify-content: flex-start;">
+            <p>
+              Panel Registro de Cotizaciones
+            </p>
+          </mat-card-content>
+          <mat-card-actions class="card-footer">
+            <button matButton style="width: 100%; font-weight: bold;" matTooltip="registrar nueva cotizacion" (click)="abrirNuevaCotizacion()">
+              Nueva Cotización
             </button>
-          </mat-card-content>
+          </mat-card-actions>
         </mat-card>
       </div>
-
       <div class="col-lg-4 col-sm-6">
-        <mat-card class="b-1 shadow-none">
-          <mat-card-header>
-            <mat-card-title>Registro de ingenios</mat-card-title>
+        <mat-card class="b-1 curso-card">
+          <mat-card-header class="card-header header-pink">
+            <mat-card-title>Ingenio</mat-card-title>
           </mat-card-header>
-          <mat-card-content class="b-t-1" style="display: flex; justify-content: flex-end;">
-            <button mat-flat-button color="primary" matTooltip="Info about the action" disabled>
+          <mat-card-content class="b-t-1" style="display: flex; justify-content: flex-start;">
+            <p>
+              Panel de Registro de Ingenios
+            </p>
+          </mat-card-content>
+          <mat-card-actions class="card-footer">
+            <button matButton style="width: 100%; font-weight: bold;" matTooltip="registrar nuevo ingenio" (click)="abrirNuevoIngenio()">
               Nuevo Ingenio
             </button>
-          </mat-card-content>
+          </mat-card-actions>
         </mat-card>
       </div>
     </div>
-
-    <mat-card>
-      <mat-card-header>
-        <mat-card-title>Codificaciones registradas</mat-card-title>
-      </mat-card-header>
-      <mat-card-content>
-        <app-codificaciones-table></app-codificaciones-table>
-      </mat-card-content>
-    </mat-card>
-
-    <!--
-      A futuro, cuando implementes Ley e Ingenio:
-      - habilita su botón (quita el `disabled`) y agrégale (click)="abrirNuevaLey()" / (click)="abrirNuevoIngenio()"
-      - agrega su propia mat-card con <app-leyes-table></app-leyes-table>, <app-ingenios-table></app-ingenios-table>
-    -->
 
   </mat-card-content>
 </mat-card>

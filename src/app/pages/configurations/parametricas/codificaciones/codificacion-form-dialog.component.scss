@@ -1,0 +1,193 @@
+/*==========================
+FORMULARIO
+===========================*/
+
+.codificacion-form {
+
+    display: grid;
+
+    grid-template-columns: repeat(3, minmax(220px,1fr));
+
+    gap: 18px;
+
+    margin-bottom: 18px;
+
+}
+
+.codificacion-form mat-form-field{
+
+    width:100%;
+
+}
+
+
+/*==========================
+BOTONES
+===========================*/
+
+.acciones{
+
+    display:flex;
+
+    justify-content:flex-end;
+
+    gap:12px;
+
+    margin-bottom:18px;
+
+    flex-wrap:wrap;
+
+}
+
+.acciones button{
+
+    min-width:170px;
+
+}
+
+
+/*==========================
+TABLA
+===========================*/
+
+.tabla-card{
+
+    margin-top:8px;
+
+}
+
+.tabla-scroll{
+
+    overflow:auto;
+
+    max-height:420px;
+
+}
+
+
+/* ancho mínimo para que en celular aparezca scroll horizontal */
+
+.tabla{
+
+    width:100%;
+
+    min-width:700px;
+
+}
+
+
+/*==========================
+ENCABEZADO
+===========================*/
+
+.mat-mdc-header-row{
+
+    background: var(--mat-sys-primary);
+    color: var(--mat-sys-on-primary);
+    font-weight: 600;
+    letter-spacing: .3px;
+
+}
+
+
+.mat-mdc-header-cell {
+    background: var(--mat-sys-primary);
+    color: var(--mat-sys-on-primary);
+    font-weight: 600;
+    letter-spacing: .3px;
+}
+
+.mat-mdc-row:hover {
+    background: color-mix(in srgb, var(--mat-sys-primary) 8%, transparent);
+    transition: background-color .2s ease;
+}
+
+
+/*==========================
+FILAS COMPACTAS
+===========================*/
+
+.mat-mdc-row{
+
+    height:42px;
+
+}
+
+.mat-mdc-cell{
+
+    padding-top:6px !important;
+
+    padding-bottom:6px !important;
+
+    font-size:13px;
+
+}
+
+
+/* encabezado fijo */
+
+.mat-mdc-header-row{
+
+    position:sticky;
+
+    top:0;
+
+    z-index:10;
+
+}
+
+
+/*==========================
+RESPONSIVE
+===========================*/
+
+/* Tablet */
+
+@media (max-width:1000px){
+
+    .codificacion-form{
+
+        grid-template-columns:repeat(2,1fr);
+
+    }
+
+}
+
+
+/* Celular */
+
+@media (max-width:700px){
+
+    .codificacion-form{
+
+        grid-template-columns:1fr;
+
+    }
+
+    .acciones{
+
+        flex-direction:column;
+
+    }
+
+    .acciones button{
+
+        width:100%;
+
+    }
+
+    .tabla-scroll{
+
+        overflow-x:auto;
+
+        overflow-y:auto;
+
+    }
+
+    .tabla{
+
+        min-width:700px;
+
+    }
+
+}

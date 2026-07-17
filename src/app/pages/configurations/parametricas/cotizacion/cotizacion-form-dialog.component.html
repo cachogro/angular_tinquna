@@ -1,0 +1,167 @@
+<div class="blue_theme">
+  <app-parametrica-dialog-shell [titulo]="modoEdicion ? 'Modificar Cotización' : 'Nueva Cotización'">
+
+    <!-- ==================== FORMULARIO ==================== -->
+    <form [formGroup]="form" (ngSubmit)="guardar()" class="cotizacion-form">
+
+      <!-- Mineral -->
+      <mat-form-field appearance="outline">
+        <mat-label>Mineral</mat-label>
+        <mat-select formControlName="idMineral">
+          <mat-option *ngFor="let mineral of minerales" [value]="mineral.id">
+            {{ mineral.descripcion }} ({{ mineral.simbolo }})
+          </mat-option>
+        </mat-select>
+        <mat-error *ngIf="form.get('idMineral')?.hasError('required')">
+          Debe seleccionar un mineral
+        </mat-error>
+        <mat-hint *ngIf="modoEdicion">El mineral no se puede modificar</mat-hint>
+      </mat-form-field>
+
+      <!-- Cotización en dólares -->
+      <mat-form-field appearance="outline">
+        <mat-label>Cotización (USD)</mat-label>
+        <input matInput type="number" step="0.01" formControlName="cotizacionMineralDolares" />
+        <mat-error *ngIf="form.get('cotizacionMineralDolares')?.hasError('required')">
+          La cotización es obligatoria
+        </mat-error>
+        <mat-error *ngIf="form.get('cotizacionMineralDolares')?.hasError('min')">
+          Debe ser mayor a 0
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Alícuota externa -->
+      <mat-form-field appearance="outline">
+        <mat-label>Alícuota externa</mat-label>
+        <input matInput type="number" step="0.01" formControlName="alicuotaExterna" />
+      </mat-form-field>
+
+      <!-- Alícuota interna -->
+      <mat-form-field appearance="outline">
+        <mat-label>Alícuota interna</mat-label>
+        <input matInput type="number" step="0.01" formControlName="alicuotaInterna" />
+      </mat-form-field>
+
+      <!-- Vigencia final -->
+      <mat-form-field appearance="outline">
+        <mat-label>Vigencia hasta</mat-label>
+        <input matInput type="date" formControlName="fechaVigenciaFinal" />
+        <mat-error *ngIf="form.get('fechaVigenciaFinal')?.hasError('required')">
+          La fecha de vigencia final es obligatoria
+        </mat-error>
+      </mat-form-field>
+
+    </form>
+
+    <!-- ==================== BOTONES ==================== -->
+    <div class="acciones">
+      <button mat-stroked-button type="button" (click)="cancelar()" [disabled]="guardando">
+        {{ modoEdicion ? 'Cancelar edición' : 'Limpiar' }}
+      </button>
+      <button mat-flat-button color="primary" type="button" (click)="guardar()" [disabled]="guardando">
+        {{ modoEdicion ? 'Actualizar' : 'Guardar' }}
+      </button>
+    </div>
+
+    <!-- ==================== TABLA ==================== -->
+    <mat-card class="tabla-card">
+      <mat-card-title>Cotizaciones registradas</mat-card-title>
+
+      <mat-card-content>
+
+        <!-- Búsqueda y filtro -->
+        <div class="filtros">
+          <mat-form-field appearance="outline" class="buscador">
+            <mat-label>Buscar por mineral</mat-label>
+            <input matInput [formControl]="searchControl" placeholder="Ej: zinc" />
+            <mat-icon matSuffix>search</mat-icon>
+          </mat-form-field>
+
+          <mat-checkbox [(ngModel)]="soloVigentes" (change)="onToggleSoloVigentes()">
+            Solo vigentes
+          </mat-checkbox>
+        </div>
+
+        <div class="tabla-scroll">
+          <table mat-table [dataSource]="cotizaciones" class="tabla mat-elevation-z1">
+
+             <ng-container matColumnDef="id">
+              <th mat-header-cell *matHeaderCellDef>ID</th>
+              <td mat-cell *matCellDef="let row">{{ row.id }}</td>
+            </ng-container>
+
+
+
+
+            <ng-container matColumnDef="mineral">
+              <th mat-header-cell *matHeaderCellDef>Mineral</th>
+              <td mat-cell *matCellDef="let row">
+                {{ row.mineral?.descripcion }} ({{ row.mineral?.simbolo }})
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="cotizacion">
+              <th mat-header-cell *matHeaderCellDef>Cotización USD</th>
+              <td mat-cell *matCellDef="let row">{{ row.cotizacionMineralDolares }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="alicuotaExterna">
+              <th mat-header-cell *matHeaderCellDef>Al. externa</th>
+              <td mat-cell *matCellDef="let row">{{ row.alicuotaExterna }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="alicuotaInterna">
+              <th mat-header-cell *matHeaderCellDef>Al. interna</th>
+              <td mat-cell *matCellDef="let row">{{ row.alicuotaInterna }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="vigenciaInicial">
+              <th mat-header-cell *matHeaderCellDef>Vigencia desde</th>
+              <td mat-cell *matCellDef="let row">{{ row.fechaVigenciaInicial | slice:0:10 }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="vigenciaFinal">
+              <th mat-header-cell *matHeaderCellDef>Vigencia hasta</th>
+              <td mat-cell *matCellDef="let row">{{ row.fechaVigenciaFinal | slice:0:10 }}</td>
+            </ng-container>
+
+
+
+            <ng-container matColumnDef="estado">
+              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <td mat-cell *matCellDef="let row">
+                <span class="badge" [class.badge--vigente]="row.activo" [class.badge--vencida]="!row.activo">
+                  {{ row.activo ? 'Vigente' : 'Vencida' }}
+                </span>
+              </td>
+            </ng-container>
+
+
+            
+
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef>Acciones</th>
+              <td mat-cell *matCellDef="let row">
+                <button mat-icon-button color="primary" matTooltip="Editar" [disabled]="!row.activo"
+                  (click)="editar(row)">
+                  <mat-icon>edit</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+            <tr mat-row *matRowDef="let row; columns: columnas"></tr>
+          </table>
+        </div>
+
+        <p *ngIf="!cargando && cotizaciones.length === 0" class="sin-datos">
+          No hay cotizaciones registradas.
+        </p>
+
+        <mat-paginator [length]="totalCotizaciones" [pageIndex]="pageIndex" [pageSize]="pageSize"
+          [pageSizeOptions]="[10, 20, 50]" (page)="onPageChange($event)"></mat-paginator>
+
+      </mat-card-content>
+    </mat-card>
+  </app-parametrica-dialog-shell>
+</div>

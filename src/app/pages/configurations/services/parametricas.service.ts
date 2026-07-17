@@ -1,15 +1,31 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { Observable, tap } from 'rxjs';
 import { APP_CONFIG } from 'src/app/config';
-import { ActualizarCodificacionRequest, Codificacion, CrearCodificacionRequest, Mineral } from '../parametricas/models/parametricas.models';
-
-
+import {
+  ActualizarCodificacionRequest,
+  ActualizarCotizacionRequest,
+  Codificacion,
+  Cotizacion,
+  CotizacionesPaginadas,
+  CrearCodificacionRequest,
+  CrearCotizacionRequest,
+  FiltrosCotizacion,
+  FiltrosIngenio,
+  GuardarIngenioRequest,
+  Ingenio,
+  IngeniosPaginados,
+  Mineral,
+} from '../parametricas/models/parametricas.models';
 
 @Injectable({ providedIn: 'root' })
 export class ParametricasService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${APP_CONFIG.apiUrl}/parametricas`;
+
+  // ==========================================================
+  // CODIFICACIONES
+  // ==========================================================
 
   // Estado reactivo: la tabla lee esto y se refresca sola cuando cambia,
   // sin que el modal necesite conocer a la tabla ni viceversa.
@@ -52,8 +68,128 @@ export class ParametricasService {
     });
   }
 
-  // A futuro: obtenerLeyes(), crearLey(), actualizarLey(), etc.
-  // Si el archivo empieza a crecer mucho, considera mover cada recurso
-  // a su propio servicio (leyes.service.ts, ingenios.service.ts), pero
-  // el patrón de signal + tap(() => cargar...()) se mantiene igual.
+  // ==========================================================
+  // COTIZACIONES
+  // ==========================================================
+
+  readonly cotizaciones = signal<Cotizacion[]>([]);
+  readonly totalCotizaciones = signal<number>(0);
+  readonly cargandoCotizaciones = signal<boolean>(false);
+
+  // Recordamos los últimos filtros usados para poder recargar la misma
+  // página/búsqueda después de crear o actualizar una cotización.
+  private filtrosCotizacionActuales: FiltrosCotizacion = { page: 1, limit: 10 };
+
+  crearCotizacion(data: CrearCotizacionRequest): Observable<Cotizacion> {
+    return this.http
+      .post<Cotizacion>(`${this.baseUrl}/cotizacion`, data)
+      .pipe(tap(() => this.cargarCotizaciones(this.filtrosCotizacionActuales)));
+  }
+
+  actualizarCotizacion(
+    data: ActualizarCotizacionRequest,
+  ): Observable<Cotizacion> {
+    return this.http
+      .post<Cotizacion>(`${this.baseUrl}/cotizacion`, data)
+      .pipe(tap(() => this.cargarCotizaciones(this.filtrosCotizacionActuales)));
+  }
+
+  listarCotizaciones(
+    filtros: FiltrosCotizacion,
+  ): Observable<CotizacionesPaginadas> {
+    let params = new HttpParams()
+      .set('page', filtros.page)
+      .set('limit', filtros.limit);
+    if (filtros.busqueda) params = params.set('busqueda', filtros.busqueda);
+    if (filtros.idMineral) params = params.set('idMineral', filtros.idMineral);
+    if (filtros.vigente !== undefined)
+      params = params.set('vigente', filtros.vigente);
+    if (filtros.activo !== undefined)
+      params = params.set('activo', filtros.activo);
+
+    return this.http.get<CotizacionesPaginadas>(
+      `${this.baseUrl}/cotizacionPag`,
+      {
+        params,
+      },
+    );
+  }
+
+  /** Carga las cotizaciones (paginadas/filtradas) y actualiza los signals */
+  cargarCotizaciones(filtros: FiltrosCotizacion): void {
+    this.filtrosCotizacionActuales = filtros;
+    this.cargandoCotizaciones.set(true);
+    this.listarCotizaciones(filtros).subscribe({
+      next: (res) => {
+        this.cotizaciones.set(res.data);
+        this.totalCotizaciones.set(res.total);
+        this.cargandoCotizaciones.set(false);
+      },
+      error: () => {
+        this.cargandoCotizaciones.set(false);
+      },
+    });
+  }
+
+  // ==========================================================
+  // INGENIOS
+  // ==========================================================
+
+  readonly ingenios = signal<Ingenio[]>([]);
+  readonly totalIngenios = signal<number>(0);
+  readonly cargandoIngenios = signal<boolean>(false);
+
+  private filtrosIngenioActuales: FiltrosIngenio = { page: 1, limit: 10 };
+
+  /** Un solo POST para crear y actualizar: sin `id` crea, con `id` actualiza */
+  guardarIngenio(data: GuardarIngenioRequest): Observable<Ingenio> {
+    return this.http
+      .post<Ingenio>(`${this.baseUrl}/ingenio`, data)
+      .pipe(tap(() => this.cargarIngenios(this.filtrosIngenioActuales)));
+  }
+
+  listarIngenios(filtros: FiltrosIngenio): Observable<IngeniosPaginados> {
+    let params = new HttpParams()
+      .set('page', filtros.page)
+      .set('limit', filtros.limit);
+
+    if (filtros.busqueda) params = params.set('busqueda', filtros.busqueda);
+    if (filtros.activo !== undefined)
+      params = params.set('activo', filtros.activo);
+
+    if (filtros.orderBy) params = params.set('orderBy', filtros.orderBy);
+    if (filtros.orderDirection)
+      params = params.set('orderDirection', filtros.orderDirection);
+
+    return this.http.get<IngeniosPaginados>(`${this.baseUrl}/ingenio`, {
+      params,
+    });
+  }
+
+  /** Carga los ingenios (paginados/filtrados) y actualiza los signals */
+  cargarIngenios(filtros: FiltrosIngenio): void {
+    this.filtrosIngenioActuales = filtros;
+    this.cargandoIngenios.set(true);
+    this.listarIngenios(filtros).subscribe({
+      next: (res) => {
+        this.ingenios.set(res.data);
+        this.totalIngenios.set(res.total);
+        this.cargandoIngenios.set(false);
+      },
+      error: () => {
+        this.cargandoIngenios.set(false);
+      },
+    });
+  }
+
+  // ⚠️ AJUSTA ESTA RUTA si tu back usa otro path para activar/desactivar
+  // ingenios. Sigue el mismo patrón que cambiarEstadoUsuario/cambiarEstado
+  // (usuario-admin.service.ts / persona.service.ts).
+  cambiarEstadoIngenio(id: string, activo: boolean): Observable<Ingenio> {
+    return this.http
+      .patch<Ingenio>(`${this.baseUrl}/ingenio/cambiar_estado/${id}`, {
+        activo,
+      })
+      .pipe(tap(() => this.cargarIngenios(this.filtrosIngenioActuales)));
+  }
 }

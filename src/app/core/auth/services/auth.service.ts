@@ -1,6 +1,6 @@
 // src/app/core/auth/services/auth.service.ts
 import { isPlatformBrowser } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import {
   Injectable,
   PLATFORM_ID,
@@ -74,8 +74,13 @@ export class AuthService {
    */
   refreshToken(): Observable<RefreshResponse> {
     const refreshToken = this.tokenStorage.getRefreshToken();
+    // Seteamos el header tal como lo pide tu RefreshTokenStrategy
+    const headers = new HttpHeaders().set(
+      'Authorization',
+      `Bearer ${refreshToken}`,
+    );
     return this.http
-      .post<RefreshResponse>(`${this.apiUrl}/refresh`, { refreshToken })
+      .post<RefreshResponse>(`${this.apiUrl}/refresh_token`, {}, { headers })
       .pipe(
         tap((response) => {
           this.tokenStorage.setAccessToken(response.token);

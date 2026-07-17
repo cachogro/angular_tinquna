@@ -4,9 +4,10 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
-
-import { CodificacionFormDialogComponent } from './codificaciones/codificacion-form-dialog/codificacion-form-dialog.component';
-import { CodificacionesTableComponent } from './codificaciones/codificaciones-table/codificaciones-table.component';
+import { CodificacionFormDialogComponent } from './codificaciones/codificacion-form-dialog.component';
+import { CotizacionFormDialogComponent } from './cotizacion/cotizacion-form-dialog.component';
+import { IngenioFormDialogComponent } from './ingenio/ingenio-form-dialog.component';
+import { MatIcon } from '@angular/material/icon';
 
 // A futuro, cuando implementes Ley e Ingenio, importa aquí sus modales
 // y sus tablas, siguiendo exactamente el mismo patrón que Codificación:
@@ -22,28 +23,38 @@ import { CodificacionesTableComponent } from './codificaciones/codificaciones-ta
     MatCardModule,
     MatDialogModule,
     MatTooltipModule,
-    CodificacionesTableComponent,
+    MatIcon,
     // LeyesTableComponent,
     // IngeniosTableComponent,
   ],
   templateUrl: './parametricas.component.html',
+   styleUrl: './parametricas.component.scss',
 })
 export class ParametricasComponent {
   private readonly dialog = inject(MatDialog);
 
   abrirNuevaCodificacion(): void {
     this.dialog.open(CodificacionFormDialogComponent, {
-      width: '860px',
+      // width: '860px',
+      width: '900px',
+      maxWidth: '95vw',
       autoFocus: false,
     });
   }
 
-  // A futuro:
-  // abrirNuevaLey(): void {
-  //   this.dialog.open(LeyFormDialogComponent, { width: '560px', autoFocus: false });
-  // }
-  //
-  // abrirNuevoIngenio(): void {
-  //   this.dialog.open(IngenioFormDialogComponent, { width: '560px', autoFocus: false });
-  // }
+  abrirNuevaCotizacion(): void {
+    this.dialog.open(CotizacionFormDialogComponent, {
+      width: '1000px',
+      maxWidth: '95vw',
+      autoFocus: false,
+    });
+  }
+
+  abrirNuevoIngenio(): void {
+    this.dialog.open(IngenioFormDialogComponent, {
+      width: '900px',
+      maxWidth: '95vw',
+      autoFocus: false,
+    });
+  }
 }
