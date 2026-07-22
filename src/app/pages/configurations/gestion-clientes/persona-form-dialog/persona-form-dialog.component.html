@@ -2,82 +2,113 @@
 
 <mat-dialog-content>
   @if (cargandoCatalogos()) {
-    <div class="dialog-loading">
-      <mat-spinner diameter="32"></mat-spinner>
-      <span>Cargando catálogos...</span>
-    </div>
+  <div class="dialog-loading">
+    <mat-spinner diameter="32"></mat-spinner>
+    <span>Cargando catálogos...</span>
+  </div>
   } @else {
-    <form [formGroup]="form" class="persona-form">
-      <div class="persona-form__grid">
-        <mat-form-field appearance="outline">
-          <mat-label>Nombres</mat-label>
-          <input matInput formControlName="nombres" />
-          @if (f.nombres.hasError('required') && f.nombres.touched) {
-            <mat-error>Obligatorio</mat-error>
-          }
-        </mat-form-field>
+  <form [formGroup]="form" class="persona-form">
+    <div class="persona-form__grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Nombres</mat-label>
+        <input matInput formControlName="nombres" />
+        @if (f.nombres.hasError('required') && f.nombres.touched) {
+        <mat-error>Obligatorio</mat-error>
+        }
+        @if (f.nombres.hasError('pattern') && f.nombres.touched) {
+        <mat-error>Solo letras y espacios</mat-error>
+        }
+      </mat-form-field>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Apellido paterno</mat-label>
-          <input matInput formControlName="apellidoPaterno" />
-          @if (f.apellidoPaterno.hasError('required') && f.apellidoPaterno.touched) {
-            <mat-error>Obligatorio</mat-error>
-          }
-        </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Apellido paterno</mat-label>
+        <input matInput formControlName="apellidoPaterno" />
+        @if (f.apellidoPaterno.hasError('required') && f.apellidoPaterno.touched) {
+        <mat-error>Obligatorio</mat-error>
+        }
+        @if (f.apellidoPaterno.hasError('pattern') && f.apellidoPaterno.touched) {
+        <mat-error>Solo letras y espacios</mat-error>
+        }
+      </mat-form-field>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Apellido materno</mat-label>
-          <input matInput formControlName="apellidoMaterno" />
-          @if (f.apellidoMaterno.hasError('required') && f.apellidoMaterno.touched) {
-            <mat-error>Obligatorio</mat-error>
-          }
-        </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Apellido materno</mat-label>
+        <input matInput formControlName="apellidoMaterno" />
+        @if (f.apellidoMaterno.hasError('required') && f.apellidoMaterno.touched) {
+        <mat-error>Obligatorio</mat-error>
+        }
+        @if (f.apellidoMaterno.hasError('pattern') && f.apellidoMaterno.touched) {
+        <mat-error>Solo letras y espacios</mat-error>
+        }
+      </mat-form-field>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Tipo de documento</mat-label>
-          <mat-select formControlName="idTipoDocumento">
-            @for (tipo of tiposDocumentoCatalogo(); track tipo.id) {
-              <mat-option [value]="tipo.id">{{ tipo.nombre }}</mat-option>
-            }
-          </mat-select>
-          @if (f.idTipoDocumento.hasError('required') && f.idTipoDocumento.touched) {
-            <mat-error>Selecciona un tipo</mat-error>
+      <mat-form-field appearance="outline">
+        <mat-label>Tipo de documento</mat-label>
+        <mat-select formControlName="idTipoDocumento">
+          @for (tipo of tiposDocumentoCatalogo(); track tipo.id) {
+          <mat-option [value]="tipo.id">{{ tipo.nombre }}</mat-option>
           }
-        </mat-form-field>
+        </mat-select>
+        @if (f.idTipoDocumento.hasError('required') && f.idTipoDocumento.touched) {
+        <mat-error>Selecciona un tipo</mat-error>
+        }
+      </mat-form-field>
 
-        <mat-form-field appearance="outline">
-          <mat-label>N° de documento</mat-label>
-          <input matInput formControlName="numeroDocumento" />
-          @if (f.numeroDocumento.hasError('required') && f.numeroDocumento.touched) {
-            <mat-error>Obligatorio</mat-error>
-          }
-        </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>N° de documento</mat-label>
+        <input matInput formControlName="numeroDocumento" />
+        @if (f.numeroDocumento.hasError('required') && f.numeroDocumento.touched) {
+        <mat-error>Obligatorio</mat-error>
+        }
+        @if (f.numeroDocumento.hasError('pattern') && f.numeroDocumento.touched) {
+        <mat-error>Formato inválido (ej: 2878532-1T, E-10137653)</mat-error>
+        }
+      </mat-form-field>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Celular</mat-label>
-          <input matInput formControlName="celular" />
-          @if (f.celular.hasError('required') && f.celular.touched) {
-            <mat-error>Obligatorio</mat-error>
-          }
-          @if (f.celular.hasError('pattern') && f.celular.touched) {
-            <mat-error>Solo números (6 a 15 dígitos)</mat-error>
-          }
-        </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Celular</mat-label>
+        <input matInput formControlName="celular" />
+        @if (f.celular.hasError('required') && f.celular.touched) {
+        <mat-error>Obligatorio</mat-error>
+        }
+        @if (f.celular.hasError('pattern') && f.celular.touched) {
+        <mat-error>Solo números (6 a 15 dígitos)</mat-error>
+        }
+      </mat-form-field>
 
-        <mat-form-field appearance="outline" class="persona-form__full">
-          <mat-label>Tipos de persona</mat-label>
-          <mat-select formControlName="tiposPersona" multiple>
-            @for (tipo of tiposPersonaCatalogo(); track tipo.id) {
-              <mat-option [value]="tipo.id">{{ tipo.nombre }}</mat-option>
-            }
-          </mat-select>
-          <mat-hint>Puede seleccionar uno o varios (ej. Cliente y Transportista)</mat-hint>
-          @if (f.tiposPersona.hasError('minSeleccion') && f.tiposPersona.touched) {
-            <mat-error>Selecciona al menos un tipo</mat-error>
+      <mat-form-field appearance="outline" class="persona-form__full">
+        <mat-label>Tipos de persona</mat-label>
+        <mat-select formControlName="tiposPersona" multiple>
+          @for (tipo of tiposPersonaCatalogo(); track tipo.id) {
+          <mat-option [value]="tipo.id">{{ tipo.nombre }}</mat-option>
           }
-        </mat-form-field>
-      </div>
-    </form>
+        </mat-select>
+        <mat-hint>Puede seleccionar uno o varios (ej. Cliente y Transportista)</mat-hint>
+        @if (f.tiposPersona.hasError('minSeleccion') && f.tiposPersona.touched) {
+        <mat-error>Selecciona al menos un tipo</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="persona-form__full">
+        <mat-label>Actor productivo minero</mat-label>
+        <input matInput formControlName="actorProductivoMinero" [matAutocomplete]="autoActor"
+          #actorTrigger="matAutocompleteTrigger" (focus)="actorTrigger.openPanel()"
+          placeholder="Ingenio, cooperativa o empresa minera" />
+        <mat-icon matSuffix>expand_more</mat-icon>
+        <mat-autocomplete #autoActor="matAutocomplete" [displayWith]="displayActor">
+          @for (actor of (actoresFiltrados$ | async); track actor.id) {
+          <mat-option [value]="actor">
+            <span>{{ actor.nombre }}</span>
+            <small class="actor-option__tipo"> · {{ actor.tipoActorProductivoMinero?.descripcion }}</small>
+          </mat-option>
+          } @empty {
+          <mat-option disabled>Sin resultados</mat-option>
+          }
+        </mat-autocomplete>
+        <mat-hint>Opcional: relaciona a esta persona con un actor productivo minero</mat-hint>
+      </mat-form-field>
+    </div>
+  </form>
   }
 </mat-dialog-content>
 
@@ -85,10 +116,10 @@
   <button mat-stroked-button (click)="cancelar()" [disabled]="guardando()">Cancelar</button>
   <button mat-flat-button color="primary" (click)="guardar()" [disabled]="guardando() || cargandoCatalogos()">
     @if (guardando()) {
-      <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
-      <span>Guardando...</span>
+    <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
+    <span>Guardando...</span>
     } @else {
-      <span>{{ esEdicion ? 'Guardar cambios' : 'Crear persona' }}</span>
+    <span>{{ esEdicion ? 'Guardar cambios' : 'Crear persona' }}</span>
     }
   </button>
 </mat-dialog-actions>

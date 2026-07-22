@@ -7,7 +7,6 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -19,17 +18,16 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { RouterModule } from '@angular/router';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
+import { AuthService } from 'src/app/core/auth/services/auth.service';
+import { RolCodigo } from 'src/app/core/auth/models/auth.models';
 import {
   ESTADOS_OPERACION,
   ESTADO_LIQUIDADO_ID,
   RegistroMineral,
 } from '../models/registro-mineral.models';
 import { RegistroMineralService } from '../services/registro-mineral.service';
-import {
-  RegistroFormDialogComponent,
-  RegistroFormDialogData,
-} from './registro-form-dialog/registro-form-dialog.component';
 
 @Component({
   selector: 'app-recepcion-mineral',
@@ -37,6 +35,7 @@ import {
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
+    RouterModule,
     MatFormFieldModule,
     MatSelectModule,
     MatRadioModule,
@@ -51,7 +50,6 @@ import {
     MatMenuModule,
     MatTooltipModule,
     MatProgressSpinnerModule,
-    MatDialogModule,
     MatDatepickerModule,
     MatNativeDateModule,
   ],
@@ -60,10 +58,17 @@ import {
 })
 export class RecepcionMineralComponent implements OnInit {
   private readonly registroMineralService = inject(RegistroMineralService);
-  private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly authService = inject(AuthService);
 
-  readonly displayedColumns = ['operacion', 'proveedor', 'detalle', 'estado', 'acciones'];
+  readonly displayedColumns = [
+    'id',
+    'operacion',
+    'proveedor',
+    'detalle',
+    'estado',
+    'acciones',
+  ];
   readonly estados = ESTADOS_OPERACION;
   readonly ESTADO_LIQUIDADO_ID = ESTADO_LIQUIDADO_ID;
 
@@ -80,6 +85,14 @@ export class RecepcionMineralComponent implements OnInit {
   readonly fechaDesdeControl = new FormControl<Date | null>(null);
   readonly fechaHastaControl = new FormControl<Date | null>(null);
 
+  /** ADMINISTRADOR y OPERADOR pueden editar y cambiar estado; TÉCNICO solo lista y crea. */
+  get puedeGestionar(): boolean {
+    return this.authService.hasRole(
+      RolCodigo.ADMINISTRADOR,
+      RolCodigo.OPERADOR,
+    );
+  }
+
   ngOnInit(): void {
     this.searchControl.valueChanges
       .pipe(debounceTime(400), distinctUntilChanged())
@@ -90,8 +103,12 @@ export class RecepcionMineralComponent implements OnInit {
       .subscribe(() => this.reiniciarYcargar());
 
     this.estadoControl.valueChanges.subscribe(() => this.reiniciarYcargar());
-    this.fechaDesdeControl.valueChanges.subscribe(() => this.reiniciarYcargar());
-    this.fechaHastaControl.valueChanges.subscribe(() => this.reiniciarYcargar());
+    this.fechaDesdeControl.valueChanges.subscribe(() =>
+      this.reiniciarYcargar(),
+    );
+    this.fechaHastaControl.valueChanges.subscribe(() =>
+      this.reiniciarYcargar(),
+    );
 
     this.cargarRegistros();
   }
@@ -130,9 +147,13 @@ export class RecepcionMineralComponent implements OnInit {
         },
         error: () => {
           this.loading.set(false);
-          this.snackBar.open('No se pudo cargar el listado de recepciones', 'Cerrar', {
-            duration: 4000,
-          });
+          this.snackBar.open(
+            'No se pudo cargar el listado de recepciones',
+            'Cerrar',
+            {
+              duration: 4000,
+            },
+          );
         },
       });
   }
@@ -158,57 +179,55 @@ export class RecepcionMineralComponent implements OnInit {
     return `${p.nombres} ${p.apellidoPaterno} ${p.apellidoMaterno}`.trim();
   }
 
+  leyesTexto(registro: RegistroMineral): string {
+    if (!registro.detalles?.length) return 'Sin leyes registradas';
+    return registro.detalles
+      .map((d) => `${d.mineral?.simbolo ?? 'Mineral ' + d.idMineral} ${d.ley}%`)
+      .join(' · ');
+  }
+
   estaLiquidado(registro: RegistroMineral): boolean {
     return registro.idEstado === ESTADO_LIQUIDADO_ID;
   }
 
   claseEstado(idEstado: number): string {
     switch (idEstado) {
-      case 1: // PENDIENTE
+      case 1:
         return 'estado-chip--pendiente';
-      case 2: // EN RECEPCIÓN
-      case 3: // EN REVISIÓN
+      case 2:
+      case 3:
         return 'estado-chip--proceso';
-      case 4: // APROBADO
+      case 4:
         return 'estado-chip--aprobado';
-      case 7: // LIQUIDADO
+      case 7:
         return 'estado-chip--liquidado';
-      case 5: // RECHAZADO A TOL
-      case 6: // CANCELADO
+      case 5:
+      case 6:
         return 'estado-chip--rechazado';
       default:
         return '';
     }
   }
 
-  abrirDialogo(registro: RegistroMineral | null): void {
-    if (registro && this.estaLiquidado(registro)) return; // defensa extra, el botón ya está deshabilitado
-
-    const data: RegistroFormDialogData = { registro };
-
-    this.dialog
-      .open(RegistroFormDialogComponent, { data, width: '680px' })
-      .afterClosed()
-      .subscribe((resultado) => {
-        if (resultado) {
-          this.cargarRegistros();
-        }
-      });
-  }
-
   cambiarEstado(registro: RegistroMineral, nuevoEstadoId: number): void {
-    if (this.estaLiquidado(registro)) return;
+    if (this.estaLiquidado(registro) || !this.puedeGestionar) return;
 
-    this.registroMineralService.cambiarEstado(registro.id, nuevoEstadoId).subscribe({
-      next: (actualizado) => {
-        this.registros.update((lista) =>
-          lista.map((r) => (r.id === registro.id ? actualizado : r))
-        );
-        this.snackBar.open('Estado actualizado correctamente', 'Cerrar', { duration: 3000 });
-      },
-      error: () => {
-        this.snackBar.open('No se pudo cambiar el estado', 'Cerrar', { duration: 4000 });
-      },
-    });
+    this.registroMineralService
+      .cambiarEstado(registro.id, nuevoEstadoId)
+      .subscribe({
+        next: (actualizado) => {
+          this.registros.update((lista) =>
+            lista.map((r) => (r.id === registro.id ? actualizado : r)),
+          );
+          this.snackBar.open('Estado actualizado correctamente', 'Cerrar', {
+            duration: 3000,
+          });
+        },
+        error: () => {
+          this.snackBar.open('No se pudo cambiar el estado', 'Cerrar', {
+            duration: 4000,
+          });
+        },
+      });
   }
 }

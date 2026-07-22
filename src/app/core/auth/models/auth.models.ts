@@ -51,4 +51,6 @@ export interface RefreshResponse {
 export enum RolCodigo {
   ADMINISTRADOR = 'ROLE_ADMINISTRADOR',
   OPERADOR = 'ROLE_OPERADOR',
+  TECNICO = 'ROLE_TECNICO',
+
 }

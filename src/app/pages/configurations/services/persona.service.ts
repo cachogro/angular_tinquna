@@ -4,6 +4,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, shareReplay } from 'rxjs';
 import { APP_CONFIG } from 'src/app/config';
 import {
+  ActorProductivoMinero,
   FiltrosPersona,
   GuardarPersonaRequest,
   PersonaCI,
@@ -20,6 +21,7 @@ export class PersonaService {
 
   private personaTipos$?: Observable<PersonaTipoCatalogo[]>;
   private tiposDocumento$?: Observable<TipoDocumentoCatalogo[]>;
+  private actoresMinero$?: Observable<ActorProductivoMinero[]>;
 
   /** Sin `id` en el request -> crea. Con `id` -> actualiza (solo los campos enviados). */
   guardarPersona(data: GuardarPersonaRequest): Observable<PersonaCI> {
@@ -38,7 +40,6 @@ export class PersonaService {
   //   if (filtros.activo !== undefined)
   //     params = params.set('activo', filtros.activo);
 
-
   //   console.log(params);
 
   //   const ruta = this.http.get<PersonasPaginadas>(`${this.baseUrl}/persona_ci`, {
@@ -49,28 +50,25 @@ export class PersonaService {
   //   return ruta
   // }
 
-
   listarPersonas(filtros: FiltrosPersona): Observable<PersonasPaginadas> {
-  let params = new HttpParams()
-    .set('page', filtros.page)
-    .set('limit', filtros.limit);
-  if (filtros.busqueda) params = params.set('busqueda', filtros.busqueda);
-  if (filtros.numeroDocumento)
-    params = params.set('numeroDocumento', filtros.numeroDocumento);
-  if (filtros.idTipoPersona)
-    params = params.set('idTipoPersona', filtros.idTipoPersona);
-  if (filtros.activo !== undefined)
-    params = params.set('activo', filtros.activo);
+    let params = new HttpParams()
+      .set('page', filtros.page)
+      .set('limit', filtros.limit);
+    if (filtros.busqueda) params = params.set('busqueda', filtros.busqueda);
+    if (filtros.numeroDocumento)
+      params = params.set('numeroDocumento', filtros.numeroDocumento);
+    if (filtros.idTipoPersona)
+      params = params.set('idTipoPersona', filtros.idTipoPersona);
+    if (filtros.activo !== undefined)
+      params = params.set('activo', filtros.activo);
 
-  const urlCompleta = `${this.baseUrl}/persona_ci?${params.toString()}`;
-  console.log('URL enviada:', urlCompleta);
+    const urlCompleta = `${this.baseUrl}/persona_ci?${params.toString()}`;
+    console.log('URL enviada:', urlCompleta);
 
-  return this.http.get<PersonasPaginadas>(`${this.baseUrl}/persona_ci`, {
-    params,
-  });
-}
-
-
+    return this.http.get<PersonasPaginadas>(`${this.baseUrl}/persona_ci`, {
+      params,
+    });
+  }
 
   cambiarEstado(id: string, activo: boolean): Observable<PersonaCI> {
     return this.http.patch<PersonaCI>(
@@ -99,5 +97,17 @@ export class PersonaService {
         .pipe(shareReplay(1));
     }
     return this.tiposDocumento$;
+  }
+
+  /** Catálogo cacheado — no se vuelve a pedir tras la primera carga */
+  getAllActoresMineros(): Observable<ActorProductivoMinero[]> {
+    if (!this.actoresMinero$) {
+      this.actoresMinero$ = this.http
+        .get<
+          ActorProductivoMinero[]
+        >(`${this.parametricasUrl}/actor-productivo-minero/allActorMineros`)
+        .pipe(shareReplay(1));
+    }
+    return this.actoresMinero$;
   }
 }

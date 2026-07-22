@@ -2,14 +2,14 @@
 FORMULARIO
 ===========================*/
 
-.ingenio-form {
+.actor-form {
     display: grid;
     grid-template-columns: repeat(3, minmax(220px, 1fr));
     gap: 18px;
     margin-bottom: 18px;
 }
 
-.ingenio-form mat-form-field {
+.actor-form mat-form-field {
     width: 100%;
 }
 
@@ -30,14 +30,15 @@ BOTONES
 }
 
 /*==========================
-FILTROS (búsqueda)
+FILTROS (búsqueda + tipo)
 ===========================*/
 
 .filtros {
     display: flex;
-    align-items: center; /* Alineación vertical centralizada */
+    align-items: center;
+    /* Alineación vertical centralizada */
     gap: 18px;
-    flex-wrap: nowrap; /* Evita que el botón baje a la siguiente línea */
+    flex-wrap: wrap;
     margin-bottom: 12px;
     width: 100%;
 }
@@ -47,9 +48,13 @@ FILTROS (búsqueda)
     min-width: 240px;
 }
 
+.filtro-tipo {
+    flex: 0 0 220px;
+    min-width: 180px;
+}
+
 /* Ajuste específico para que el botón tenga la misma altura visual que el mat-form-field */
 .btn-limpiar {
-   // height: 56px; /* Altura estándar para campos 'outline' de Material */
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -71,7 +76,7 @@ TABLA
 
 .tabla {
     width: 100%;
-    min-width: 780px;
+    min-width: 880px;
 }
 
 /*==========================
@@ -79,8 +84,8 @@ ENCABEZADO
 ===========================*/
 
 .mat-mdc-header-row {
-    background: var(--mat-sys-primary);
-    color: var(--mat-sys-on-primary);
+    background: #0d6efd !important;
+    color: #ffffff !important;
     font-weight: 600;
     letter-spacing: .3px;
     position: sticky;
@@ -141,13 +146,13 @@ RESPONSIVE
 ===========================*/
 
 @media (max-width: 1000px) {
-    .ingenio-form {
+    .actor-form {
         grid-template-columns: repeat(2, 1fr);
     }
 }
 
 @media (max-width: 700px) {
-    .ingenio-form {
+    .actor-form {
         grid-template-columns: 1fr;
     }
 
@@ -164,12 +169,16 @@ RESPONSIVE
         align-items: stretch;
     }
 
+    .filtro-tipo {
+        flex: 1 1 auto;
+    }
+
     .tabla-scroll {
         overflow-x: auto;
         overflow-y: auto;
     }
 
     .tabla {
-        min-width: 780px;
+        min-width: 880px;
     }
 }

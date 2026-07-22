@@ -12,6 +12,20 @@ export interface PersonaTipoCatalogo {
   descripcion: string;
 }
 
+export interface TipoActorProductivoMineroCatalogo {
+  id: string;
+  descripcion: string;
+}
+
+export interface ActorProductivoMinero {
+  id: string;
+  idTipoActorProductivoMinero: string;
+  tipoActorProductivoMinero?: TipoActorProductivoMineroCatalogo;
+  nombre: string;
+  direccion?: string;
+  telefono?: string;
+}
+
 export interface PersonaTipoAsignado {
   idPersona: string;
   idPersonaTipo: number;
@@ -31,6 +45,8 @@ export interface PersonaCI {
   numeroDocumento: string;
   celular: string;
   observaciones?: string | null;
+  idActorProductivoMinero?: string | null;
+  actorProductivoMinero?: ActorProductivoMinero | null;
   personaTipos: PersonaTipoAsignado[];
 }
 
@@ -44,6 +60,7 @@ export interface GuardarPersonaRequest {
   numeroDocumento?: string;
   celular?: string;
   tiposPersona?: number[];
+  idActorProductivoMinero?: string | number | null;
 }
 
 export interface FiltrosPersona {

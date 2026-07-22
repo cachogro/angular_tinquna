@@ -149,32 +149,96 @@ export interface Ingenio {
   fechaRegistro?: string;
 }
 
+
+// ==========================================================
+// ACTOR PRODUCTIVO MINERO (antes "Ingenio")
+// ==========================================================
+
+
+// export interface GuardarIngenioRequest {
+//   id?: string;
+//   nombre: string;
+//   direccion: string;
+//   telefono: string;
+// }
+
+// export interface FiltrosIngenio {
+//   page: number;
+//   limit: number;
+//   /** Solo se busca por nombre */
+//   busqueda?: string;
+//   activo?: boolean;
+//   /** Campo por el que se ordena. Por defecto 'id' */
+//   orderBy?: 'id' | 'nombre' | 'fechaRegistro';
+//   /** Por defecto 'DESC' (más nuevos primero) */
+//   orderDirection?: 'ASC' | 'DESC';
+// }
+
+// export interface IngeniosPaginados {
+//   data: Ingenio[];
+//   total: number;
+//   page: number;
+//   limit: number;
+// }
+
+
+export interface TipoActorProductivoMinero {
+  id: number | string;
+  descripcion: string;
+  activo?: boolean;
+  usuarioUltimaModificacion?: string | null;
+  fechaUltimaModificacion?: string | null;
+}
+
+/**
+ * Versión resumida del tipo tal como podría venir anidado en la
+ * respuesta del listado (igual que `mineral` en Cotizacion). Si el
+ * back no lo anida, el componente resuelve el nombre buscando en el
+ * catálogo cacheado por `idTipoActorProductivoMinero`.
+ */
+export interface ActorProductivoMinero {
+  id: string;
+  nombre: string;
+  direccion: string;
+  telefono: string;
+  idTipoActorProductivoMinero: number | string;
+  tipoActorProductivoMinero?: TipoActorProductivoMinero;
+  activo?: boolean;
+  usuarioUltimaModificacion?: string | null;
+  fechaUltimaModificacion?: string | null;
+  fechaRegistro?: string;
+}
+
 /**
  * El back usa un solo POST tanto para crear como para actualizar:
  * sin `id` -> crea, con `id` -> actualiza.
  */
-export interface GuardarIngenioRequest {
+export interface GuardarActorProductivoMineroRequest {
   id?: string;
   nombre: string;
   direccion: string;
   telefono: string;
+  idTipoActorProductivoMinero: number | string;
 }
 
-export interface FiltrosIngenio {
+export interface FiltrosActorProductivoMinero {
   page: number;
   limit: number;
   /** Solo se busca por nombre */
   busqueda?: string;
   activo?: boolean;
+  idTipoActorProductivoMinero?: number | string;
   /** Campo por el que se ordena. Por defecto 'id' */
   orderBy?: 'id' | 'nombre' | 'fechaRegistro';
   /** Por defecto 'DESC' (más nuevos primero) */
   orderDirection?: 'ASC' | 'DESC';
 }
 
-export interface IngeniosPaginados {
-  data: Ingenio[];
+export interface ActoresProductivosMinerosPaginados {
+  data: ActorProductivoMinero[];
   total: number;
   page: number;
   limit: number;
 }
+
+

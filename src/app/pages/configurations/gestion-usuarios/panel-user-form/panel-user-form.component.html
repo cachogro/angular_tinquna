@@ -11,6 +11,9 @@
       </div>
     </div>
   </mat-card-header>
+
+
+
   <mat-card-content class="b-t-1">
     <div class="form-page">
       @if (cargandoCatalogos() || cargandoUsuario()) {
@@ -19,6 +22,8 @@
         <span>Cargando información...</span>
       </div>
       } @else {
+
+        
       <form [formGroup]="form" (ngSubmit)="guardar()">
         <section class="form-section">
           <h3 class="form-section__title">

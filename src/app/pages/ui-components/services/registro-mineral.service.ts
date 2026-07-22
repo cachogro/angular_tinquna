@@ -20,28 +20,43 @@ export class RegistroMineralService {
   private codificaciones$?: Observable<CodificacionCatalogo[]>;
 
   /** Sin `id` en el request -> crea. Con `id` -> actualiza. */
-  guardarRegistro(data: GuardarRegistroMineralRequest): Observable<RegistroMineral> {
-    return this.http.post<RegistroMineral>(`${this.baseUrl}/registro_mineral`, data);
+  guardarRegistro(
+    data: GuardarRegistroMineralRequest,
+  ): Observable<RegistroMineral> {
+    return this.http.post<RegistroMineral>(
+      `${this.baseUrl}/registro_mineral`,
+      data,
+    );
   }
 
-  listarRegistros(filtros: FiltrosRegistroMineral): Observable<RegistrosMineralPaginados> {
-    let params = new HttpParams().set('page', filtros.page).set('limit', filtros.limit);
+  listarRegistros(
+    filtros: FiltrosRegistroMineral,
+  ): Observable<RegistrosMineralPaginados> {
+    let params = new HttpParams()
+      .set('page', filtros.page)
+      .set('limit', filtros.limit);
 
     if (filtros.busqueda) params = params.set('busqueda', filtros.busqueda);
-    if (filtros.numeroDocumento) params = params.set('numeroDocumento', filtros.numeroDocumento);
+    if (filtros.numeroDocumento)
+      params = params.set('numeroDocumento', filtros.numeroDocumento);
     if (filtros.idEstado) params = params.set('idEstado', filtros.idEstado);
-    if (filtros.fechaDesde) params = params.set('fechaDesde', filtros.fechaDesde);
-    if (filtros.fechaHasta) params = params.set('fechaHasta', filtros.fechaHasta);
+    if (filtros.fechaDesde)
+      params = params.set('fechaDesde', filtros.fechaDesde);
+    if (filtros.fechaHasta)
+      params = params.set('fechaHasta', filtros.fechaHasta);
 
-    return this.http.get<RegistrosMineralPaginados>(`${this.baseUrl}/registro_mineral`, {
-      params,
-    });
+    return this.http.get<RegistrosMineralPaginados>(
+      `${this.baseUrl}/registro_mineral`,
+      {
+        params,
+      },
+    );
   }
 
   cambiarEstado(id: string, idEstado: number): Observable<RegistroMineral> {
     return this.http.patch<RegistroMineral>(
       `${this.baseUrl}/registro_mineral/cambiar_estado/${id}`,
-      { idEstado }
+      { idEstado },
     );
   }
 

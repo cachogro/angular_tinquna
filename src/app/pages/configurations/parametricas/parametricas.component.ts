@@ -6,7 +6,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { CodificacionFormDialogComponent } from './codificaciones/codificacion-form-dialog.component';
 import { CotizacionFormDialogComponent } from './cotizacion/cotizacion-form-dialog.component';
-import { IngenioFormDialogComponent } from './ingenio/ingenio-form-dialog.component';
+import { ActorProductivoMineroFormDialogComponent } from './actor-productivo-minero/actor-productivo-minero-form-dialog.component';
 import { MatIcon } from '@angular/material/icon';
 
 // A futuro, cuando implementes Ley e Ingenio, importa aquí sus modales
@@ -28,7 +28,7 @@ import { MatIcon } from '@angular/material/icon';
     // IngeniosTableComponent,
   ],
   templateUrl: './parametricas.component.html',
-   styleUrl: './parametricas.component.scss',
+  styleUrl: './parametricas.component.scss',
 })
 export class ParametricasComponent {
   private readonly dialog = inject(MatDialog);
@@ -50,11 +50,14 @@ export class ParametricasComponent {
     });
   }
 
-  abrirNuevoIngenio(): void {
-    this.dialog.open(IngenioFormDialogComponent, {
+  abrirNuevoActorProductivoMinero(): void {
+    this.dialog.open(ActorProductivoMineroFormDialogComponent, {
       width: '900px',
       maxWidth: '95vw',
       autoFocus: false,
     });
   }
+
+
+
 }

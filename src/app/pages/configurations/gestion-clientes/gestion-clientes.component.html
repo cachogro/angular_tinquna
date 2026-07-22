@@ -1,20 +1,24 @@
 <mat-card class="cardWithShadow theme-card">
-  <!-- <mat-card-header>
-    <mat-card-title class="m-b-0">Operaciones</mat-card-title>
-  </mat-card-header> -->
+  <mat-card-header>
+    <div>
+      <mat-card-title class="m-b-0">Clientes y personas</mat-card-title>
+      <mat-card-subtitle class="m-b-0">Proveedores, clientes, choferes, distribuidores y
+        transportistas</mat-card-subtitle>
+    </div>
+    <div style="margin-left: auto;">
+
+      <button mat-flat-button color="primary" class="m-r-8" (click)="abrirDialogo(null)">
+        <mat-icon>person_add</mat-icon>
+        Nueva persona
+      </button>
+
+    </div>
+
+
+  </mat-card-header>
 
   <mat-card-content class="b-t-1">
     <div class="clientes-page">
-      <div class="clientes-page__header">
-        <div>
-          <h2 class="clientes-page__title">Clientes y personas</h2>
-          <p class="clientes-page__subtitle">Proveedores, clientes, choferes, distribuidores y transportistas</p>
-        </div>
-        <button mat-flat-button color="primary" (click)="abrirDialogo(null)">
-          <mat-icon>person_add</mat-icon>
-          Nueva persona
-        </button>
-      </div>
 
       <div class="clientes-toolbar">
         <mat-form-field appearance="outline" class="clientes-toolbar__search" subscriptSizing="dynamic">

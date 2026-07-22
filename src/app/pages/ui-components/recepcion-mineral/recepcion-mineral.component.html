@@ -1,20 +1,19 @@
 <mat-card class="cardWithShadow theme-card">
   <mat-card-header>
-    <mat-card-title class="m-b-0">Recepcion de Minerales</mat-card-title>
+    <div>
+      <mat-card-title class="m-b-0">Registros de recepción</mat-card-title>
+      <mat-card-subtitle class="m-b-0">Ingreso y seguimiento del mineral recibido de proveedores</mat-card-subtitle>
+    </div>
+    <div style="margin-left: auto;">
+      <a mat-flat-button color="primary" routerLink="nuevo">
+        <mat-icon>add_box</mat-icon>
+        Nueva recepción
+      </a>
+    </div>
   </mat-card-header>
 
   <mat-card-content class="b-t-1">
     <div class="recepcion-page">
-      <div class="recepcion-page__header">
-        <div>
-          <h2 class="recepcion-page__title">Registros de recepción</h2>
-          <p class="recepcion-page__subtitle">Ingreso y seguimiento del mineral recibido de proveedores</p>
-        </div>
-        <button mat-flat-button color="primary" (click)="abrirDialogo(null)">
-          <mat-icon>add_box</mat-icon>
-          Nueva recepción
-        </button>
-      </div>
 
       <div class="recepcion-toolbar">
         <mat-form-field appearance="outline" class="recepcion-toolbar__search" subscriptSizing="dynamic">
@@ -30,7 +29,7 @@
           <mat-select [formControl]="estadoControl" placeholder="Estado">
             <mat-option [value]="null">Todos los estados</mat-option>
             @for (estado of estados; track estado.id) {
-              <mat-option [value]="estado.id">{{ estado.nombre }}</mat-option>
+            <mat-option [value]="estado.id">{{ estado.nombre }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
@@ -57,98 +56,111 @@
 
       <div class="recepcion-table-wrapper">
         @if (loading()) {
-          <div class="recepcion-loading">
-            <mat-spinner diameter="36"></mat-spinner>
-            <span>Cargando recepciones...</span>
-          </div>
+        <div class="recepcion-loading">
+          <mat-spinner diameter="36"></mat-spinner>
+          <span>Cargando recepciones...</span>
+        </div>
         } @else if (registros().length === 0) {
-          <div class="recepcion-empty">
-            <mat-icon>inventory_2</mat-icon>
-            <p>No se encontraron recepciones con estos filtros</p>
-          </div>
+        <div class="recepcion-empty">
+          <mat-icon>inventory_2</mat-icon>
+          <p>No se encontraron recepciones con estos filtros</p>
+        </div>
         } @else {
-          <table mat-table [dataSource]="registros()" class="recepcion-table">
-            <ng-container matColumnDef="operacion">
-              <th mat-header-cell *matHeaderCellDef>Operación</th>
-              <td mat-cell *matCellDef="let r">
-                <div class="operacion-cell__codigo">{{ r.codigoOperacion }}</div>
-                <div class="operacion-cell__fecha">
-                  <mat-icon inline>event</mat-icon> {{ r.fechaOperacion }}
-                </div>
-              </td>
-            </ng-container>
 
-            <ng-container matColumnDef="proveedor">
-              <th mat-header-cell *matHeaderCellDef>Proveedor</th>
-              <td mat-cell *matCellDef="let r">
-                <div class="proveedor-cell__nombre">{{ nombreProveedor(r) }}</div>
-                <div class="proveedor-cell__doc">{{ r.persona?.numeroDocumento ?? '—' }}</div>
-              </td>
-            </ng-container>
 
-            <ng-container matColumnDef="detalle">
-              <th mat-header-cell *matHeaderCellDef>Detalle</th>
-              <td mat-cell *matCellDef="let r">
-                <div class="detalle-cell">
-                  <span>{{ r.codificacion?.codigo ?? '—' }} · {{ r.numeroSacos }} sacos</span>
-                  <span>{{ r.pesoNeto }} kg · Ley {{ r.ley }}%</span>
-                </div>
-              </td>
-            </ng-container>
 
-            <ng-container matColumnDef="estado">
-              <th mat-header-cell *matHeaderCellDef>Estado</th>
-              <td mat-cell *matCellDef="let r">
-                <mat-chip class="estado-chip" [ngClass]="claseEstado(r.idEstado)">
-                  {{ r.estado?.nombre ?? ('Estado #' + r.idEstado) }}
-                </mat-chip>
-              </td>
-            </ng-container>
 
-            <ng-container matColumnDef="acciones">
-              <th mat-header-cell *matHeaderCellDef class="acciones-header">Acciones</th>
-              <td mat-cell *matCellDef="let r" class="acciones-cell">
-                <button
-                  mat-icon-button
-                  [disabled]="estaLiquidado(r)"
-                  [matTooltip]="estaLiquidado(r) ? 'No se puede editar: ya está liquidado' : 'Editar'"
-                  (click)="abrirDialogo(r)"
-                >
-                  <mat-icon>edit</mat-icon>
+
+
+
+        <table mat-table [dataSource]="registros()" class="recepcion-table">
+          <ng-container matColumnDef="id">
+            <th mat-header-cell *matHeaderCellDef>ID</th>
+            <td mat-cell *matCellDef="let r">
+              <div class="operacion-cell__id">{{ r.id }}</div>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="operacion">
+            <th mat-header-cell *matHeaderCellDef>Operación</th>
+            <td mat-cell *matCellDef="let r">
+              <div class="operacion-cell__codigo">{{ r.codigoOperacion }}</div>
+              <div class="operacion-cell__fecha">
+                <mat-icon inline>event</mat-icon> {{ r.fechaOperacion }}
+              </div>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="proveedor">
+            <th mat-header-cell *matHeaderCellDef>Proveedor</th>
+            <td mat-cell *matCellDef="let r">
+              <div class="proveedor-cell__nombre">{{ nombreProveedor(r) }}</div>
+              <div class="proveedor-cell__doc">{{ r.persona?.numeroDocumento ?? '—' }}</div>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="detalle">
+            <th mat-header-cell *matHeaderCellDef>Detalle</th>
+            <td mat-cell *matCellDef="let r">
+              <div class="detalle-cell">
+                <span>{{ r.codificacion?.codigo ?? '—' }} · {{ r.numeroSacos }} sacos</span>
+                <span>{{ r.pesoNeto }} kg · {{ leyesTexto(r) }}</span>
+              </div>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="estado">
+            <th mat-header-cell *matHeaderCellDef>Estado</th>
+            <td mat-cell *matCellDef="let r">
+              <mat-chip class="estado-chip" [ngClass]="claseEstado(r.idEstado)">
+                {{ r.estado?.nombre ?? ('Estado #' + r.idEstado) }}
+              </mat-chip>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="acciones">
+            <th mat-header-cell *matHeaderCellDef class="acciones-header">Acciones</th>
+            <td mat-cell *matCellDef="let r" class="acciones-cell">
+              @if (puedeGestionar) {
+              <a mat-icon-button [routerLink]="estaLiquidado(r) ? null : ['editar', r.id]" [state]="{ registro: r }"
+                [disabled]="estaLiquidado(r)"
+                [matTooltip]="estaLiquidado(r) ? 'No se puede editar: ya está liquidado' : 'Editar'">
+                <mat-icon>edit</mat-icon>
+              </a>
+
+              <button mat-icon-button [matMenuTriggerFor]="menuEstado" [disabled]="estaLiquidado(r)"
+                [matTooltip]="estaLiquidado(r) ? 'No se puede modificar: ya está liquidado' : 'Cambiar estado'">
+                <mat-icon>sync_alt</mat-icon>
+              </button>
+              <mat-menu #menuEstado="matMenu">
+                @for (estado of estados; track estado.id) {
+                @if (estado.id !== r.idEstado) {
+                <button mat-menu-item (click)="cambiarEstado(r, estado.id)">
+                  {{ estado.nombre }}
                 </button>
+                }
+                }
+              </mat-menu>
+              } @else {
+              <span class="solo-lectura" matTooltip="Tu rol solo puede listar y crear registros">
+                <mat-icon>visibility</mat-icon>
+              </span>
+              }
+            </td>
+          </ng-container>
 
-                <button
-                  mat-icon-button
-                  [matMenuTriggerFor]="menuEstado"
-                  [disabled]="estaLiquidado(r)"
-                  [matTooltip]="estaLiquidado(r) ? 'No se puede modificar: ya está liquidado' : 'Cambiar estado'"
-                >
-                  <mat-icon>sync_alt</mat-icon>
-                </button>
-                <mat-menu #menuEstado="matMenu">
-                  @for (estado of estados; track estado.id) {
-                    @if (estado.id !== r.idEstado) {
-                      <button mat-menu-item (click)="cambiarEstado(r, estado.id)">
-                        {{ estado.nombre }}
-                      </button>
-                    }
-                  }
-                </mat-menu>
-              </td>
-            </ng-container>
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+        </table>
 
-            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-            <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
-          </table>
-
-          <mat-paginator
-            [length]="total()"
-            [pageSize]="pageSize"
-            [pageIndex]="pageIndex"
-            [pageSizeOptions]="[10, 25, 50]"
-            (page)="onPageChange($event)"
-          ></mat-paginator>
+        <mat-paginator [length]="total()" [pageSize]="pageSize" [pageIndex]="pageIndex" [pageSizeOptions]="[10, 25, 50]"
+          (page)="onPageChange($event)"></mat-paginator>
         }
+
+
+
+
+
       </div>
     </div>
   </mat-card-content>

@@ -6,7 +6,7 @@ FORMULARIO
 
     display: grid;
 
-    grid-template-columns: repeat(3, minmax(220px,1fr));
+    grid-template-columns: repeat(3, minmax(220px, 1fr));
 
     gap: 18px;
 
@@ -14,9 +14,9 @@ FORMULARIO
 
 }
 
-.codificacion-form mat-form-field{
+.codificacion-form mat-form-field {
 
-    width:100%;
+    width: 100%;
 
 }
 
@@ -25,23 +25,23 @@ FORMULARIO
 BOTONES
 ===========================*/
 
-.acciones{
+.acciones {
 
-    display:flex;
+    display: flex;
 
-    justify-content:flex-end;
+    justify-content: flex-end;
 
-    gap:12px;
+    gap: 12px;
 
-    margin-bottom:18px;
+    margin-bottom: 18px;
 
-    flex-wrap:wrap;
+    flex-wrap: wrap;
 
 }
 
-.acciones button{
+.acciones button {
 
-    min-width:170px;
+    min-width: 170px;
 
 }
 
@@ -50,28 +50,28 @@ BOTONES
 TABLA
 ===========================*/
 
-.tabla-card{
+.tabla-card {
 
-    margin-top:8px;
+    margin-top: 8px;
 
 }
 
-.tabla-scroll{
+.tabla-scroll {
 
-    overflow:auto;
+    overflow: auto;
 
-    max-height:420px;
+    max-height: 420px;
 
 }
 
 
 /* ancho mínimo para que en celular aparezca scroll horizontal */
 
-.tabla{
+.tabla {
 
-    width:100%;
+    width: 100%;
 
-    min-width:700px;
+    min-width: 700px;
 
 }
 
@@ -80,10 +80,18 @@ TABLA
 ENCABEZADO
 ===========================*/
 
-.mat-mdc-header-row{
+// .mat-mdc-header-row{
 
-    background: var(--mat-sys-primary);
-    color: var(--mat-sys-on-primary);
+//     background: var(--mat-sys-primary);
+//     color: var(--mat-sys-on-primary);
+//     font-weight: 600;
+//     letter-spacing: .3px;
+
+// }
+.mat-mdc-header-row {
+
+    background: #0d6efd !important;
+    color: #ffffff !important;
     font-weight: 600;
     letter-spacing: .3px;
 
@@ -107,32 +115,32 @@ ENCABEZADO
 FILAS COMPACTAS
 ===========================*/
 
-.mat-mdc-row{
+.mat-mdc-row {
 
-    height:42px;
+    height: 42px;
 
 }
 
-.mat-mdc-cell{
+.mat-mdc-cell {
 
-    padding-top:6px !important;
+    padding-top: 6px !important;
 
-    padding-bottom:6px !important;
+    padding-bottom: 6px !important;
 
-    font-size:13px;
+    font-size: 13px;
 
 }
 
 
 /* encabezado fijo */
 
-.mat-mdc-header-row{
+.mat-mdc-header-row {
 
-    position:sticky;
+    position: sticky;
 
-    top:0;
+    top: 0;
 
-    z-index:10;
+    z-index: 10;
 
 }
 
@@ -143,11 +151,11 @@ RESPONSIVE
 
 /* Tablet */
 
-@media (max-width:1000px){
+@media (max-width:1000px) {
 
-    .codificacion-form{
+    .codificacion-form {
 
-        grid-template-columns:repeat(2,1fr);
+        grid-template-columns: repeat(2, 1fr);
 
     }
 
@@ -156,37 +164,37 @@ RESPONSIVE
 
 /* Celular */
 
-@media (max-width:700px){
+@media (max-width:700px) {
 
-    .codificacion-form{
+    .codificacion-form {
 
-        grid-template-columns:1fr;
-
-    }
-
-    .acciones{
-
-        flex-direction:column;
+        grid-template-columns: 1fr;
 
     }
 
-    .acciones button{
+    .acciones {
 
-        width:100%;
-
-    }
-
-    .tabla-scroll{
-
-        overflow-x:auto;
-
-        overflow-y:auto;
+        flex-direction: column;
 
     }
 
-    .tabla{
+    .acciones button {
 
-        min-width:700px;
+        width: 100%;
+
+    }
+
+    .tabla-scroll {
+
+        overflow-x: auto;
+
+        overflow-y: auto;
+
+    }
+
+    .tabla {
+
+        min-width: 700px;
 
     }
 

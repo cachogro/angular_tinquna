@@ -68,14 +68,26 @@ TABLA
 ENCABEZADO
 ===========================*/
 
+// .mat-mdc-header-row {
+//     background: var(--mat-sys-primary);
+//     color: var(--mat-sys-on-primary);
+//     font-weight: 600;
+//     letter-spacing: .3px;
+//     position: sticky;
+//     top: 0;
+//     z-index: 10;
+// }
+
 .mat-mdc-header-row {
-    background: var(--mat-sys-primary);
-    color: var(--mat-sys-on-primary);
+
+    background: #0d6efd !important;
+    color: #ffffff !important;
     font-weight: 600;
     letter-spacing: .3px;
     position: sticky;
     top: 0;
     z-index: 10;
+
 }
 
 .mat-mdc-header-cell {

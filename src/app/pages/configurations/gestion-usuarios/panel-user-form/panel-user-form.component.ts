@@ -212,11 +212,17 @@ export class PanelUserFormComponent implements OnInit {
       });
   }
 
+
+
+
   private onExito(mensaje: string): void {
     this.guardando.set(false);
     this.snackBar.open(mensaje, 'Cerrar', { duration: 3000 });
-    this.router.navigate(['/ui-components/users']);
+    this.router.navigate(['/configuraciones/gestion-usuarios']);
   }
+
+
+
 
   private onError(err: unknown): void {
     this.guardando.set(false);

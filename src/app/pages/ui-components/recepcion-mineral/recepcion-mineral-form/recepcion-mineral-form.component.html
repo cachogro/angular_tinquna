@@ -1,0 +1,227 @@
+<mat-card class="cardWithShadow theme-card">
+  <mat-card-header class="card-header-row">
+    <!-- Bloque izquierdo: volver + títulos -->
+    <div class="header-left">
+      <button mat-icon-button (click)="cancelar()" matTooltip="Volver">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <div>
+        <mat-card-title class="m-b-0">
+          {{ esEdicion ? 'Editar recepción' : 'Nueva recepción de mineral' }}
+        </mat-card-title>
+        <mat-card-subtitle class="m-b-0">
+          {{ esEdicion ? 'Actualiza los datos de la operación' : 'Registra el ingreso de mineral de un proveedor' }}
+        </mat-card-subtitle>
+      </div>
+    </div>
+    <!-- Bloque derecho: botón Nueva persona -->
+    <div style="margin-left: auto;">
+      <button mat-flat-button color="primary" class="m-r-8" (click)="abrirDialogoRegistroPersona(null)">
+        <mat-icon>person_add</mat-icon>
+        Nueva persona
+      </button>
+    </div>
+  </mat-card-header>
+
+  <mat-card-content class="b-t-1">
+    <div class="form-page">
+      @if (cargandoCatalogos()) {
+      <div class="form-loading">
+        <mat-spinner diameter="36"></mat-spinner>
+        <span>Cargando información...</span>
+      </div>
+      } @else {
+      <form [formGroup]="form" (ngSubmit)="guardar()">
+        <div class="form-grid">
+
+          <!-- Fila 1: Actor · Proveedor · Fecha -->
+          <mat-form-field appearance="outline">
+            <mat-label>Actor productivo minero</mat-label>
+            <input type="text" matInput [formControl]="$any(actorControl)" [matAutocomplete]="autoActor"
+              #actorTrigger="matAutocompleteTrigger" (focus)="actorTrigger.openPanel()"
+              placeholder="Ingenio, cooperativa o empresa minera (opcional)" />
+            <mat-autocomplete #autoActor="matAutocomplete" [displayWith]="displayActor">
+              @for (opcion of (filtroActores | async); track opcion.id) {
+              <mat-option [value]="opcion" style="font-size: 13px">
+                {{ opcion.nombre }}
+                <small> · {{ opcion.tipoActorProductivoMinero?.descripcion }}</small>
+              </mat-option>
+              } @empty {
+              <mat-option disabled>Sin resultados</mat-option>
+              }
+            </mat-autocomplete>
+            <mat-hint>Elígelo primero para acotar el proveedor</mat-hint>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Proveedor</mat-label>
+            <input type="text" matInput [formControl]="$any(proveedorControl)" [matAutocomplete]="autoProveedor"
+              #proveedorTrigger="matAutocompleteTrigger" (focus)="proveedorTrigger.openPanel()"
+              placeholder="Escribe nombre, apellido o carnet..." />
+            <mat-autocomplete #autoProveedor="matAutocomplete" [displayWith]="displayProveedor">
+              @for (opcion of (filtroProveedores | async); track opcion.id) {
+              <mat-option [value]="opcion" style="font-size: 13px">
+                {{ opcion.nombres }} {{ opcion.apellidoPaterno }} {{ opcion.apellidoMaterno }} — {{
+                opcion.numeroDocumento }}
+              </mat-option>
+              } @empty {
+              <mat-option disabled>Sin resultados</mat-option>
+              }
+            </mat-autocomplete>
+            @if (proveedorControl.hasError('required') && proveedorControl.touched) {
+            <mat-error>Selecciona un proveedor</mat-error>
+            }
+            @if (proveedorControl.hasError('proveedorInvalido') && proveedorControl.touched) {
+            <mat-error>Selecciona un proveedor de la lista</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Fecha y hora de operación</mat-label>
+            <input matInput type="datetime-local" [max]="maxFechaHoraLocal()" formControlName="fechaHoraOperacion" />
+            @if (f.fechaHoraOperacion.hasError('required') && f.fechaHoraOperacion.touched) {
+            <mat-error>Obligatorio</mat-error>
+            }
+            @if (f.fechaHoraOperacion.hasError('fechaFutura') && f.fechaHoraOperacion.touched) {
+            <mat-error>No puede ser una fecha/hora futura</mat-error>
+            }
+          </mat-form-field>
+
+          <!-- Fila 2: Codificación · Peso neto · Anticipo -->
+          <mat-form-field appearance="outline">
+            <mat-label>N° de sacos</mat-label>
+            <input matInput type="number" min="0" formControlName="numeroSacos" (keydown)="bloquearNegativos($event)" />
+            @if (f.numeroSacos.hasError('required') && f.numeroSacos.touched) {
+            <mat-error>Obligatorio</mat-error>
+            }
+            @if (f.numeroSacos.hasError('min') && f.numeroSacos.touched) {
+            <mat-error>Debe ser mayor a 0</mat-error>
+            }
+            <mat-hint>No es obligatorio para la codificación de cargas</mat-hint>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Peso neto (kg)</mat-label>
+            <input matInput type="number" step="0.001" min="0" formControlName="pesoNeto"
+              (keydown)="bloquearNegativos($event)" />
+            @if (f.pesoNeto.hasError('required') && f.pesoNeto.touched) {
+            <mat-error>Obligatorio</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Anticipo</mat-label>
+            <input matInput type="number" step="0.01" min="0" formControlName="anticipo"
+              (keydown)="bloquearNegativos($event)" />
+            @if (f.anticipo.hasError('required') && f.anticipo.touched) {
+            <mat-error>Obligatorio</mat-error>
+            }
+          </mat-form-field>
+
+
+
+
+
+          <!-- Fila 4: N° de sacos -->
+          <mat-form-field appearance="outline">
+
+
+
+
+            <mat-label>Codificación</mat-label>
+            <mat-select formControlName="idCodificacion">
+              @for (cod of codificaciones(); track cod.id) {
+              <mat-option [value]="cod.id">{{ cod.codigo }} — {{ cod.nombre }}</mat-option>
+              }
+            </mat-select>
+            @if (f.idCodificacion.hasError('required') && f.idCodificacion.touched) {
+            <mat-error>Selecciona una codificación</mat-error>
+            }
+          </mat-form-field>
+
+
+
+
+
+          <!-- Fila 3: Tabla de minerales (ocupa todo el ancho) -->
+          <div class="form-grid__full minerales-container">
+            @if (detalleControls().length > 0) {
+            <div class="minerales-header">
+              <span class="minerales-header__label">
+                Ley por mineral y su unidad (puede quedar en 0: es un registro preliminar, la ley exacta se define en
+                laboratorio)
+              </span>
+            </div>
+            <table class="minerales-table">
+              <thead>
+                <tr>
+                  <th>Mineral / Producto</th>
+                  <th>Ley</th>
+                  <th>Unidad</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (fila of detalleControls(); track fila.idMineral) {
+                <tr>
+                  <td class="minerales-table__name">
+                    {{ fila.descripcion }}{{ fila.simbolo ? ' (' + fila.simbolo + ')' : '' }}
+                  </td>
+                  <td class="minerales-table__ley">
+                    <mat-form-field appearance="outline" class="ley-input">
+                      <input matInput type="number" step="0.01" min="0"
+                        [max]="fila.unidadControl.value === '%' ? 100 : null" [formControl]="fila.control"
+                        placeholder="Ley" (keydown)="bloquearNegativos($event)" />
+                      @if (fila.control.hasError('required') && fila.control.touched) {
+                      <mat-error>Obligatorio (puede ser 0)</mat-error>
+                      }
+                      @if (fila.control.hasError('max') && fila.control.touched) {
+                      <mat-error>No puede superar 100</mat-error>
+                      }
+                    </mat-form-field>
+                  </td>
+                  <td class="minerales-table__unidad">
+                    <mat-form-field appearance="outline" class="unidad-input">
+                      <mat-select [formControl]="fila.unidadControl">
+                        @for (unidad of leyUnidades; track unidad) {
+                        <mat-option [value]="unidad">{{ unidad }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+                  </td>
+                </tr>
+                }
+              </tbody>
+            </table>
+            } @else if (f.idCodificacion.value) {
+            <p class="minerales-vacio">Esta codificación no tiene minerales configurados.</p>
+            }
+          </div>
+
+
+
+          <!-- Fila 5: Observaciones (completa) -->
+          <mat-form-field appearance="outline" class="form-grid__full">
+            <mat-label>Observaciones</mat-label>
+            <textarea matInput rows="2" formControlName="observaciones"></textarea>
+          </mat-form-field>
+
+        </div>
+
+        <div class="form-actions">
+          <button mat-stroked-button type="button" (click)="cancelar()" [disabled]="guardando()">
+            Cancelar
+          </button>
+          <button mat-flat-button color="primary" type="submit" [disabled]="guardando()">
+            @if (guardando()) {
+            <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
+            <span>Guardando...</span>
+            } @else {
+            <span>{{ esEdicion ? 'Guardar cambios' : 'Registrar recepción' }}</span>
+            }
+          </button>
+        </div>
+      </form>
+      }
+    </div>
+  </mat-card-content>
+</mat-card>

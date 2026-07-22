@@ -1,0 +1,166 @@
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;                     // separación entre el botón y los títulos
+}
+
+//------------------fin----------------
+
+
+.form-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 100%;
+}
+
+.form-loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 48px;
+  color: rgba(0, 0, 0, 0.5);
+  justify-content: center;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px 20px;
+}
+
+@media (max-width: 900px) {
+  .form-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px 16px;
+  }
+}
+
+@media (max-width: 599px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+
+.form-grid__full {
+  grid-column: 1 / -1;
+}
+
+.minerales-container {
+  padding: 12px 0;
+  overflow-x: auto;
+}
+
+.minerales-header {
+  margin-bottom: 8px;
+}
+
+.minerales-header__label {
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.minerales-table {
+  width: 100%;
+  min-width: 380px;
+  max-width: 560px;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.minerales-table thead th {
+  text-align: left;
+  padding: 4px 8px;
+  background-color: #f5f5f5;
+  font-weight: 600;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.7);
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.minerales-table tbody td {
+  padding: 2px 8px;
+  border-bottom: 1px solid #f0f0f0;
+  vertical-align: middle;
+}
+
+.minerales-table__name {
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.8);
+  width: 50%;
+}
+
+.minerales-table__ley {
+  width: 28%;
+}
+
+.minerales-table__unidad {
+  width: 22%;
+}
+
+.ley-input,
+.unidad-input {
+  width: 100%;
+  font-size: 12.5px;
+}
+
+.ley-input .mat-form-field-wrapper,
+.unidad-input .mat-form-field-wrapper {
+  padding-bottom: 0;
+}
+
+.ley-input .mat-form-field-infix,
+.unidad-input .mat-form-field-infix {
+  padding: 0.3em 0;
+}
+
+.ley-input .mat-form-field-outline,
+.unidad-input .mat-form-field-outline {
+  top: 0;
+}
+
+.minerales-vacio {
+  color: rgba(0, 0, 0, 0.5);
+  font-size: 13px;
+  font-style: italic;
+  padding: 12px 0;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  margin-top: 8px;
+}
+
+.form-actions button {
+  min-width: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+@media (max-width: 599px) {
+  .form-actions {
+    flex-direction: column-reverse;
+  }
+
+  .form-actions button {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+.btn-spinner {
+  display: inline-block;
+}
+
+.btn-spinner ::ng-deep circle {
+  stroke: currentColor;
+}

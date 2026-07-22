@@ -1,8 +1,8 @@
 <div class="blue_theme">
-  <app-parametrica-dialog-shell [titulo]="modoEdicion ? 'Modificar Ingenio' : 'Nuevo Ingenio'">
+  <app-parametrica-dialog-shell [titulo]="modoEdicion ? 'Modificar Actor Productivo Minero' : 'Nuevo Actor Productivo Minero'">
 
     <!-- ==================== FORMULARIO ==================== -->
-    <form [formGroup]="form" (ngSubmit)="guardar()" class="ingenio-form">
+    <form [formGroup]="form" (ngSubmit)="guardar()" class="actor-form">
 
       <!-- Nombre -->
       <mat-form-field appearance="outline">
@@ -10,6 +10,19 @@
         <input matInput formControlName="nombre" maxlength="150" placeholder="Ej: Ingenio San Cristóbal" />
         <mat-error *ngIf="form.get('nombre')?.hasError('required')">
           El nombre es obligatorio
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Tipo -->
+      <mat-form-field appearance="outline">
+        <mat-label>Tipo</mat-label>
+        <mat-select formControlName="idTipoActorProductivoMinero">
+          <mat-option *ngFor="let tipo of tipos" [value]="tipo.id">
+            {{ tipo.descripcion }}
+          </mat-option>
+        </mat-select>
+        <mat-error *ngIf="form.get('idTipoActorProductivoMinero')?.hasError('required')">
+          Debe seleccionar un tipo
         </mat-error>
       </mat-form-field>
 
@@ -45,19 +58,26 @@
 
     <!-- ==================== TABLA ==================== -->
     <mat-card class="tabla-card">
-      <mat-card-title>Ingenios registrados</mat-card-title>
+      <mat-card-title>Actores productivos mineros registrados</mat-card-title>
 
       <mat-card-content>
 
-        <!-- Búsqueda -->
-
-
+        <!-- Búsqueda y filtro por tipo -->
         <div class="filtros">
-          <!-- Se añade subscriptSizing="dynamic" -->
           <mat-form-field appearance="outline" class="buscador" subscriptSizing="dynamic">
             <mat-label>Buscar por nombre</mat-label>
             <input matInput [formControl]="searchControl" placeholder="Ej: San Cristóbal" />
             <mat-icon matSuffix>search</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filtro-tipo" subscriptSizing="dynamic">
+            <mat-label>Filtrar por tipo</mat-label>
+            <mat-select [formControl]="filtroTipoControl">
+              <mat-option [value]="null">Todos</mat-option>
+              <mat-option *ngFor="let tipo of tipos" [value]="tipo.id">
+                {{ tipo.descripcion }}
+              </mat-option>
+            </mat-select>
           </mat-form-field>
 
           <button mat-stroked-button type="button" class="btn-limpiar"
@@ -67,9 +87,8 @@
           </button>
         </div>
 
-
         <div class="tabla-scroll">
-          <table mat-table [dataSource]="ingenios" class="tabla mat-elevation-z1">
+          <table mat-table [dataSource]="actores" class="tabla mat-elevation-z1">
 
             <ng-container matColumnDef="id">
               <th mat-header-cell *matHeaderCellDef>ID</th>
@@ -79,6 +98,11 @@
             <ng-container matColumnDef="nombre">
               <th mat-header-cell *matHeaderCellDef>Nombre</th>
               <td mat-cell *matCellDef="let row">{{ row.nombre }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="tipo">
+              <th mat-header-cell *matHeaderCellDef>Tipo</th>
+              <td mat-cell *matCellDef="let row">{{ descripcionTipo(row) }}</td>
             </ng-container>
 
             <ng-container matColumnDef="direccion">
@@ -118,11 +142,11 @@
           </table>
         </div>
 
-        <p *ngIf="!cargando && ingenios.length === 0" class="sin-datos">
-          No hay ingenios registrados.
+        <p *ngIf="!cargando && actores.length === 0" class="sin-datos">
+          No hay actores productivos mineros registrados.
         </p>
 
-        <mat-paginator [length]="totalIngenios" [pageIndex]="pageIndex" [pageSize]="pageSize"
+        <mat-paginator [length]="totalActores" [pageIndex]="pageIndex" [pageSize]="pageSize"
           [pageSizeOptions]="[10, 20, 50]" (page)="onPageChange($event)"></mat-paginator>
 
       </mat-card-content>

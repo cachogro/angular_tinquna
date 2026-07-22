@@ -19,6 +19,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -27,21 +28,25 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog/confirm-dialog.component';
 
 import { ParametricaDialogShellComponent } from '../shared/parametrica-dialog-shell.component';
-import { Ingenio } from '../models/parametricas.models';
+import {
+  ActorProductivoMinero,
+  TipoActorProductivoMinero,
+} from '../models/parametricas.models';
 import { ParametricasService } from '../../services/parametricas.service';
 
-export interface IngenioDialogData {
-  ingenio?: Ingenio;
+export interface ActorProductivoMineroDialogData {
+  actorProductivoMinero?: ActorProductivoMinero;
 }
 
 @Component({
-  selector: 'app-ingenio-form-dialog',
+  selector: 'app-actor-productivo-minero-form-dialog',
   standalone: true,
   imports: [
     CommonModule,
     ReactiveFormsModule,
     MatFormFieldModule,
     MatInputModule,
+    MatSelectModule,
     MatButtonModule,
     MatDialogModule,
     MatSnackBarModule,
@@ -52,42 +57,55 @@ export interface IngenioDialogData {
     MatPaginatorModule,
     ParametricaDialogShellComponent,
   ],
-  templateUrl: './ingenio-form-dialog.component.html',
-  styleUrl: './ingenio-form-dialog.component.scss',
+  templateUrl: './actor-productivo-minero-form-dialog.component.html',
+  styleUrl: './actor-productivo-minero-form-dialog.component.scss',
 })
-export class IngenioFormDialogComponent implements OnInit {
+export class ActorProductivoMineroFormDialogComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly parametricasService = inject(ParametricasService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
-  private readonly dialogRef = inject(MatDialogRef<IngenioFormDialogComponent>);
+  private readonly dialogRef = inject(
+    MatDialogRef<ActorProductivoMineroFormDialogComponent>,
+  );
   private readonly data =
-    inject<IngenioDialogData>(MAT_DIALOG_DATA, { optional: true }) ?? {};
+    inject<ActorProductivoMineroDialogData>(MAT_DIALOG_DATA, {
+      optional: true,
+    }) ?? {};
 
   guardando = false;
-  columnas = ['id', 'nombre', 'direccion', 'telefono', 'estado', 'acciones'];
+  columnas = ['id', 'nombre', 'tipo', 'direccion', 'telefono', 'estado', 'acciones'];
 
-  // ---------- Búsqueda y paginación ----------
+  tipos: TipoActorProductivoMinero[] = [];
+
+  // ---------- Búsqueda, filtro por tipo y paginación ----------
   searchControl = new FormControl('');
+  filtroTipoControl = new FormControl<number | string | null>(null);
   pageIndex = 0; // 0-based, como espera mat-paginator
   pageSize = 10;
   private readonly busquedaChange$ = new Subject<void>();
 
   // Estado propio del componente: permite pasar de "nuevo" a "edición"
   // sin depender solo de `data`.
-  ingenioEditando: Ingenio | null = null;
+  actorEditando: ActorProductivoMinero | null = null;
 
   get modoEdicion(): boolean {
-    return !!this.ingenioEditando;
+    return !!this.actorEditando;
   }
 
   form: FormGroup = this.fb.group({
     nombre: ['', [Validators.required, Validators.maxLength(150)]],
     direccion: ['', [Validators.required, Validators.maxLength(200)]],
     telefono: ['', [Validators.required, Validators.maxLength(20)]],
+    idTipoActorProductivoMinero: [
+      null as number | string | null,
+      [Validators.required],
+    ],
   });
 
   ngOnInit(): void {
+    this.cargarTipos();
+
     this.busquedaChange$
       .pipe(debounceTime(400), distinctUntilChanged())
       .subscribe(() => {
@@ -99,26 +117,57 @@ export class IngenioFormDialogComponent implements OnInit {
       this.busquedaChange$.next(),
     );
 
+    this.filtroTipoControl.valueChanges.subscribe(() => {
+      this.pageIndex = 0;
+      this.recargarTabla();
+    });
+
     this.recargarTabla();
 
-    if (this.data.ingenio) {
-      this.editar(this.data.ingenio);
+    if (this.data.actorProductivoMinero) {
+      this.editar(this.data.actorProductivoMinero);
     }
   }
 
+  private cargarTipos(): void {
+    this.parametricasService.obtenerTiposActorProductivoMinero().subscribe({
+      next: (data) => {
+        this.tipos = data.filter((t) => t.activo !== false);
+      },
+      error: () =>
+        this.snackBar.open('Error al cargar los tipos', 'Cerrar', {
+          duration: 3000,
+        }),
+    });
+  }
+
+  /** Descripción del tipo para mostrar en la tabla, usando el catálogo
+   *  cacheado si el back no lo devuelve anidado en cada fila. */
+  descripcionTipo(row: ActorProductivoMinero): string {
+    if (row.tipoActorProductivoMinero?.descripcion) {
+      return row.tipoActorProductivoMinero.descripcion;
+    }
+    const tipo = this.tipos.find(
+      (t) => String(t.id) === String(row.idTipoActorProductivoMinero),
+    );
+    return tipo?.descripcion ?? '—';
+  }
+
   private recargarTabla(): void {
-    this.parametricasService.cargarIngenios({
+    this.parametricasService.cargarActoresProductivosMineros({
       page: this.pageIndex + 1,
       limit: this.pageSize,
       busqueda: this.searchControl.value?.trim() || undefined,
+      idTipoActorProductivoMinero: this.filtroTipoControl.value ?? undefined,
       orderBy: 'id',
       orderDirection: 'DESC',
     });
   }
 
-  /** Limpia el texto buscado y restablece la lista completa desde la página 1 */
+  /** Limpia el texto buscado y el filtro de tipo, restableciendo la lista */
   limpiarBusqueda(): void {
     this.searchControl.setValue('', { emitEvent: false });
+    this.filtroTipoControl.setValue(null, { emitEvent: false });
     this.pageIndex = 0;
     this.recargarTabla();
   }
@@ -137,10 +186,12 @@ export class IngenioFormDialogComponent implements OnInit {
     const { nombre } = this.form.getRawValue();
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       data: {
-        title: this.modoEdicion ? 'Actualizar ingenio' : 'Crear ingenio',
+        title: this.modoEdicion
+          ? 'Actualizar actor productivo minero'
+          : 'Crear actor productivo minero',
         message: this.modoEdicion
-          ? `¿Confirmas actualizar el ingenio "${nombre}"?`
-          : `¿Confirmas crear el ingenio "${nombre}"?`,
+          ? `¿Confirmas actualizar "${nombre}"?`
+          : `¿Confirmas crear "${nombre}"?`,
         confirmLabel: this.modoEdicion ? 'Actualizar' : 'Crear',
         cancelLabel: 'Cancelar',
         tone: 'default',
@@ -156,23 +207,25 @@ export class IngenioFormDialogComponent implements OnInit {
 
   private persistir(): void {
     this.guardando = true;
-    const { nombre, direccion, telefono } = this.form.getRawValue();
+    const { nombre, direccion, telefono, idTipoActorProductivoMinero } =
+      this.form.getRawValue();
 
-    // Un solo POST: si hay ingenio en edición, se manda su id y el back
+    // Un solo POST: si hay actor en edición, se manda su id y el back
     // actualiza; si no, lo crea.
     this.parametricasService
-      .guardarIngenio({
-        id: this.ingenioEditando?.id,
+      .guardarActorProductivoMinero({
+        id: this.actorEditando?.id,
         nombre,
         direccion,
         telefono,
+        idTipoActorProductivoMinero,
       })
       .subscribe({
         next: () => {
           this.snackBar.open(
             this.modoEdicion
-              ? 'Ingenio actualizado correctamente'
-              : 'Ingenio creado correctamente',
+              ? 'Actor productivo minero actualizado correctamente'
+              : 'Actor productivo minero creado correctamente',
             'Cerrar',
             { duration: 3000 },
           );
@@ -193,48 +246,54 @@ export class IngenioFormDialogComponent implements OnInit {
   }
 
   /** Pone el formulario en modo edición con los datos de la fila seleccionada */
-  editar(ingenio: Ingenio): void {
-    this.ingenioEditando = ingenio;
+  editar(actor: ActorProductivoMinero): void {
+    this.actorEditando = actor;
     this.form.patchValue({
-      nombre: ingenio.nombre,
-      direccion: ingenio.direccion,
-      telefono: ingenio.telefono,
+      nombre: actor.nombre,
+      direccion: actor.direccion,
+      telefono: actor.telefono,
+      idTipoActorProductivoMinero: actor.idTipoActorProductivoMinero,
     });
   }
 
   /** Limpia el formulario y sale del modo edición, sin cerrar el modal */
   limpiar(): void {
-    this.form.reset({ nombre: '', direccion: '', telefono: '' });
-    this.ingenioEditando = null;
+    this.form.reset({
+      nombre: '',
+      direccion: '',
+      telefono: '',
+      idTipoActorProductivoMinero: null,
+    });
+    this.actorEditando = null;
   }
 
   cancelar(): void {
     this.limpiar();
   }
 
-  /** Activa o desactiva un ingenio, con confirmación previa */
-  cambiarEstado(ingenio: Ingenio): void {
-    const accion = ingenio.activo ? 'desactivar' : 'activar';
+  /** Activa o desactiva un actor productivo minero, con confirmación previa */
+  cambiarEstado(actor: ActorProductivoMinero): void {
+    const accion = actor.activo ? 'desactivar' : 'activar';
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       data: {
-        title: ingenio.activo ? 'Desactivar ingenio' : 'Activar ingenio',
-        message: `¿Confirmas ${accion} el ingenio "${ingenio.nombre}"?`,
-        confirmLabel: ingenio.activo ? 'Desactivar' : 'Activar',
+        title: actor.activo ? 'Desactivar' : 'Activar',
+        message: `¿Confirmas ${accion} "${actor.nombre}"?`,
+        confirmLabel: actor.activo ? 'Desactivar' : 'Activar',
         cancelLabel: 'Cancelar',
         // Si tu ConfirmDialogComponent tiene un tone tipo 'danger'/'warning'
         // para acciones destructivas, úsalo aquí al desactivar.
         tone: 'default',
-        icon: ingenio.activo ? 'toggle_off' : 'toggle_on',
+        icon: actor.activo ? 'toggle_off' : 'toggle_on',
       },
     });
     dialogRef.afterClosed().subscribe((confirmado: boolean) => {
       if (!confirmado) return;
       this.parametricasService
-        .cambiarEstadoIngenio(ingenio.id, !ingenio.activo)
+        .cambiarEstadoActorProductivoMinero(actor.id, !actor.activo)
         .subscribe({
           next: () =>
             this.snackBar.open(
-              `Ingenio ${ingenio.activo ? 'desactivado' : 'activado'} correctamente`,
+              `${actor.activo ? 'Desactivado' : 'Activado'} correctamente`,
               'Cerrar',
               { duration: 3000 },
             ),
@@ -249,19 +308,19 @@ export class IngenioFormDialogComponent implements OnInit {
   }
 
   /** Respaldo: ordena descendente por id en el cliente mientras el back
-   *  no soporte los parámetros orderBy/orderDirection en /parametricas/ingenio.
-   *  Una vez el back ordene server-side, esto queda como un no-op. */
-  get ingenios(): Ingenio[] {
-    return [...this.parametricasService.ingenios()].sort(
+   *  no soporte los parámetros orderBy/orderDirection. Una vez el back
+   *  ordene server-side, esto queda como un no-op. */
+  get actores(): ActorProductivoMinero[] {
+    return [...this.parametricasService.actoresProductivosMineros()].sort(
       (a, b) => Number(b.id) - Number(a.id),
     );
   }
 
-  get totalIngenios(): number {
-    return this.parametricasService.totalIngenios();
+  get totalActores(): number {
+    return this.parametricasService.totalActoresProductivosMineros();
   }
 
   get cargando(): boolean {
-    return this.parametricasService.cargandoIngenios();
+    return this.parametricasService.cargandoActoresProductivosMineros();
   }
 }

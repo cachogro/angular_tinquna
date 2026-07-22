@@ -1,8 +1,10 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
-import { Observable, tap } from 'rxjs';
+import { Observable, shareReplay, tap } from 'rxjs';
 import { APP_CONFIG } from 'src/app/config';
 import {
+  ActoresProductivosMinerosPaginados,
+  ActorProductivoMinero,
   ActualizarCodificacionRequest,
   ActualizarCotizacionRequest,
   Codificacion,
@@ -10,12 +12,11 @@ import {
   CotizacionesPaginadas,
   CrearCodificacionRequest,
   CrearCotizacionRequest,
+  FiltrosActorProductivoMinero,
   FiltrosCotizacion,
-  FiltrosIngenio,
-  GuardarIngenioRequest,
-  Ingenio,
-  IngeniosPaginados,
+  GuardarActorProductivoMineroRequest,
   Mineral,
+  TipoActorProductivoMinero,
 } from '../parametricas/models/parametricas.models';
 
 @Injectable({ providedIn: 'root' })
@@ -132,23 +133,52 @@ export class ParametricasService {
   }
 
   // ==========================================================
-  // INGENIOS
+  // ACTOR PRODUCTIVO MINERO (antes "Ingenio")
   // ==========================================================
 
-  readonly ingenios = signal<Ingenio[]>([]);
-  readonly totalIngenios = signal<number>(0);
-  readonly cargandoIngenios = signal<boolean>(false);
+  private readonly actorProductivoMineroUrl = `${this.baseUrl}/actor-productivo-minero`;
 
-  private filtrosIngenioActuales: FiltrosIngenio = { page: 1, limit: 10 };
+  readonly actoresProductivosMineros = signal<ActorProductivoMinero[]>([]);
+  readonly totalActoresProductivosMineros = signal<number>(0);
+  readonly cargandoActoresProductivosMineros = signal<boolean>(false);
 
-  /** Un solo POST para crear y actualizar: sin `id` crea, con `id` actualiza */
-  guardarIngenio(data: GuardarIngenioRequest): Observable<Ingenio> {
-    return this.http
-      .post<Ingenio>(`${this.baseUrl}/ingenio`, data)
-      .pipe(tap(() => this.cargarIngenios(this.filtrosIngenioActuales)));
+  private filtrosActorProductivoMineroActuales: FiltrosActorProductivoMinero = {
+    page: 1,
+    limit: 10,
+  };
+
+  private tiposActorProductivoMinero$?: Observable<TipoActorProductivoMinero[]>;
+
+  /** Catálogo cacheado — no se vuelve a pedir tras la primera carga */
+  obtenerTiposActorProductivoMinero(): Observable<TipoActorProductivoMinero[]> {
+    if (!this.tiposActorProductivoMinero$) {
+      this.tiposActorProductivoMinero$ = this.http
+        .get<
+          TipoActorProductivoMinero[]
+        >(`${this.actorProductivoMineroUrl}/allTipoActor`)
+        .pipe(shareReplay(1));
+    }
+    return this.tiposActorProductivoMinero$;
   }
 
-  listarIngenios(filtros: FiltrosIngenio): Observable<IngeniosPaginados> {
+  /** Un solo POST para crear y actualizar: sin `id` crea, con `id` actualiza */
+  guardarActorProductivoMinero(
+    data: GuardarActorProductivoMineroRequest,
+  ): Observable<ActorProductivoMinero> {
+    return this.http
+      .post<ActorProductivoMinero>(this.actorProductivoMineroUrl, data)
+      .pipe(
+        tap(() =>
+          this.cargarActoresProductivosMineros(
+            this.filtrosActorProductivoMineroActuales,
+          ),
+        ),
+      );
+  }
+
+  listarActoresProductivosMineros(
+    filtros: FiltrosActorProductivoMinero,
+  ): Observable<ActoresProductivosMinerosPaginados> {
     let params = new HttpParams()
       .set('page', filtros.page)
       .set('limit', filtros.limit);
@@ -156,40 +186,55 @@ export class ParametricasService {
     if (filtros.busqueda) params = params.set('busqueda', filtros.busqueda);
     if (filtros.activo !== undefined)
       params = params.set('activo', filtros.activo);
-
+    if (filtros.idTipoActorProductivoMinero !== undefined)
+      params = params.set(
+        'idTipoActorProductivoMinero',
+        filtros.idTipoActorProductivoMinero,
+      );
     if (filtros.orderBy) params = params.set('orderBy', filtros.orderBy);
     if (filtros.orderDirection)
       params = params.set('orderDirection', filtros.orderDirection);
 
-    return this.http.get<IngeniosPaginados>(`${this.baseUrl}/ingenio`, {
-      params,
-    });
+    return this.http.get<ActoresProductivosMinerosPaginados>(
+      this.actorProductivoMineroUrl,
+      { params },
+    );
   }
 
-  /** Carga los ingenios (paginados/filtrados) y actualiza los signals */
-  cargarIngenios(filtros: FiltrosIngenio): void {
-    this.filtrosIngenioActuales = filtros;
-    this.cargandoIngenios.set(true);
-    this.listarIngenios(filtros).subscribe({
+  /** Carga los actores productivos mineros (paginados/filtrados) y actualiza los signals */
+  cargarActoresProductivosMineros(filtros: FiltrosActorProductivoMinero): void {
+    this.filtrosActorProductivoMineroActuales = filtros;
+    this.cargandoActoresProductivosMineros.set(true);
+    this.listarActoresProductivosMineros(filtros).subscribe({
       next: (res) => {
-        this.ingenios.set(res.data);
-        this.totalIngenios.set(res.total);
-        this.cargandoIngenios.set(false);
+        this.actoresProductivosMineros.set(res.data);
+        this.totalActoresProductivosMineros.set(res.total);
+        this.cargandoActoresProductivosMineros.set(false);
       },
       error: () => {
-        this.cargandoIngenios.set(false);
+        this.cargandoActoresProductivosMineros.set(false);
       },
     });
   }
 
-  // ⚠️ AJUSTA ESTA RUTA si tu back usa otro path para activar/desactivar
-  // ingenios. Sigue el mismo patrón que cambiarEstadoUsuario/cambiarEstado
+  // ⚠️ AJUSTA ESTA RUTA si tu back usa otro path para activar/desactivar.
+  // Sigue el mismo patrón que cambiarEstadoUsuario/cambiarEstado
   // (usuario-admin.service.ts / persona.service.ts).
-  cambiarEstadoIngenio(id: string, activo: boolean): Observable<Ingenio> {
+  cambiarEstadoActorProductivoMinero(
+    id: string,
+    activo: boolean,
+  ): Observable<ActorProductivoMinero> {
     return this.http
-      .patch<Ingenio>(`${this.baseUrl}/ingenio/cambiar_estado/${id}`, {
-        activo,
-      })
-      .pipe(tap(() => this.cargarIngenios(this.filtrosIngenioActuales)));
+      .patch<ActorProductivoMinero>(
+        `${this.actorProductivoMineroUrl}/cambiar_estado/${id}`,
+        { activo },
+      )
+      .pipe(
+        tap(() =>
+          this.cargarActoresProductivosMineros(
+            this.filtrosActorProductivoMineroActuales,
+          ),
+        ),
+      );
   }
 }
