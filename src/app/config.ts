@@ -9,7 +9,14 @@ export const defaults: AppSettings = {
 };
 export const APP_CONFIG = {
   production: false,
+
+  //direccion de prubas comentar o descomentasr
   apiUrl: 'http://localhost:3000/api',
+
+  //direccion de red local comentar  o descomentar
+ // apiUrl: 'http://192.168.100.165:3000/api',
+  //apiUrl: 'http://192.168.100',
+
   applicationName: 'Sistema Tinkuriquna',
   version: '1.0.0',
   inactivity: {

@@ -36,6 +36,39 @@ export const UiComponentsRoutes: Routes = [
           },
         ],
       },
+
+      {
+        path: 'reportes',
+        loadComponent: () =>
+          import('./reportes/reporte-recepcion-mineral.component').then(
+            (m) => m.ReporteRecepcionMineralComponent,
+          ),
+      },
+
+      {
+        path: 'valorizacion',
+        canActivate: [roleGuard],
+        data: {
+          // Valorización: acceso solo para ADMINISTRADOR y OPERADOR (sin TÉCNICO)
+          roles: [RolCodigo.ADMINISTRADOR, RolCodigo.OPERADOR],
+        },
+        children: [
+          {
+            path: '',
+            loadComponent: () =>
+              import('./valorizacion/valorizacion.component').then(
+                (m) => m.ValorizacionComponent,
+              ),
+          },
+          {
+            path: 'editar/:id',
+            loadComponent: () =>
+              import(
+                './valorizacion/valorizacion-form/valorizacion-form.component'
+              ).then((m) => m.ValorizacionFormComponent),
+          },
+        ],
+      },
     ],
   },
 ];

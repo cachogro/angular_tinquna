@@ -1,0 +1,103 @@
+<div class="blue_theme">
+  <app-parametrica-dialog-shell [titulo]="modoEdicion ? 'Modificar Laboratorio' : 'Nuevo Laboratorio'">
+
+    <!-- ==================== FORMULARIO ==================== -->
+    <form [formGroup]="form" (ngSubmit)="guardar()" class="laboratorio-form">
+
+      <!-- Nombre -->
+      <mat-form-field appearance="outline">
+        <mat-label>Nombre</mat-label>
+        <input matInput formControlName="nombre" maxlength="150" placeholder="Ej: Laboratorio Químico Potosí" />
+        <mat-error *ngIf="form.get('nombre')?.hasError('required')">
+          El nombre es obligatorio
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Dirección (opcional) -->
+      <mat-form-field appearance="outline">
+        <mat-label>Dirección</mat-label>
+        <input matInput formControlName="direccion" maxlength="200" placeholder="Ej: Av. Universitaria N° 123" />
+      </mat-form-field>
+
+      <!-- Teléfono (opcional) -->
+      <mat-form-field appearance="outline">
+        <mat-label>Teléfono</mat-label>
+        <input matInput formControlName="telefono" maxlength="20" placeholder="Ej: 62451234" />
+      </mat-form-field>
+
+    </form>
+
+    <!-- ==================== BOTONES ==================== -->
+    <div class="acciones">
+      <button mat-stroked-button type="button" (click)="cancelar()" [disabled]="guardando">
+        {{ modoEdicion ? 'Cancelar edición' : 'Limpiar' }}
+      </button>
+      <button mat-flat-button color="primary" type="button" (click)="guardar()" [disabled]="guardando">
+        {{ modoEdicion ? 'Actualizar' : 'Guardar' }}
+      </button>
+    </div>
+
+    <!-- ==================== TABLA ==================== -->
+    <mat-card class="tabla-card">
+      <mat-card-title>Laboratorios registrados</mat-card-title>
+
+      <mat-card-content>
+
+        <div class="tabla-scroll">
+          <table mat-table [dataSource]="laboratorios" class="tabla mat-elevation-z1">
+
+            <ng-container matColumnDef="id">
+              <th mat-header-cell *matHeaderCellDef>ID</th>
+              <td mat-cell *matCellDef="let row">{{ row.id }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="nombre">
+              <th mat-header-cell *matHeaderCellDef>Nombre</th>
+              <td mat-cell *matCellDef="let row">{{ row.nombre }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="direccion">
+              <th mat-header-cell *matHeaderCellDef>Dirección</th>
+              <td mat-cell *matCellDef="let row">{{ row.direccion || '—' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="telefono">
+              <th mat-header-cell *matHeaderCellDef>Teléfono</th>
+              <td mat-cell *matCellDef="let row">{{ row.telefono || '—' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="estado">
+              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <td mat-cell *matCellDef="let row">
+                <span class="badge" [class.badge--vigente]="row.activo" [class.badge--vencida]="!row.activo">
+                  {{ row.activo ? 'Activo' : 'Inactivo' }}
+                </span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef>Acciones</th>
+              <td mat-cell *matCellDef="let row">
+                <button mat-icon-button color="primary" matTooltip="Editar" (click)="editar(row)">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button mat-icon-button [color]="row.activo ? 'warn' : 'primary'"
+                  [matTooltip]="row.activo ? 'Desactivar' : 'Activar'" (click)="cambiarEstado(row)">
+                  <mat-icon>{{ row.activo ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+            <tr mat-row *matRowDef="let row; columns: columnas"></tr>
+          </table>
+        </div>
+
+        <p *ngIf="!cargando && laboratorios.length === 0" class="sin-datos">
+          No hay laboratorios registrados.
+        </p>
+
+      </mat-card-content>
+    </mat-card>
+  </app-parametrica-dialog-shell>
+</div>

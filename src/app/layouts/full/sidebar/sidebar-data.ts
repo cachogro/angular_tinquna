@@ -20,6 +20,16 @@ export const navItems: NavItem[] = [
     iconName: 'solar:file-text-line-duotone',
     route: '/ui-components/recepcion-minerales',
   },
+  {
+    displayName: 'Valorizacion',
+    iconName: 'solar:file-text-line-duotone',
+    route: '/ui-components/valorizacion',
+  },
+  {
+    displayName: 'Reportes',
+    iconName: 'solar:file-text-line-duotone',
+    route: '/ui-components/reportes',
+  },
 
   //-----------MODULO LOGUIN NO SE PUEDE ACCEDER SI UYA ESTAS LOGUEADO
   // {

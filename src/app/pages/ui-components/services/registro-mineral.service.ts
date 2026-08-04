@@ -24,7 +24,7 @@ export class RegistroMineralService {
     data: GuardarRegistroMineralRequest,
   ): Observable<RegistroMineral> {
     return this.http.post<RegistroMineral>(
-      `${this.baseUrl}/registro_mineral`,
+      `${this.baseUrl}/recepcion_mineral`,
       data,
     );
   }
@@ -32,11 +32,34 @@ export class RegistroMineralService {
   listarRegistros(
     filtros: FiltrosRegistroMineral,
   ): Observable<RegistrosMineralPaginados> {
+    let params = this.construirParams(filtros);
+
+    return this.http.get<RegistrosMineralPaginados>(
+      `${this.baseUrl}/recepcion_mineral`,
+      {
+        params,
+      },
+    );
+  }
+
+  /** Descarga el Excel del listado con los filtros actuales (todas las páginas que apliquen, según el backend). */
+  exportarExcel(filtros: FiltrosRegistroMineral): Observable<Blob> {
+    const params = this.construirParams(filtros);
+
+    return this.http.get(`${this.baseUrl}/recepcion_mineral/excel`, {
+      params,
+      responseType: 'blob',
+    });
+  }
+
+  private construirParams(filtros: FiltrosRegistroMineral): HttpParams {
     let params = new HttpParams()
       .set('page', filtros.page)
       .set('limit', filtros.limit);
 
     if (filtros.busqueda) params = params.set('busqueda', filtros.busqueda);
+    if (filtros.codigoOperacion)
+      params = params.set('codigoOperacion', filtros.codigoOperacion);
     if (filtros.numeroDocumento)
       params = params.set('numeroDocumento', filtros.numeroDocumento);
     if (filtros.idEstado) params = params.set('idEstado', filtros.idEstado);
@@ -44,18 +67,16 @@ export class RegistroMineralService {
       params = params.set('fechaDesde', filtros.fechaDesde);
     if (filtros.fechaHasta)
       params = params.set('fechaHasta', filtros.fechaHasta);
+    if (filtros.orderBy) params = params.set('orderBy', filtros.orderBy);
+    if (filtros.orderDirection)
+      params = params.set('orderDirection', filtros.orderDirection);
 
-    return this.http.get<RegistrosMineralPaginados>(
-      `${this.baseUrl}/registro_mineral`,
-      {
-        params,
-      },
-    );
+    return params;
   }
 
   cambiarEstado(id: string, idEstado: number): Observable<RegistroMineral> {
     return this.http.patch<RegistroMineral>(
-      `${this.baseUrl}/registro_mineral/cambiar_estado/${id}`,
+      `${this.baseUrl}/recepcion_mineral/cambiar_estado/${id}`,
       { idEstado },
     );
   }
@@ -68,5 +89,17 @@ export class RegistroMineralService {
         .pipe(shareReplay(1));
     }
     return this.codificaciones$;
+  }
+
+  descargarPdf(id: number) {
+    this.http
+      .get(`${this.baseUrl}/recepcion_mineral/pdf/${id}`, {
+        responseType: 'blob',
+      })
+      .subscribe((blob) => {
+        const url = window.URL.createObjectURL(blob);
+
+        window.open(url, '_blank');
+      });
   }
 }

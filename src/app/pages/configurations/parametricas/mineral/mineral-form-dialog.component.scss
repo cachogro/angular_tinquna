@@ -2,48 +2,49 @@
 FORMULARIO
 ===========================*/
 
-.cotizacion-form {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(220px, 1fr));
-    gap: 18px;
+.mineral-form {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
     margin-bottom: 18px;
 }
 
-.cotizacion-form mat-form-field {
+.mineral-form mat-form-field {
     width: 100%;
 }
 
-/*==========================
-BOTONES (viven como celda del grid, junto a las alícuotas)
-===========================*/
-
-.acciones-form {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-
-.acciones-form button {
-    flex: 1;
-    min-width: 120px;
-}
-
-/*==========================
-FILTROS (búsqueda + solo vigentes)
-===========================*/
-
-.filtros {
-    display: flex;
-    align-items: center;
+/* Fila 1: descripción, símbolo, unidad de cotización, tipo */
+.fila-uno {
+    display: grid;
+    grid-template-columns: 2fr 0.8fr 1fr 1.2fr;
     gap: 18px;
-    flex-wrap: wrap;
-    margin-bottom: 12px;
 }
 
-.buscador {
-    flex: 1;
-    min-width: 240px;
+/* Fila 2: factor de conversión, detalle */
+.fila-dos {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 18px;
+}
+
+.input-mayusculas {
+    text-transform: uppercase;
+}
+
+/*==========================
+BOTONES
+===========================*/
+
+.acciones {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+}
+
+.acciones button {
+    min-width: 170px;
 }
 
 /*==========================
@@ -61,25 +62,14 @@ TABLA
 
 .tabla {
     width: 100%;
-    min-width: 820px;
+    min-width: 700px;
 }
 
 /*==========================
 ENCABEZADO
 ===========================*/
 
-// .mat-mdc-header-row {
-//     background: var(--mat-sys-primary);
-//     color: var(--mat-sys-on-primary);
-//     font-weight: 600;
-//     letter-spacing: .3px;
-//     position: sticky;
-//     top: 0;
-//     z-index: 10;
-// }
-
 .mat-mdc-header-row {
-
     background: #0d6efd !important;
     color: #ffffff !important;
     font-weight: 600;
@@ -87,7 +77,6 @@ ENCABEZADO
     position: sticky;
     top: 0;
     z-index: 10;
-
 }
 
 .mat-mdc-header-cell {
@@ -117,7 +106,7 @@ FILAS COMPACTAS
 }
 
 /*==========================
-BADGE DE ESTADO (vigente / vencida)
+BADGE DE ESTADO (activo / inactivo)
 ===========================*/
 
 .badge {
@@ -138,32 +127,38 @@ BADGE DE ESTADO (vigente / vencida)
     color: #616161;
 }
 
+.sin-datos {
+    text-align: center;
+    color: #757575;
+    padding: 16px 0;
+}
+
 /*==========================
 RESPONSIVE
 ===========================*/
 
 @media (max-width: 1000px) {
-    .cotizacion-form {
+    .fila-uno {
         grid-template-columns: repeat(2, 1fr);
+    }
+
+    .fila-dos {
+        grid-template-columns: 1fr 1fr;
     }
 }
 
 @media (max-width: 700px) {
-    .cotizacion-form {
+    .fila-uno,
+    .fila-dos {
         grid-template-columns: 1fr;
     }
 
-    .acciones-form {
+    .acciones {
         flex-direction: column;
     }
 
-    .acciones-form button {
+    .acciones button {
         width: 100%;
-    }
-
-    .filtros {
-        flex-direction: column;
-        align-items: stretch;
     }
 
     .tabla-scroll {
@@ -172,6 +167,6 @@ RESPONSIVE
     }
 
     .tabla {
-        min-width: 820px;
+        min-width: 700px;
     }
 }

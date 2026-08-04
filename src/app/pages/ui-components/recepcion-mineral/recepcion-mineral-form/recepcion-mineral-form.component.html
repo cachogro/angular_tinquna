@@ -77,12 +77,12 @@
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Fecha y hora de operación</mat-label>
-            <input matInput type="datetime-local" [max]="maxFechaHoraLocal()" formControlName="fechaHoraOperacion" />
-            @if (f.fechaHoraOperacion.hasError('required') && f.fechaHoraOperacion.touched) {
+            <mat-label>Fecha y hora de Recepción</mat-label>
+            <input matInput type="datetime-local" [max]="maxFechaHoraLocal()" formControlName="fechaHoraRecepcion" />
+            @if (f.fechaHoraRecepcion.hasError('required') && f.fechaHoraRecepcion.touched) {
             <mat-error>Obligatorio</mat-error>
             }
-            @if (f.fechaHoraOperacion.hasError('fechaFutura') && f.fechaHoraOperacion.touched) {
+            @if (f.fechaHoraRecepcion.hasError('fechaFutura') && f.fechaHoraRecepcion.touched) {
             <mat-error>No puede ser una fecha/hora futura</mat-error>
             }
           </mat-form-field>
@@ -101,12 +101,20 @@
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Peso neto (kg)</mat-label>
-            <input matInput type="number" step="0.001" min="0" formControlName="pesoNeto"
+            <mat-label>Balanza L (kg)</mat-label>
+            <input matInput type="number" step="0.001" min="0" formControlName="balanzaL"
               (keydown)="bloquearNegativos($event)" />
-            @if (f.pesoNeto.hasError('required') && f.pesoNeto.touched) {
+            @if (f.balanzaL.hasError('required') && f.balanzaL.touched) {
             <mat-error>Obligatorio</mat-error>
             }
+          </mat-form-field>
+
+
+          <mat-form-field appearance="outline">
+            <mat-label>Balanza T (kg)</mat-label>
+            <input matInput type="number" step="0.001" min="0" formControlName="balanzaT"
+              (keydown)="bloquearNegativos($event)" />
+            <mat-hint>Opcional, si no aplica se envía como 0</mat-hint>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
@@ -114,20 +122,11 @@
             <input matInput type="number" step="0.01" min="0" formControlName="anticipo"
               (keydown)="bloquearNegativos($event)" />
             @if (f.anticipo.hasError('required') && f.anticipo.touched) {
-            <mat-error>Obligatorio</mat-error>
+            <mat-error>Obligatorio, ingresa 0 si no aplica</mat-error>
             }
           </mat-form-field>
-
-
-
-
-
           <!-- Fila 4: N° de sacos -->
           <mat-form-field appearance="outline">
-
-
-
-
             <mat-label>Codificación</mat-label>
             <mat-select formControlName="idCodificacion">
               @for (cod of codificaciones(); track cod.id) {
@@ -139,65 +138,28 @@
             }
           </mat-form-field>
 
-
-
-
-
-          <!-- Fila 3: Tabla de minerales (ocupa todo el ancho) -->
-          <div class="form-grid__full minerales-container">
-            @if (detalleControls().length > 0) {
-            <div class="minerales-header">
-              <span class="minerales-header__label">
-                Ley por mineral y su unidad (puede quedar en 0: es un registro preliminar, la ley exacta se define en
-                laboratorio)
-              </span>
-            </div>
-            <table class="minerales-table">
-              <thead>
-                <tr>
-                  <th>Mineral / Producto</th>
-                  <th>Ley</th>
-                  <th>Unidad</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (fila of detalleControls(); track fila.idMineral) {
-                <tr>
-                  <td class="minerales-table__name">
-                    {{ fila.descripcion }}{{ fila.simbolo ? ' (' + fila.simbolo + ')' : '' }}
-                  </td>
-                  <td class="minerales-table__ley">
-                    <mat-form-field appearance="outline" class="ley-input">
-                      <input matInput type="number" step="0.01" min="0"
-                        [max]="fila.unidadControl.value === '%' ? 100 : null" [formControl]="fila.control"
-                        placeholder="Ley" (keydown)="bloquearNegativos($event)" />
-                      @if (fila.control.hasError('required') && fila.control.touched) {
-                      <mat-error>Obligatorio (puede ser 0)</mat-error>
-                      }
-                      @if (fila.control.hasError('max') && fila.control.touched) {
-                      <mat-error>No puede superar 100</mat-error>
-                      }
-                    </mat-form-field>
-                  </td>
-                  <td class="minerales-table__unidad">
-                    <mat-form-field appearance="outline" class="unidad-input">
-                      <mat-select [formControl]="fila.unidadControl">
-                        @for (unidad of leyUnidades; track unidad) {
-                        <mat-option [value]="unidad">{{ unidad }}</mat-option>
-                        }
-                      </mat-select>
-                    </mat-form-field>
-                  </td>
-                </tr>
-                }
-              </tbody>
-            </table>
-            } @else if (f.idCodificacion.value) {
-            <p class="minerales-vacio">Esta codificación no tiene minerales configurados.</p>
+          <mat-form-field appearance="outline">
+            <mat-label>Humedad</mat-label>
+            <input matInput type="number" step="0.01" min="0" formControlName="humedad"
+              (keydown)="bloquearNegativos($event)" />
+            @if (f.humedad.hasError('required') && f.humedad.touched) {
+            <mat-error>Obligatorio, ingresa 0 si no aplica</mat-error>
             }
-          </div>
+          </mat-form-field>
 
-
+          <mat-form-field appearance="outline">
+            <mat-label>Muestrero</mat-label>
+            <mat-select formControlName="idMuestrero">
+              @for (persona of muestreros(); track persona.id) {
+              <mat-option [value]="persona.id">
+                {{ nombreProveedor(persona) }} — {{ persona.numeroDocumento }}
+              </mat-option>
+              }
+            </mat-select>
+            @if (f.idMuestrero.hasError('required') && f.idMuestrero.touched) {
+            <mat-error>Selecciona un muestrero</mat-error>
+            }
+          </mat-form-field>
 
           <!-- Fila 5: Observaciones (completa) -->
           <mat-form-field appearance="outline" class="form-grid__full">

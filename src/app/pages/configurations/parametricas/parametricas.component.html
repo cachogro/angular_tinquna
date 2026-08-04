@@ -60,6 +60,60 @@
           </mat-card-actions>
         </mat-card>
       </div>
+      <div class="col-lg-4 col-sm-6">
+        <mat-card class="b-1 curso-card">
+          <mat-card-header class="card-header header-blue">
+            <mat-card-title>Laboratorio</mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="b-t-1" style="display: flex; justify-content: flex-start;">
+            <p>
+              Panel de Registro de Laboratorios
+            </p>
+          </mat-card-content>
+          <mat-card-actions class="card-footer">
+            <button matButton style="width: 100%; font-weight: bold;" matTooltip="registrar nuevo laboratorio"
+              (click)="abrirNuevoLaboratorio()">
+              Nuevo Laboratorio
+            </button>
+          </mat-card-actions>
+        </mat-card>
+      </div>
+      <div class="col-lg-4 col-sm-6">
+        <mat-card class="b-1 curso-card">
+          <mat-card-header class="card-header header-teal">
+            <mat-card-title>Entidad de Aporte</mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="b-t-1" style="display: flex; justify-content: flex-start;">
+            <p>
+              Panel de Registro de Entidades de Aporte
+            </p>
+          </mat-card-content>
+          <mat-card-actions class="card-footer">
+            <button matButton style="width: 100%; font-weight: bold;" matTooltip="registrar nueva entidad de aporte"
+              (click)="abrirNuevaEntidadAporte()">
+              Nueva Entidad de Aporte
+            </button>
+          </mat-card-actions>
+        </mat-card>
+      </div>
+      <div class="col-lg-4 col-sm-6">
+        <mat-card class="b-1 curso-card">
+          <mat-card-header class="card-header header-orange">
+            <mat-card-title>Mineral</mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="b-t-1" style="display: flex; justify-content: flex-start;">
+            <p>
+              Panel de Registro de Minerales
+            </p>
+          </mat-card-content>
+          <mat-card-actions class="card-footer">
+            <button matButton style="width: 100%; font-weight: bold;" matTooltip="registrar nuevo mineral"
+              (click)="abrirNuevoMineral()">
+              Nuevo Mineral
+            </button>
+          </mat-card-actions>
+        </mat-card>
+      </div>
     </div>
 
   </mat-card-content>

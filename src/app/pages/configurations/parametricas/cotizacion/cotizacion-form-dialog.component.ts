@@ -1,13 +1,19 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import {
+  AbstractControl,
   FormBuilder,
   FormControl,
   FormGroup,
   FormsModule,
   ReactiveFormsModule,
+  ValidationErrors,
   Validators,
 } from '@angular/forms';
+import {
+  MatAutocompleteModule,
+  MatAutocompleteSelectedEvent,
+} from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -21,7 +27,6 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
-import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -34,6 +39,10 @@ import { ParametricaDialogShellComponent } from '../shared/parametrica-dialog-sh
 
 export interface CotizacionDialogData {
   cotizacion?: Cotizacion;
+  /** Al abrir en modo "nueva" (sin `cotizacion`), preselecciona este mineral.
+   *  Útil cuando el modal se abre desde valorización porque un mineral no
+   *  tiene cotización vigente. */
+  idMineralPreseleccionado?: number;
 }
 
 @Component({
@@ -45,7 +54,7 @@ export interface CotizacionDialogData {
     FormsModule,
     MatFormFieldModule,
     MatInputModule,
-    MatSelectModule,
+    MatAutocompleteModule,
     MatButtonModule,
     MatDialogModule,
     MatSnackBarModule,
@@ -72,6 +81,11 @@ export class CotizacionFormDialogComponent implements OnInit {
     inject<CotizacionDialogData>(MAT_DIALOG_DATA, { optional: true }) ?? {};
 
   minerales: Mineral[] = [];
+  mineralesFiltrados: Mineral[] = [];
+  /** Control aparte del `form`: guarda lo que se ve en el input (texto
+   *  mientras se busca, o el Mineral una vez seleccionado). El id real
+   *  seleccionado sigue viviendo en `form.get('idMineral')`. */
+  readonly mineralCtrl = new FormControl<Mineral | string | null>('');
   guardando = false;
   columnas = [
     'id',
@@ -100,16 +114,55 @@ export class CotizacionFormDialogComponent implements OnInit {
     return !!this.cotizacionEditando;
   }
 
+  /** Fecha de hoy en hora local, "YYYY-MM-DD". Sirve como mínimo del date
+   *  input y para validar que fechaVigenciaFinal no sea anterior a hoy
+   *  (el back rechaza esas fechas con 400). */
+  readonly fechaMinima = this.obtenerFechaHoyLocal();
+
+  private validarFechaNoAnteriorAHoy = (
+    control: AbstractControl,
+  ): ValidationErrors | null => {
+    if (!control.value) return null;
+    return control.value < this.fechaMinima ? { fechaPasada: true } : null;
+  };
+
   form: FormGroup = this.fb.group({
     idMineral: [null as number | null, [Validators.required]],
     cotizacionMineralDolares: [
       null as number | null,
-      [Validators.required, Validators.min(0.01)],
+      [Validators.required, Validators.min(0), this.validarMaxDecimales(5)],
     ],
-    alicuotaExterna: [0, [Validators.min(0)]],
-    alicuotaInterna: [0, [Validators.min(0)]],
-    fechaVigenciaFinal: ['', [Validators.required]],
+    alicuotaExterna: [
+      null as number | null,
+      [Validators.min(0), this.validarMaxDecimales(5)],
+    ],
+    alicuotaInterna: [
+      null as number | null,
+      [Validators.min(0), this.validarMaxDecimales(5)],
+    ],
+    fechaVigenciaFinal: [
+      '',
+      [Validators.required, this.validarFechaNoAnteriorAHoy],
+    ],
   });
+
+  private obtenerFechaHoyLocal(): string {
+    const hoy = new Date();
+    const year = hoy.getFullYear();
+    const month = String(hoy.getMonth() + 1).padStart(2, '0');
+    const day = String(hoy.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  /** El back acepta como máximo 5 decimales en cotización y alícuotas */
+  private validarMaxDecimales(max: number) {
+    return (control: AbstractControl): ValidationErrors | null => {
+      const value = control.value;
+      if (value === null || value === undefined || value === '') return null;
+      const decimales = value.toString().split('.')[1]?.length ?? 0;
+      return decimales > max ? { maxDecimales: { max } } : null;
+    };
+  }
 
   ngOnInit(): void {
     this.cargarMinerales();
@@ -125,10 +178,17 @@ export class CotizacionFormDialogComponent implements OnInit {
       this.busquedaChange$.next(),
     );
 
+    this.mineralCtrl.valueChanges.subscribe((valor) => {
+      const texto = typeof valor === 'string' ? valor : (valor?.descripcion ?? '');
+      this.mineralesFiltrados = this.filtrarMinerales(texto);
+    });
+
     this.recargarTabla();
 
     if (this.data.cotizacion) {
       this.editar(this.data.cotizacion);
+    } else if (this.data.idMineralPreseleccionado) {
+      this.form.patchValue({ idMineral: this.data.idMineralPreseleccionado });
     }
   }
 
@@ -136,12 +196,83 @@ export class CotizacionFormDialogComponent implements OnInit {
     this.parametricasService.obtenerMinerales().subscribe({
       next: (data) => {
         this.minerales = data.filter((m) => m.activo !== false);
+        this.mineralesFiltrados = this.minerales;
+        this.sincronizarMineralCtrl();
       },
       error: () =>
         this.snackBar.open('Error al cargar los minerales', 'Cerrar', {
           duration: 3000,
         }),
     });
+  }
+
+  /** Refleja en el input de búsqueda el mineral que ya está seleccionado en
+   *  `form.get('idMineral')` (al editar, o al preseleccionar). Se llama tras
+   *  cargar los minerales por si el id ya estaba seteado antes de tenerlos. */
+  private sincronizarMineralCtrl(): void {
+    const id = this.form.get('idMineral')?.value;
+    if (id == null) return;
+    const mineral = this.minerales.find((m) => m.id === id);
+    if (mineral) this.mineralCtrl.setValue(mineral, { emitEvent: false });
+  }
+
+  private filtrarMinerales(texto: string): Mineral[] {
+    const filtro = texto.trim().toLowerCase();
+    if (!filtro) return this.minerales;
+    return this.minerales.filter((m) =>
+      m.descripcion.toLowerCase().includes(filtro),
+    );
+  }
+
+  mostrarMineral = (mineral: Mineral | string | null): string => {
+    if (!mineral) return '';
+    if (typeof mineral === 'string') return mineral;
+    return `${mineral.descripcion} (${mineral.simbolo ?? ''})`;
+  };
+
+  onMineralSeleccionado(event: MatAutocompleteSelectedEvent): void {
+    const mineral = event.option.value as Mineral;
+    this.form.get('idMineral')!.setValue(mineral.id);
+    this.form.get('idMineral')!.markAsTouched();
+  }
+
+  /** Si al salir del campo no se llegó a seleccionar un mineral real de la
+   *  lista (p. ej. el usuario escribió y no eligió ninguna opción), se
+   *  intenta hacer match exacto por descripción; si no hay match, se limpia
+   *  el campo para que el validator `required` de idMineral lo marque. */
+  onMineralBlur(): void {
+    const valor = this.mineralCtrl.value;
+    if (valor && typeof valor === 'object') return;
+
+    const texto = (valor ?? '').toString().trim().toLowerCase();
+    const coincidencia = this.minerales.find(
+      (m) => m.descripcion.toLowerCase() === texto,
+    );
+    if (coincidencia) {
+      this.mineralCtrl.setValue(coincidencia);
+      this.form.get('idMineral')!.setValue(coincidencia.id);
+    } else {
+      this.mineralCtrl.setValue('');
+      this.form.get('idMineral')!.setValue(null);
+    }
+    this.form.get('idMineral')!.markAsTouched();
+  }
+
+  /** El buscador de mineral solo admite letras, espacios y acentos */
+  soloLetras(event: KeyboardEvent): void {
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    if (event.key.length > 1) return; // teclas de control: Backspace, Tab, ArrowLeft, etc.
+    if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]$/.test(event.key)) {
+      event.preventDefault();
+    }
+  }
+
+  /** Evita el signo "-" (y notación "e") en los campos numéricos: no deben
+   *  aceptar negativos, ni siquiera tecleados a mano. */
+  bloquearNegativos(event: KeyboardEvent): void {
+    if (['-', '+', 'e', 'E'].includes(event.key)) {
+      event.preventDefault();
+    }
   }
 
   private recargarTabla(): void {
@@ -201,21 +332,32 @@ export class CotizacionFormDialogComponent implements OnInit {
       fechaVigenciaFinal,
     } = this.form.getRawValue();
 
+    // Si el usuario deja alicuotaExterna/alicuotaInterna vacías, no se
+    // incluyen en el body: el back solo aplica su fallback (heredar de la
+    // última cotización, o no modificar en edición) cuando la propiedad es
+    // undefined. Mandar null o 0 explícito rompería esa lógica.
+    const alicuotas: { alicuotaExterna?: number; alicuotaInterna?: number } =
+      {};
+    if (alicuotaExterna !== null && alicuotaExterna !== '') {
+      alicuotas.alicuotaExterna = alicuotaExterna;
+    }
+    if (alicuotaInterna !== null && alicuotaInterna !== '') {
+      alicuotas.alicuotaInterna = alicuotaInterna;
+    }
+
     const request$ =
       this.modoEdicion && this.cotizacionEditando
         ? this.parametricasService.actualizarCotizacion({
             id: this.cotizacionEditando.id,
             cotizacionMineralDolares,
-            alicuotaExterna,
-            alicuotaInterna,
             fechaVigenciaFinal,
+            ...alicuotas,
           })
         : this.parametricasService.crearCotizacion({
             idMineral,
             cotizacionMineralDolares,
-            alicuotaExterna,
-            alicuotaInterna,
             fechaVigenciaFinal,
+            ...alicuotas,
           });
 
     request$.subscribe({
@@ -256,6 +398,7 @@ export class CotizacionFormDialogComponent implements OnInit {
       fechaVigenciaFinal: this.aInputDate(cotizacion.fechaVigenciaFinal),
     });
     this.form.get('idMineral')!.disable();
+    this.sincronizarMineralCtrl();
   }
 
   /** Limpia el formulario y sale del modo edición, sin cerrar el modal */
@@ -263,11 +406,13 @@ export class CotizacionFormDialogComponent implements OnInit {
     this.form.reset({
       idMineral: null,
       cotizacionMineralDolares: null,
-      alicuotaExterna: 0,
-      alicuotaInterna: 0,
+      alicuotaExterna: null,
+      alicuotaInterna: null,
       fechaVigenciaFinal: '',
     });
     this.form.get('idMineral')!.enable();
+    this.mineralCtrl.setValue('');
+    this.mineralesFiltrados = this.minerales;
     this.cotizacionEditando = null;
   }
 
@@ -279,6 +424,16 @@ export class CotizacionFormDialogComponent implements OnInit {
    *  el input type="date" necesita siempre "YYYY-MM-DD". */
   private aInputDate(fecha: string): string {
     return fecha?.slice(0, 10) ?? '';
+  }
+
+  /** Formatea a "dd/mm/aaaa" para la tabla. Se hace por string, sin pasar
+   *  por `Date`, para no arrastrar el offset del timestamp completo
+   *  ("...T15:42:10.123-04:00") ni el de fechas legadas sin hora
+   *  ("2026-07-15") — ambas ya traen el día calendario correcto. */
+  formatearFecha(fecha: string | null | undefined): string {
+    if (!fecha) return '';
+    const [year, month, day] = fecha.slice(0, 10).split('-');
+    return `${day}/${month}/${year}`;
   }
 
   get cotizaciones(): Cotizacion[] {

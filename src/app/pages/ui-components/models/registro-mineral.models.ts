@@ -1,4 +1,5 @@
 // src/app/pages/ui-components/models/registro-mineral.models.ts
+import { ActorProductivoMinero } from 'src/app/pages/configurations/models/persona.models';
 
 export interface MineralResumen {
   id: number | string;
@@ -27,13 +28,12 @@ export interface EstadoOperacion {
 /** Catálogo fijo (dado que rara vez cambia). Si luego tienes un endpoint,
  *  reemplaza el uso de esta constante por una llamada al servicio. */
 export const ESTADOS_OPERACION: EstadoOperacion[] = [
-  { id: 1, nombre: 'PENDIENTE' },
-  { id: 2, nombre: 'EN RECEPCIÓN' },
-  { id: 3, nombre: 'EN REVISIÓN' },
-  { id: 4, nombre: 'APROBADO' },
-  { id: 5, nombre: 'RECHAZADO A TOL' },
-  { id: 6, nombre: 'CANCELADO' },
-  { id: 7, nombre: 'LIQUIDADO' },
+  { id: 1, nombre: 'EN RECEPCIÓN' },
+  { id: 2, nombre: 'APROBADO' },
+  { id: 3, nombre: 'RECHAZADO A TOL' },
+  { id: 4, nombre: 'CANCELADO' },
+  { id: 5, nombre: 'TRANZADO' },
+  { id: 6, nombre: 'REMUESTREO' },
 ];
 
 export const ESTADO_LIQUIDADO_ID = 7;
@@ -46,6 +46,7 @@ export interface PersonaResumen {
   numeroDocumento: string;
   celular?: string;
   idActorProductivoMinero?: string | null;
+  actorProductivoMinero?: ActorProductivoMinero | null;
 }
 
 export type LeyUnidad = '%' | 'g/TM';
@@ -71,11 +72,15 @@ export interface RegistroMineral {
   idPersona: string;
   persona?: PersonaResumen;
   numeroSacos: number | null;
-  pesoNeto: string; // el backend lo devuelve como string numérico
+  balanzaL: string; // el backend lo devuelve como string numérico
+  balanzaT: string;
   anticipo: string;
+  humedad?: string | number | null;
+  idPersonalInterno?: string | null;
+  personalInterno?: PersonaResumen | null;
   /** @deprecated el backend ya no gestiona este campo */
   totalValorBruto?: string;
-  fechaOperacion: string; // ISO 8601 con offset, ej. '2026-07-22T14:35:00-04:00'
+  fechaRecepcion: string; // ISO 8601 con offset, ej. '2026-07-22T14:35:00-04:00'
   observaciones?: string | null;
   idEstado: number;
   estado?: EstadoOperacion;
@@ -96,21 +101,30 @@ export interface GuardarRegistroMineralRequest {
   idCodificacion: string;
   idPersona: string;
   numeroSacos: number | null;
-  pesoNeto: number;
+  balanzaL: number;
+  balanzaT: number;
   anticipo: number;
-  fechaOperacion: string; // ISO 8601 con offset, ej. '2026-07-22T14:35:00-04:00'
+  humedad: number;
+  /** Id de la persona (tipo muestrero) asignada a la recepción. Opcional. */
+  idPersonalInterno?: string;
+  fechaRecepcion: string; // ISO 8601 con offset, ej. '2026-07-22T14:35:00-04:00'
   observaciones: string;
-  detalles: DetalleMineralRequest[];
+  // detalles: DetalleMineralRequest[];
 }
+
+export type OrdenDireccion = 'ASC' | 'DESC';
 
 export interface FiltrosRegistroMineral {
   page: number;
   limit: number;
   busqueda?: string; // nombre de proveedor
+  codigoOperacion?: string; // código o número de operación/correlativo
   numeroDocumento?: string; // carnet
   idEstado?: number;
   fechaDesde?: string; // 'YYYY-MM-DD'
   fechaHasta?: string; // 'YYYY-MM-DD'
+  orderBy?: string;
+  orderDirection?: OrdenDireccion;
 }
 
 export interface RegistrosMineralPaginados {

@@ -1,0 +1,85 @@
+<h2 mat-dialog-title>
+  Detalle de la recepción
+  <span class="dialog-subtitle">{{ registro.codigoOperacion }} · {{ registro.estado?.nombre ?? ('Estado #' +
+    registro.idEstado) }}</span>
+</h2>
+
+<mat-dialog-content class="dialog-content">
+  <div class="detalle-grid">
+    <div class="detalle-item">
+      <span class="detalle-item__label">N° de operación</span>
+      <span class="detalle-item__valor">{{ registro.codigoOperacion || '—' }}</span>
+    </div>
+    <div class="detalle-item">
+      <span class="detalle-item__label">Correlativo</span>
+      <span class="detalle-item__valor">{{ registro.correlativo || '—' }}</span>
+    </div>
+    <div class="detalle-item">
+      <span class="detalle-item__label">Fecha y hora de recepción</span>
+      <span class="detalle-item__valor">{{ formatFecha(registro.fechaRecepcion) }}</span>
+    </div>
+
+    <div class="detalle-item">
+      <span class="detalle-item__label">Proveedor</span>
+      <span class="detalle-item__valor">{{ nombreProveedor() }}</span>
+    </div>
+    <div class="detalle-item">
+      <span class="detalle-item__label">N° de documento</span>
+      <span class="detalle-item__valor">{{ registro.persona?.numeroDocumento || '—' }}</span>
+    </div>
+    <div class="detalle-item">
+      <span class="detalle-item__label">Codificación</span>
+      <span class="detalle-item__valor">
+        {{ registro.codificacion ? (registro.codificacion.codigo + ' — ' + registro.codificacion.nombre) : '—' }}
+      </span>
+    </div>
+
+    <div class="detalle-item">
+      <span class="detalle-item__label">N° de sacos</span>
+      <span class="detalle-item__valor">{{ formatNumero(registro.numeroSacos) || '—' }}</span>
+    </div>
+    <div class="detalle-item">
+      <span class="detalle-item__label">Balanza L (kg)</span>
+      <span class="detalle-item__valor">{{ formatNumero(registro.balanzaL) }}</span>
+    </div>
+    <div class="detalle-item">
+      <span class="detalle-item__label">Balanza T (kg)</span>
+      <span class="detalle-item__valor">{{ formatNumero(registro.balanzaT) }}</span>
+    </div>
+
+    <div class="detalle-item">
+      <span class="detalle-item__label">Anticipo</span>
+      <span class="detalle-item__valor">{{ formatNumero(registro.anticipo) }}</span>
+    </div>
+    <div class="detalle-item">
+      <span class="detalle-item__label">Humedad</span>
+      <span class="detalle-item__valor">{{ formatNumero(registro.humedad) || '0' }}</span>
+    </div>
+    <div class="detalle-item">
+      <span class="detalle-item__label">Muestrero</span>
+      <span class="detalle-item__valor">{{ nombreMuestrero() }}</span>
+    </div>
+
+    @if (leyesTexto()) {
+    <div class="detalle-item detalle-item--full">
+      <span class="detalle-item__label">Leyes</span>
+      <span class="detalle-item__valor">{{ leyesTexto() }}</span>
+    </div>
+    }
+
+    <div class="detalle-item detalle-item--full">
+      <span class="detalle-item__label">Observaciones</span>
+      <span class="detalle-item__valor">{{ registro.observaciones || '—' }}</span>
+    </div>
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  @if (data.puedeImprimir) {
+  <button mat-stroked-button color="primary" (click)="imprimir2(registro.id)">
+    <mat-icon>print</mat-icon>
+    Imprimir PDF
+  </button>
+  }
+  <button mat-flat-button color="primary" (click)="cerrar()">Cerrar</button>
+</mat-dialog-actions>

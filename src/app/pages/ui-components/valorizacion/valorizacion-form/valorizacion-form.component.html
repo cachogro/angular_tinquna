@@ -1,0 +1,457 @@
+<mat-card class="cardWithShadow theme-card">
+  <mat-card-header class="card-header-row">
+    <div class="header-left">
+      <button mat-icon-button (click)="volver()" matTooltip="Volver">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <div>
+        <mat-card-title class="m-b-0">Valorización</mat-card-title>
+        <mat-card-subtitle class="m-b-0">
+          @if (valorizacion(); as v) {
+          Recepción {{ v.recepcionMineral?.codigoOperacion ?? '—' }} — {{ mineral()?.descripcion ?? 'Mineral' }}
+          } @else {
+          Cargando...
+          }
+        </mat-card-subtitle>
+      </div>
+    </div>
+  </mat-card-header>
+
+  <mat-card-content class="b-t-1">
+    @if (cargando()) {
+    <div class="form-loading">
+      <mat-spinner diameter="36"></mat-spinner>
+      <span>Cargando valorización...</span>
+    </div>
+    } @else if (valorizacion(); as v) {
+    <div class="valorizacion-preview">
+
+      @if (!esEditable) {
+      <div class="valorizacion-preview__aviso">
+        <mat-icon>lock</mat-icon>
+        <span>Esta valorización ya no está en borrador, por lo que no se puede editar.</span>
+      </div>
+      }
+
+      @if (verificandoCotizacion) {
+      <div class="valorizacion-preview__aviso valorizacion-preview__aviso--info">
+        <mat-spinner diameter="18"></mat-spinner>
+        <span>Verificando cotización vigente de los minerales...</span>
+      </div>
+      } @else if (mineralesSinCotizacion.length > 0) {
+      <div class="valorizacion-preview__aviso valorizacion-preview__aviso--alerta">
+        <mat-icon>error_outline</mat-icon>
+        <div class="valorizacion-preview__aviso-contenido">
+          <span>Los siguientes minerales no tienen cotización vigente. No se puede valorizar hasta registrarla:</span>
+          @for (m of mineralesSinCotizacion; track m.id) {
+          <div class="valorizacion-preview__mineral-sin-cotizacion">
+            <span>{{ m.descripcion }}{{ m.simbolo ? ' (' + m.simbolo + ')' : '' }}</span>
+            <button mat-stroked-button color="primary" type="button" (click)="abrirRegistrarCotizacion(m.id)">
+              <mat-icon>request_quote</mat-icon>
+              Registrar cotización
+            </button>
+          </div>
+          }
+        </div>
+      </div>
+      } @else if (detallesMineralesArray.length > 0) {
+      <div class="valorizacion-preview__aviso valorizacion-preview__aviso--ok">
+        <mat-icon>check_circle</mat-icon>
+        <span>Cotización vigente verificada para todos los minerales de la ley.</span>
+      </div>
+      }
+
+      <!-- Datos de la recepción de mineral: solo lectura -->
+
+      <div class="card mt-2">
+        <div class="card-body">
+          <div class="row">
+            <!-- Columna izquierda: 3 elementos -->
+            <div class="col-md-6">
+              <p class="small mb-1">
+                Productos:
+                <span class="text-primary">{{ productosTexto(v) }}</span>
+              </p>
+              <p class="small mb-1">
+                Cliente:
+                <span class="text-primary">
+                  {{ clienteTexto(v) }} — C.I.: {{ v.recepcionMineral?.persona?.numeroDocumento ?? '—' }}
+                </span>
+              </p>
+              <p class="small mb-0">
+                Lote:
+                <span class="text-primary">{{ v.recepcionMineral?.codigoOperacion ?? '—' }}</span>
+              </p>
+            </div>
+            <!-- Columna derecha: 3 elementos -->
+            <div class="col-md-6">
+              <p class="small mb-1">
+                Fecha de recepción:
+                <span class="text-primary">{{ formatFechaSolo(v.recepcionMineral?.fechaRecepcion) }}</span>
+              </p>
+              <p class="small mb-1">
+                Fecha de transacción:
+                <span class="text-primary">{{ fechaTransaccionTexto }}</span>
+              </p>
+              <p class="small mb-0">
+                Tipo APM:
+                <span class="text-primary">{{ v.recepcionMineral?.persona?.actorProductivoMinero?.nombre ?? '—'
+                  }}</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      @if (form; as f) {
+      <form [formGroup]="f" (ngSubmit)="guardarComoPrevalorizado()" class="valorizacion-form">
+
+        <h3 class="valorizacion-form__titulo">Cálculo de peso neto</h3>
+        <br>
+        <div class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Peso bruto húmedo (kg)</mat-label>
+            <input matInput type="number" [value]="pesoBrutoHumedo()" disabled />
+            <mat-hint>Balanza L de la recepción</mat-hint>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Humedad (%)</mat-label>
+            <input matInput type="number" step="0.01" formControlName="humedadPorcentaje" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Peso neto seco (kg)</mat-label>
+            <input matInput type="number" step="0.001" formControlName="pesoNetoSecoKilogramos" />
+            <mat-hint>Calculado: peso bruto húmedo − (peso bruto húmedo × humedad%)</mat-hint>
+          </mat-form-field>
+        </div>
+        <!-- <h3 class="valorizacion-form__titulo">Precio por kilo</h3> -->
+        <br>
+        <div class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Tipo de cambio (Bs/USD)</mat-label>
+            <input matInput type="number" step="0.01" formControlName="tipoCambio" />
+            <mat-hint>Ingrésalo antes de cargar la ley: lo usa el Precio por kilo de cada fila</mat-hint>
+          </mat-form-field>
+
+          <!-- <mat-form-field appearance="outline">
+            <mat-label>Precio por kilo final (a pagar)</mat-label>
+            <input matInput type="number" step="0.01" formControlName="precioKiloFinal" />
+            <mat-hint>Decisión del liquidador</mat-hint>
+          </mat-form-field> -->
+        </div>
+
+        <h3 class="valorizacion-form__titulo">
+          Ley mineral
+          @if (esCodificacionRam()) {
+          <button mat-stroked-button type="button" color="primary" (click)="agregarMineralLey()">
+            <mat-icon>add</mat-icon>
+            Agregar mineral
+          </button>
+          }
+        </h3>
+
+
+        <!-- calculo de precio por quilo mineral -->
+
+        <div formArrayName="detallesMinerales" class="valorizacion-form__ley-tabla-wrap">
+          @if (detallesMineralesArray.length === 0) {
+          <p class="valorizacion-preview__nota">Aún no hay minerales con ley registrada.</p>
+          } @else {
+          @for (fila of detallesMineralesArray.controls; track $index; let i = $index) {
+          <div [formGroupName]="i" class="valorizacion-form__ley-fila">
+            <mat-form-field appearance="outline"
+              class="valorizacion-form__ley-campo valorizacion-form__ley-campo--mineral">
+              <mat-label>Mineral / Producto</mat-label>
+              <mat-select formControlName="idMineral" (selectionChange)="onMineralFilaChange(i)">
+                @for (m of opcionesMineral(i); track m.id) {
+                <mat-option [value]="m.id">{{ m.descripcion }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="valorizacion-form__ley-campo valorizacion-form__ley-campo--ley">
+              <mat-label>Ley</mat-label>
+              <input matInput type="number" step="0.01" formControlName="ley" (input)="recalcularFilaLey(i)" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline"
+              class="valorizacion-form__ley-campo valorizacion-form__ley-campo--ley-unidad">
+              <mat-label>Ley Unidad</mat-label>
+              <mat-select formControlName="leyUnidad">
+                @for (unidad of leyUnidades; track unidad) {
+                <mat-option [value]="unidad">{{ unidad }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline"
+              class="valorizacion-form__ley-campo valorizacion-form__ley-campo--cotizacion">
+              <mat-label>Cotización vigente</mat-label>
+              <input matInput type="number" [value]="cotizacionUSDMineral(fila.get('idMineral')?.value)" disabled />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline"
+              class="valorizacion-form__ley-campo valorizacion-form__ley-campo--factor-conversion">
+              <mat-label>Factor de conversión</mat-label>
+              <input matInput type="number" [value]="factorConversionMineral(fila.get('idMineral')?.value)" disabled />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline"
+              class="valorizacion-form__ley-campo valorizacion-form__ley-campo--pct-cotizacion">
+              <mat-label>% Cotización</mat-label>
+              <input matInput type="number" step="0.01" formControlName="porcentajeCotizacion"
+                (input)="recalcularFilaLey(i)" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline"
+              class="valorizacion-form__ley-campo valorizacion-form__ley-campo--cotizacion-aplicada">
+              <mat-label>Cotización aplicada</mat-label>
+              <input matInput type="number" formControlName="cotizacionAplicada" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline"
+              class="valorizacion-form__ley-campo valorizacion-form__ley-campo--precio">
+              <mat-label>Precio</mat-label>
+              <input matInput type="number" step="1" formControlName="precio" (input)="recalcularFilaLey(i)" />
+              <mat-hint>Entero, ej. 45 → factor 0.000045</mat-hint>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline"
+              class="valorizacion-form__ley-campo valorizacion-form__ley-campo--ley-pagable">
+              <mat-label>Ley Pagable</mat-label>
+              <input matInput type="number" formControlName="leyPagable" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline"
+              class="valorizacion-form__ley-campo valorizacion-form__ley-campo--precio-kilo">
+              <mat-label>Precio por kilo</mat-label>
+              <input matInput type="number" formControlName="precioPorKilo" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="valorizacion-form__ley-campo valorizacion-form__ley-campo--pkl">
+              <mat-label>P/KL</mat-label>
+              <input matInput type="number" formControlName="pKl" />
+            </mat-form-field>
+
+            @if (esCodificacionRam()) {
+            <button mat-icon-button color="warn" type="button" (click)="quitarMineralLey(i)"
+              class="valorizacion-form__ley-eliminar" matTooltip="Quitar mineral">
+              <mat-icon>delete</mat-icon>
+            </button>
+            }
+          </div>
+          }
+          }
+        </div>
+
+
+        <h3 class="valorizacion-form__titulo">Datos de laboratorio</h3>
+        <div class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Laboratorio</mat-label>
+            <mat-select formControlName="idLaboratorio">
+              @for (lab of laboratorios(); track lab.id) {
+              <mat-option [value]="lab.id">{{ lab.nombre }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <!-- <mat-form-field appearance="outline">
+            <mat-label>Peso neto húmedo (kg)</mat-label>
+            <input matInput type="number" step="0.001" formControlName="pesoNetoHumedoKilogramos" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Tara (kg)</mat-label>
+            <input matInput type="number" step="0.001" formControlName="taraKilogramos" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Merma (%)</mat-label>
+            <input matInput type="number" step="0.01" formControlName="mermaPorcentaje" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Merma (kg)</mat-label>
+            <input matInput type="number" step="0.001" formControlName="mermaKilogramos" />
+          </mat-form-field> -->
+        </div>
+
+        <!-- fin calculo de precio por quilo mineral -->
+
+
+        <h3 class="valorizacion-form__titulo">
+          Descuentos de Ley
+          <button mat-stroked-button type="button" color="primary" (click)="agregarAporte()">
+            <mat-icon>add</mat-icon>
+            Agregar aporte
+          </button>
+        </h3>
+
+        <div formArrayName="aportes" class="valorizacion-form__aportes-tabla-wrap">
+          @if (aportesArray.length === 0) {
+          <p class="valorizacion-preview__nota">Aún no agregaste ningún aporte.</p>
+          } @else {
+          <table class="valorizacion-form__aportes-tabla">
+            <colgroup>
+              <col class="col-check">
+              <col class="col-entidad">
+              <col class="col-base">
+              <col class="col-porcentaje">
+              <col class="col-base-calculo">
+              <col class="col-importe">
+              <col class="col-acciones">
+            </colgroup>
+            <thead>
+              <tr>
+                <th class="col-check">Aplicar</th>
+                <th>Entidad</th>
+                <th>Base</th>
+                <th>% Alíc.</th>
+                <th>Base cálc.</th>
+                <th>Importe</th>
+                <th class="col-acciones">Acc.</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (fila of aportesArray.controls; track $index; let i = $index) {
+              <tr [formGroupName]="i">
+                <td class="col-check">
+                  <mat-checkbox formControlName="aplicar" (change)="recalcularAporte(i)"
+                    matTooltip="Aplicar este descuento"></mat-checkbox>
+                </td>
+
+                <td>
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic"
+                    class="valorizacion-form__aportes-campo">
+                    <mat-select formControlName="idEntidadAporte" (selectionChange)="recalcularAporte(i)">
+                      @for (entidad of entidadesAporteActivas(); track entidad.id) {
+                      <mat-option [value]="entidad.id">{{ entidad.descripcion }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                </td>
+
+                <td>
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic"
+                    class="valorizacion-form__aportes-campo valorizacion-form__aportes-campo--base">
+                    <mat-select formControlName="tipoBaseAporte" (selectionChange)="recalcularAporte(i)">
+                      @for (base of opcionesBaseAporte(i); track base) {
+                      <mat-option [value]="base">{{ base }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                </td>
+
+                <td>
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic"
+                    class="valorizacion-form__aportes-campo valorizacion-form__aportes-campo--porcentaje">
+                    <input matInput type="number" formControlName="porcentajeAporte" (input)="recalcularAporte(i)"
+                      [matTooltip]="fila.get('idEntidadAporte')?.value === ID_REGALIA_MINERA ? 'Sugerido: suma de alicuotaInterna. Editable.' : ''" />
+                  </mat-form-field>
+                </td>
+
+                <td>
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic"
+                    class="valorizacion-form__aportes-campo">
+                    <input matInput type="number" formControlName="baseCalculo" />
+                  </mat-form-field>
+                </td>
+
+                <td>
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic"
+                    class="valorizacion-form__aportes-campo">
+                    <input matInput type="number" formControlName="importeBolivianos" />
+                  </mat-form-field>
+                </td>
+
+                <td class="col-acciones">
+                  <button mat-icon-button color="warn" type="button" (click)="quitarAporte(i)"
+                    matTooltip="Quitar aporte">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </td>
+              </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr class="valorizacion-form__aportes-fila-totales">
+                <td colspan="3">Totales</td>
+                <td>{{ totalAlicuotas() }} %</td>
+                <td></td>
+                <td>{{ totalImporteAportes() }} Bs</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+          }
+        </div>
+
+        <h3 class="valorizacion-form__titulo">Totales</h3>
+        <div class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Líquido pagable</mat-label>
+            <input matInput type="number" [value]="liquidoPagable()" disabled />
+            <mat-hint>Peso neto seco × suma de P/KL</mat-hint>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Anticipo</mat-label>
+            <input matInput type="number" [value]="v.anticipo" disabled />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Saldo a pagar</mat-label>
+            <input matInput type="number" [value]="saldoAPagar()" disabled />
+            <mat-hint>Líquido pagable − anticipo</mat-hint>
+          </mat-form-field>
+        </div>
+
+        <div class="form-actions">
+          <button mat-stroked-button type="button" (click)="volver()" [disabled]="guardando()">Volver</button>
+
+          <span class="valorizacion-form__autoguardado">
+            @switch (estadoAutoguardado()) {
+            @case ('guardando') {
+            <mat-spinner diameter="14"></mat-spinner>
+            <span>Guardando borrador...</span>
+            }
+            @case ('guardado') {
+            <mat-icon inline="true">check_circle</mat-icon>
+            <span>Borrador guardado</span>
+            }
+            @case ('error') {
+            <mat-icon inline="true" color="warn">error_outline</mat-icon>
+            <span>No se pudo autoguardar</span>
+            }
+            }
+          </span>
+
+          <button mat-stroked-button color="primary" type="button" (click)="guardarComoPrevalorizado()"
+            [disabled]="!puedeValorizar || guardando()">
+            @if (guardando()) {
+            <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
+            <span>Guardando...</span>
+            } @else {
+            <span>Guardar (Pre-valorizado)</span>
+            }
+          </button>
+
+          <button mat-flat-button color="primary" type="button" (click)="finalizarValorizacion()"
+            [disabled]="!puedeValorizar || guardando()">
+            @if (guardando()) {
+            <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
+            <span>Guardando...</span>
+            } @else {
+            <span>Finalizar (Valorizado)</span>
+            }
+          </button>
+        </div>
+      </form>
+      }
+    </div>
+    }
+  </mat-card-content>
+</mat-card>

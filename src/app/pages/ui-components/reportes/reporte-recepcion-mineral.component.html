@@ -1,0 +1,190 @@
+<mat-card class="cardWithShadow theme-card">
+  <mat-card-header>
+    <div>
+      <mat-card-title class="m-b-0">Reporte de recepción de mineral</mat-card-title>
+      <mat-card-subtitle class="m-b-0">Filtra, revisa los totales y exporta el listado</mat-card-subtitle>
+    </div>
+    <div class="reporte-header__acciones">
+      <!-- <button mat-stroked-button routerLink="..">
+        <mat-icon>arrow_back</mat-icon>
+        Volver
+      </button> -->
+      <button mat-stroked-button color="primary" (click)="exportarPdf()">
+        <mat-icon>picture_as_pdf</mat-icon>
+        Exportar PDF
+      </button>
+      <button mat-flat-button color="primary" (click)="exportarExcel()" [disabled]="exportando()">
+        @if (exportando()) {
+        <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
+        <span>Generando...</span>
+        } @else {
+        <ng-container>
+          <mat-icon>grid_on</mat-icon>
+          <span>Exportar Excel</span>
+
+        </ng-container>
+
+
+        }
+      </button>
+    </div>
+  </mat-card-header>
+
+  <mat-card-content class="b-t-1">
+    <div class="reporte-page">
+
+      <div class="reporte-toolbar">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-icon matPrefix>numbers</mat-icon>
+          <input matInput placeholder="Código / N° de operación" [formControl]="codigoControl" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="reporte-toolbar__search" subscriptSizing="dynamic">
+          <mat-icon matPrefix>search</mat-icon>
+          <input matInput placeholder="Buscar por proveedor" [formControl]="searchControl" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <input matInput placeholder="N° de carnet" [formControl]="documentoControl" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-select [formControl]="estadoControl" placeholder="Estado">
+            <mat-option [value]="null">Todos los estados</mat-option>
+            @for (estado of estados; track estado.id) {
+            <mat-option [value]="estado.id">{{ estado.nombre }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Desde</mat-label>
+          <input matInput [matDatepicker]="pickerDesde" [max]="hoy" [formControl]="fechaDesdeControl" />
+          <mat-datepicker-toggle matSuffix [for]="pickerDesde"></mat-datepicker-toggle>
+          <mat-datepicker #pickerDesde></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Hasta</mat-label>
+          <input matInput [matDatepicker]="pickerHasta" [max]="hoy" [formControl]="fechaHastaControl" />
+          <mat-datepicker-toggle matSuffix [for]="pickerHasta"></mat-datepicker-toggle>
+          <mat-datepicker #pickerHasta></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-select [formControl]="orderByControl" placeholder="Ordenar por">
+            @for (opcion of opcionesOrden; track opcion.value) {
+            <mat-option [value]="opcion.value">{{ opcion.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <button mat-icon-button (click)="toggleOrden()"
+          [matTooltip]="orderDirectionControl.value === 'ASC' ? 'Ascendente' : 'Descendente'">
+          <mat-icon>{{ orderDirectionControl.value === 'ASC' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+        </button>
+
+        <button mat-button (click)="limpiarFiltros()" class="reporte-toolbar__clear">
+          <mat-icon>filter_alt_off</mat-icon>
+          Limpiar
+        </button>
+      </div>
+
+      <div class="reporte-resumen">
+        <div class="resumen-card">
+          <span class="resumen-card__label">Registros (página actual)</span>
+          <span class="resumen-card__valor">{{ registros().length }} / {{ total() }}</span>
+        </div>
+        <div class="resumen-card">
+          <span class="resumen-card__label">N° de sacos</span>
+          <span class="resumen-card__valor">{{ totalSacos() }}</span>
+        </div>
+        <div class="resumen-card">
+          <span class="resumen-card__label">Balanza L (kg)</span>
+          <span class="resumen-card__valor">{{ totalBalanzaL() | number: '1.2-2' }}</span>
+        </div>
+        <div class="resumen-card">
+          <span class="resumen-card__label">Balanza T (kg)</span>
+          <span class="resumen-card__valor">{{ totalBalanzaT() | number: '1.2-2' }}</span>
+        </div>
+        <div class="resumen-card">
+          <span class="resumen-card__label">Anticipo</span>
+          <span class="resumen-card__valor">{{ totalAnticipo() | number: '1.2-2' }}</span>
+        </div>
+      </div>
+      <p class="reporte-resumen__nota">
+        Los totales corresponden solo a la página actual. Para totales de todo el rango filtrado, usa "Exportar Excel".
+      </p>
+
+      <div class="reporte-table-wrapper">
+        @if (loading()) {
+        <div class="reporte-loading">
+          <mat-spinner diameter="36"></mat-spinner>
+          <span>Cargando reporte...</span>
+        </div>
+        } @else if (registros().length === 0) {
+        <div class="reporte-empty">
+          <mat-icon>inventory_2</mat-icon>
+          <p>No se encontraron recepciones con estos filtros</p>
+        </div>
+        } @else {
+        <table mat-table [dataSource]="registros()" class="reporte-table">
+          <ng-container matColumnDef="fecha">
+            <th mat-header-cell *matHeaderCellDef>Fecha</th>
+            <td mat-cell *matCellDef="let r">{{ formatFechaTabla(r.fechaRecepcion) }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="operacion">
+            <th mat-header-cell *matHeaderCellDef>Operación</th>
+            <td mat-cell *matCellDef="let r">{{ r.codigoOperacion }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="proveedor">
+            <th mat-header-cell *matHeaderCellDef>Proveedor</th>
+            <td mat-cell *matCellDef="let r">
+              <div>{{ nombreProveedor(r) }}</div>
+              <div class="proveedor-doc">{{ r.persona?.numeroDocumento ?? '—' }}</div>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="estado">
+            <th mat-header-cell *matHeaderCellDef>Estado</th>
+            <td mat-cell *matCellDef="let r">{{ r.estado?.nombre ?? ('Estado #' + r.idEstado) }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="sacos">
+            <th mat-header-cell *matHeaderCellDef>Sacos</th>
+            <td mat-cell *matCellDef="let r">{{ r.numeroSacos ?? '—' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="balanzaL">
+            <th mat-header-cell *matHeaderCellDef>Balanza L</th>
+            <td mat-cell *matCellDef="let r">{{ r.balanzaL }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="balanzaT">
+            <th mat-header-cell *matHeaderCellDef>Balanza T</th>
+            <td mat-cell *matCellDef="let r">{{ r.balanzaT }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="anticipo">
+            <th mat-header-cell *matHeaderCellDef>Anticipo</th>
+            <td mat-cell *matCellDef="let r">{{ r.anticipo }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="humedad">
+            <th mat-header-cell *matHeaderCellDef>Humedad</th>
+            <td mat-cell *matCellDef="let r">{{ r.humedad ?? '—' }}</td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+        </table>
+
+        <mat-paginator [length]="total()" [pageSize]="pageSize" [pageIndex]="pageIndex" [pageSizeOptions]="[10, 25, 50]"
+          (page)="onPageChange($event)"></mat-paginator>
+        }
+      </div>
+    </div>
+  </mat-card-content>
+</mat-card>

@@ -1,0 +1,359 @@
+.card-header-row {
+  display: flex;
+  align-items: center;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.form-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 56px 24px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.valorizacion-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.valorizacion-preview__aviso {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: rgba(255, 159, 67, 0.12);
+  color: #ff9f43;
+  font-size: 13px;
+}
+
+.valorizacion-preview__aviso--info {
+  background: rgba(0, 207, 232, 0.12);
+  color: #00879c;
+}
+
+.valorizacion-preview__aviso--alerta {
+  background: rgba(234, 84, 85, 0.12);
+  color: #ea5455;
+  flex-wrap: wrap;
+  align-items: flex-start;
+
+  span {
+    flex: 1 1 auto;
+  }
+}
+
+.valorizacion-preview__aviso-contenido {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1 1 auto;
+}
+
+.valorizacion-preview__mineral-sin-cotizacion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.valorizacion-preview__aviso--ok {
+  background: rgba(40, 199, 111, 0.12);
+  color: #28c76f;
+}
+
+.valorizacion-form__titulo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  margin: 8px 0 4px;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px 16px;
+  align-items: start;
+}
+
+.valorizacion-form__precio-calculado {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+
+.valorizacion-form__precio-valor {
+  font-size: 18px;
+  font-weight: 700;
+  color: #7367f0;
+}
+
+.valorizacion-form__aportes-tabla-wrap {
+  overflow-x: auto;
+  margin-bottom: 8px;
+}
+
+.valorizacion-form__aportes-tabla {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.valorizacion-form__aportes-tabla th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.6);
+  padding: 4px 4px;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.08);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.valorizacion-form__aportes-tabla td {
+  padding: 2px 4px;
+  vertical-align: middle;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+/* Anchos en % (no px): con table-layout:fixed, el % es la única unidad que
+ * se respeta de forma exacta y predecible sin importar el ancho del
+ * contenedor. Entidad baja a la mitad de lo que ocupaba (~64% -> 32%); lo
+ * liberado se reparte entre las demás columnas en la misma proporción que
+ * ya tenían entre sí. */
+.col-check {
+  width: 7%;
+}
+
+.col-entidad {
+  width: 32%;
+}
+
+.col-base {
+  width: 10%;
+}
+
+.col-porcentaje {
+  width: 11%;
+}
+
+.col-base-calculo,
+.col-importe {
+  width: 16%;
+}
+
+.col-acciones {
+  width: 8%;
+}
+
+.valorizacion-form__aportes-tabla .col-check,
+.valorizacion-form__aportes-tabla .col-acciones {
+  text-align: center;
+}
+
+.valorizacion-form__aportes-campo {
+  width: 100%;
+
+  ::ng-deep .mat-mdc-text-field-wrapper {
+    padding: 0 4px;
+  }
+
+  ::ng-deep .mat-mdc-form-field-infix {
+    min-height: 0;
+    padding: 6px 0;
+  }
+
+  input,
+  ::ng-deep .mat-mdc-select-value {
+    font-size: 12px;
+  }
+}
+
+.valorizacion-form__aportes-campo--porcentaje input {
+  text-align: center;
+}
+
+.valorizacion-form__aportes-fila-totales {
+  background: rgba(115, 103, 240, 0.06);
+  font-weight: 700;
+}
+
+.valorizacion-form__aportes-fila-totales td {
+  padding: 8px;
+  color: #7367f0;
+}
+
+.valorizacion-form__ley-tabla-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.valorizacion-form__ley-fila {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(110px, 1fr)) auto;
+  grid-template-rows: auto auto;
+  gap: 4px 12px;
+  align-items: start;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.valorizacion-form__ley-campo {
+  width: 100%;
+
+  ::ng-deep .mat-mdc-form-field-subscript-wrapper {
+    display: none;
+  }
+}
+
+.valorizacion-form__ley-campo--mineral {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+}
+
+.valorizacion-form__ley-campo--ley {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.valorizacion-form__ley-campo--ley-unidad {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.valorizacion-form__ley-campo--cotizacion {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.valorizacion-form__ley-campo--factor-conversion {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+.valorizacion-form__ley-campo--pct-cotizacion {
+  grid-column: 4;
+  grid-row: 1;
+}
+
+.valorizacion-form__ley-campo--cotizacion-aplicada {
+  grid-column: 4;
+  grid-row: 2;
+}
+
+.valorizacion-form__ley-campo--precio {
+  grid-column: 5;
+  grid-row: 1 / span 2;
+}
+
+.valorizacion-form__ley-campo--ley-pagable {
+  grid-column: 6;
+  grid-row: 1 / span 2;
+}
+
+.valorizacion-form__ley-campo--precio-kilo {
+  grid-column: 7;
+  grid-row: 1;
+}
+
+.valorizacion-form__ley-campo--pkl {
+  grid-column: 7;
+  grid-row: 2;
+}
+
+.valorizacion-form__ley-eliminar {
+  grid-column: 8;
+  grid-row: 1 / span 2;
+  align-self: center;
+  justify-self: center;
+}
+
+.valorizacion-form__resumen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  padding: 16px;
+  border-radius: 8px;
+  background: rgba(115, 103, 240, 0.06);
+}
+
+.valorizacion-form__resumen-saldo span:last-child {
+  font-size: 18px;
+  font-weight: 700;
+  color: #7367f0;
+}
+
+.valorizacion-preview__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.015);
+}
+
+.mt-2 {
+  margin-top: 0.5rem;
+}
+
+.card-body {
+  padding: 16px;
+}
+
+.valorizacion-preview__label {
+  display: block;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.5);
+  margin-bottom: 4px;
+}
+
+.valorizacion-preview__nota {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.5);
+  font-style: italic;
+}
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.valorizacion-form__autoguardado {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 auto;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.55);
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}

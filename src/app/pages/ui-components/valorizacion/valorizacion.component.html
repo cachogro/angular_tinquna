@@ -1,18 +1,8 @@
 <mat-card class="cardWithShadow theme-card">
   <mat-card-header>
     <div>
-      <mat-card-title class="m-b-0">Registros de recepción</mat-card-title>
-      <mat-card-subtitle class="m-b-0">Ingreso y seguimiento del mineral recibido de proveedores</mat-card-subtitle>
-    </div>
-    <div style="margin-left: auto; display: flex; gap: 8px;">
-      <!-- <a mat-stroked-button color="primary" routerLink="reportes">
-        <mat-icon>bar_chart</mat-icon>
-        Reportes
-      </a> -->
-      <a mat-flat-button color="primary" routerLink="nuevo">
-        <mat-icon>add_box</mat-icon>
-        Nueva recepción
-      </a>
+      <mat-card-title class="m-b-0">Valorización</mat-card-title>
+      <mat-card-subtitle class="m-b-0">Seguimiento de valorizaciones de mineral</mat-card-subtitle>
     </div>
   </mat-card-header>
 
@@ -67,102 +57,67 @@
         @if (loading()) {
         <div class="recepcion-loading">
           <mat-spinner diameter="36"></mat-spinner>
-          <span>Cargando recepciones...</span>
+          <span>Cargando valorizaciones...</span>
         </div>
         } @else if (registros().length === 0) {
         <div class="recepcion-empty">
           <mat-icon>inventory_2</mat-icon>
-          <p>No se encontraron recepciones con estos filtros</p>
+          <p>No se encontraron valorizaciones con estos filtros</p>
         </div>
         } @else {
         <table mat-table [dataSource]="registros()" class="recepcion-table">
           <ng-container matColumnDef="id">
             <th mat-header-cell *matHeaderCellDef>ID</th>
-            <td mat-cell *matCellDef="let r">
-              <div class="operacion-cell__id">{{ r.id }}</div>
+            <td mat-cell *matCellDef="let v">
+              <div class="operacion-cell__id">{{ v.id }}</div>
             </td>
           </ng-container>
 
           <ng-container matColumnDef="operacion">
             <th mat-header-cell *matHeaderCellDef>Operación</th>
-            <td mat-cell *matCellDef="let r">
-              <div class="operacion-cell__codigo">{{ r.codigoOperacion }}</div>
+            <td mat-cell *matCellDef="let v">
+              <div class="operacion-cell__codigo">{{ v.recepcionMineral?.codigoOperacion ?? '—' }}</div>
               <div class="operacion-cell__fecha">
-                <mat-icon inline>event</mat-icon> {{ formatFechaTabla(r.fechaRecepcion) }}
+                <mat-icon inline>event</mat-icon> {{ formatFechaTabla(v.recepcionMineral?.fechaRecepcion) }}
               </div>
             </td>
           </ng-container>
 
           <ng-container matColumnDef="proveedor">
             <th mat-header-cell *matHeaderCellDef>Proveedor</th>
-            <td mat-cell *matCellDef="let r">
-              <div class="proveedor-cell__nombre">{{ nombreProveedor(r) }}</div>
-              <div class="proveedor-cell__doc">{{ r.persona?.numeroDocumento ?? '—' }}</div>
+            <td mat-cell *matCellDef="let v">
+              <div class="proveedor-cell__nombre">{{ nombreProveedor(v) }}</div>
+              <div class="proveedor-cell__doc">{{ v.recepcionMineral?.persona?.numeroDocumento ?? '—' }}</div>
             </td>
           </ng-container>
 
           <ng-container matColumnDef="detalle">
             <th mat-header-cell *matHeaderCellDef>Detalle</th>
-            <td mat-cell *matCellDef="let r">
+            <td mat-cell *matCellDef="let v">
               <div class="detalle-cell">
-                <span>{{ r.codificacion?.codigo ?? '—' }} · {{ formatNumero(r.numeroSacos) }} sacos</span>
-                <span>{{ formatNumero(r.balanzaL) }} kg · {{ leyesTexto(r) }}</span>
+                <span>{{ detalleTexto(v) }}</span>
               </div>
             </td>
           </ng-container>
 
           <ng-container matColumnDef="estado">
             <th mat-header-cell *matHeaderCellDef>Estado</th>
-            <td mat-cell *matCellDef="let r">
-              <mat-chip class="estado-chip" [ngClass]="claseEstado(r.idEstado)">
-                {{ r.estado?.nombre ?? ('Estado #' + r.idEstado) }}
+            <td mat-cell *matCellDef="let v">
+              <mat-chip class="estado-chip" [ngClass]="claseEstado(v.idEstadoValorizacion)">
+                {{ v.estadoValorizacion?.nombre ?? ('Estado #' + v.idEstadoValorizacion) }}
               </mat-chip>
             </td>
           </ng-container>
 
           <ng-container matColumnDef="acciones">
             <th mat-header-cell *matHeaderCellDef class="acciones-header">Acciones</th>
-            <td mat-cell *matCellDef="let r" class="acciones-cell">
-              <button mat-icon-button (click)="verDetalle(r)" matTooltip="Ver detalle">
-                <mat-icon>visibility</mat-icon>
-              </button>
-
-              @if (puedeImprimir(r)) {
-              <button mat-icon-button (click)="imprimir2(r.id)" matTooltip="Imprimir PDF">
-                <mat-icon>print</mat-icon>
-              </button>
-              }
-
+            <td mat-cell *matCellDef="let v" class="acciones-cell">
               @if (puedeGestionar) {
-              <a mat-icon-button [routerLink]="puedeEditar(r) ? ['editar', r.id] : null" [state]="{ registro: r }"
-                [disabled]="!puedeEditar(r)"
-                [matTooltip]="puedeEditar(r) ? 'Editar' : 'No se puede editar: el registro ya fue procesado'">
+              <a mat-icon-button [routerLink]="puedeEditar(v) ? ['editar', v.id] : null"
+                [disabled]="!puedeEditar(v)"
+                [matTooltip]="puedeEditar(v) ? 'Editar' : 'Solo se puede editar mientras esté en borrador'">
                 <mat-icon>edit</mat-icon>
               </a>
-
-              @if (puedeValorizar(r)) {
-              <button mat-icon-button (click)="valorizar(r)" [disabled]="valorizando(r)"
-                matTooltip="Crear valorización">
-                @if (valorizando(r)) {
-                <mat-spinner diameter="18"></mat-spinner>
-                } @else {
-                <mat-icon>price_check</mat-icon>
-                }
-              </button>
-              }
-
-              <button mat-icon-button [matMenuTriggerFor]="menuEstado"
-                [disabled]="transicionesDisponibles(r).length === 0"
-                [matTooltip]="transicionesDisponibles(r).length === 0 ? 'Este estado no admite más cambios' : 'Cambiar estado'">
-                <mat-icon>sync_alt</mat-icon>
-              </button>
-              <mat-menu #menuEstado="matMenu">
-                @for (estado of transicionesDisponibles(r); track estado.id) {
-                <button mat-menu-item (click)="cambiarEstado(r, estado.id)">
-                  {{ estado.nombre }}
-                </button>
-                }
-              </mat-menu>
               }
             </td>
           </ng-container>
@@ -174,11 +129,6 @@
         <mat-paginator [length]="total()" [pageSize]="pageSize" [pageIndex]="pageIndex" [pageSizeOptions]="[10, 25, 50]"
           (page)="onPageChange($event)"></mat-paginator>
         }
-
-
-
-
-
       </div>
     </div>
   </mat-card-content>

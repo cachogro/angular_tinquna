@@ -1,54 +1,23 @@
+// ======================================================
+// ESTILOS BASE (heredados de la página de clientes)
+// ======================================================
+
 .usuarios-page {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-}
-
-.usuarios-page__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.usuarios-page__title {
-  font-size: 24px;
-  font-weight: 700;
-  margin: 0;
-}
-
-.usuarios-page__subtitle {
-  margin: 4px 0 0;
-  color: rgba(0, 0, 0, 0.6);
-  font-size: 14px;
-}
-
-.usuarios-page__cta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  border-radius: 10px;
-}
-
-.usuarios-card {
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
-  overflow: hidden;
+  gap: 16px;
 }
 
 .usuarios-toolbar {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 20px 24px 8px;
   flex-wrap: wrap;
 }
 
 .usuarios-toolbar__search {
-  flex: 1 1 280px;
-  min-width: 240px;
+  flex: 1 1 240px;
+  min-width: 220px;
 }
 
 .usuarios-toolbar__clear {
@@ -59,7 +28,7 @@
 }
 
 .usuarios-table-wrapper {
-  min-height: 240px;
+  min-height: 200px;
 }
 
 .usuarios-loading,
@@ -69,44 +38,41 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
-  padding: 64px 24px;
+  padding: 56px 24px;
   color: rgba(0, 0, 0, 0.45);
-}
-
-.usuarios-empty mat-icon {
-  font-size: 40px;
-  width: 40px;
-  height: 40px;
 }
 
 .usuarios-table {
   width: 100%;
 }
 
+// ======================================================
+// ESTILOS PROPIOS DE LA TABLA DE USUARIOS
+// ======================================================
+
+// Celda de usuario (avatar + nombre + login)
 .usuario-cell {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 6px 0;
 }
 
 .usuario-avatar {
-  width: 38px;
-  height: 38px;
-  min-width: 38px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 14px;
+  flex-shrink: 0;
 }
 
 .usuario-cell__info {
   display: flex;
   flex-direction: column;
-  line-height: 1.3;
 }
 
 .usuario-cell__nombre {
@@ -116,36 +82,42 @@
 
 .usuario-cell__login {
   font-size: 12px;
-  color: rgba(0, 0, 0, 0.5);
+  color: rgba(0, 0, 0, 0.55);
 }
 
+// Celda de contacto
 .contacto-cell {
   display: flex;
   flex-direction: column;
   gap: 2px;
   font-size: 13px;
-  color: rgba(0, 0, 0, 0.65);
 
   mat-icon {
-    font-size: 15px;
-    width: 15px;
-    height: 15px;
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
     vertical-align: middle;
-    margin-right: 2px;
+    margin-right: 4px;
+    color: rgba(0, 0, 0, 0.5);
   }
 }
 
+// Chip de rol
 .rol-chip {
-  background: rgba(115, 103, 240, 0.12) !important;
-  color: #7367f0 !important;
-  font-weight: 600;
+  background: rgba(0, 207, 232, 0.12) !important;
+  color: #00879c !important;
   font-size: 12px !important;
+  min-height: 24px !important;
 }
 
 .rol-chip--admin {
-  background: rgba(234, 84, 85, 0.12) !important;
-  color: #ea5455 !important;
+  background: rgba(255, 193, 7, 0.2) !important;
+  color: #b8860b !important;
 }
+
+// ======================================================
+// ESTILOS REUTILIZABLES (idénticos a la página de clientes)
+// ======================================================
 
 .estado-badge {
   display: inline-flex;
@@ -185,26 +157,20 @@
 }
 
 .text-danger {
-  color: #ea5455;
+  color: #d32f2f;
 }
 
+// ======================================================
+// ESTILO GLOBAL PARA EL HEADER DE LA TABLA (ya definido
+// en clientes, pero se mantiene por si acaso)
+// ======================================================
 
-// .mat-mdc-header-row{
-
-//     background: var(--mat-sys-primary);
-//     color: var(--mat-sys-on-primary);
-//     font-weight: 600;
-//     letter-spacing: .3px;
-
-// }
-
-.mat-mdc-header-row{
-
-    background: #0d6efd !important;
-    color: #ffffff !important;
-    font-weight: 600;
-    letter-spacing: .3px;
-
+.mat-mdc-header-row {
+  background: #0d6efd !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
-
-

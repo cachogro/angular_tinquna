@@ -7,7 +7,9 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { CodificacionFormDialogComponent } from './codificaciones/codificacion-form-dialog.component';
 import { CotizacionFormDialogComponent } from './cotizacion/cotizacion-form-dialog.component';
 import { ActorProductivoMineroFormDialogComponent } from './actor-productivo-minero/actor-productivo-minero-form-dialog.component';
-import { MatIcon } from '@angular/material/icon';
+import { LaboratorioFormDialogComponent } from './laboratorio/laboratorio-form-dialog.component';
+import { EntidadAporteFormDialogComponent } from './entidad-aporte/entidad-aporte-form-dialog.component';
+import { MineralFormDialogComponent } from './mineral/mineral-form-dialog.component';
 
 // A futuro, cuando implementes Ley e Ingenio, importa aquí sus modales
 // y sus tablas, siguiendo exactamente el mismo patrón que Codificación:
@@ -23,9 +25,7 @@ import { MatIcon } from '@angular/material/icon';
     MatCardModule,
     MatDialogModule,
     MatTooltipModule,
-    MatIcon,
-    // LeyesTableComponent,
-    // IngeniosTableComponent,
+   
   ],
   templateUrl: './parametricas.component.html',
   styleUrl: './parametricas.component.scss',
@@ -58,6 +58,28 @@ export class ParametricasComponent {
     });
   }
 
+  abrirNuevoLaboratorio(): void {
+    this.dialog.open(LaboratorioFormDialogComponent, {
+      width: '800px',
+      maxWidth: '95vw',
+      autoFocus: false,
+    });
+  }
 
+  abrirNuevaEntidadAporte(): void {
+    this.dialog.open(EntidadAporteFormDialogComponent, {
+      width: '900px',
+      maxWidth: '95vw',
+      autoFocus: false,
+    });
+  }
+
+  abrirNuevoMineral(): void {
+    this.dialog.open(MineralFormDialogComponent, {
+      width: '900px',
+      maxWidth: '95vw',
+      autoFocus: false,
+    });
+  }
 
 }

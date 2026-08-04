@@ -12,9 +12,14 @@ import {
   CotizacionesPaginadas,
   CrearCodificacionRequest,
   CrearCotizacionRequest,
+  EntidadAporte,
   FiltrosActorProductivoMinero,
   FiltrosCotizacion,
   GuardarActorProductivoMineroRequest,
+  GuardarEntidadAporteRequest,
+  GuardarLaboratorioRequest,
+  GuardarMineralRequest,
+  Laboratorio,
   Mineral,
   TipoActorProductivoMinero,
 } from '../parametricas/models/parametricas.models';
@@ -93,6 +98,17 @@ export class ParametricasService {
     return this.http
       .post<Cotizacion>(`${this.baseUrl}/cotizacion`, data)
       .pipe(tap(() => this.cargarCotizaciones(this.filtrosCotizacionActuales)));
+  }
+
+  /** Cotización vigente de un mineral en este instante exacto (según NOW()
+   *  de la base de datos). Responde 404 si el mineral no tiene ninguna
+   *  vigente ahora mismo. */
+  obtenerCotizacionVigentePorMineral(
+    idMineral: number,
+  ): Observable<Cotizacion> {
+    return this.http.get<Cotizacion>(
+      `${this.baseUrl}/cotizacion/vigente/${idMineral}`,
+    );
   }
 
   listarCotizaciones(
@@ -236,5 +252,143 @@ export class ParametricasService {
           ),
         ),
       );
+  }
+
+  // ==========================================================
+  // LABORATORIOS
+  // ==========================================================
+
+  private readonly laboratorioUrl = `${this.baseUrl}/laboratorio`;
+
+  // Máximo ~10 registros esperados: sin paginación, igual que Codificación.
+  readonly laboratorios = signal<Laboratorio[]>([]);
+  readonly cargandoLaboratorios = signal<boolean>(false);
+
+  /** Un solo POST para crear y actualizar: sin `id` crea, con `id` actualiza */
+  guardarLaboratorio(data: GuardarLaboratorioRequest): Observable<Laboratorio> {
+    return this.http
+      .post<Laboratorio>(this.laboratorioUrl, data)
+      .pipe(tap(() => this.cargarLaboratorios()));
+  }
+
+  obtenerLaboratorios(): Observable<Laboratorio[]> {
+    return this.http.get<Laboratorio[]>(this.laboratorioUrl);
+  }
+
+  /** Carga los laboratorios y actualiza el signal para que la tabla se refresque */
+  cargarLaboratorios(): void {
+    this.cargandoLaboratorios.set(true);
+    this.obtenerLaboratorios().subscribe({
+      next: (data) => {
+        this.laboratorios.set(data);
+        this.cargandoLaboratorios.set(false);
+      },
+      error: () => {
+        this.cargandoLaboratorios.set(false);
+      },
+    });
+  }
+
+  cambiarEstadoLaboratorio(
+    id: string,
+    activo: boolean,
+  ): Observable<Laboratorio> {
+    return this.http
+      .patch<Laboratorio>(`${this.laboratorioUrl}/cambiar_estado/${id}`, {
+        activo,
+      })
+      .pipe(tap(() => this.cargarLaboratorios()));
+  }
+
+  // ==========================================================
+  // ENTIDAD DE APORTE
+  // ==========================================================
+
+  private readonly entidadAporteUrl = `${this.baseUrl}/entidad-aporte`;
+
+  readonly entidadesAporte = signal<EntidadAporte[]>([]);
+  readonly cargandoEntidadesAporte = signal<boolean>(false);
+
+  /** Un solo POST para crear y actualizar: sin `id` crea, con `id` actualiza */
+  guardarEntidadAporte(
+    data: GuardarEntidadAporteRequest,
+  ): Observable<EntidadAporte> {
+    return this.http
+      .post<EntidadAporte>(this.entidadAporteUrl, data)
+      .pipe(tap(() => this.cargarEntidadesAporte()));
+  }
+
+  obtenerAllEntidadesAporte(): Observable<EntidadAporte[]> {
+    return this.http.get<EntidadAporte[]>(this.baseUrl + '/entidad-aporte2');
+  }
+
+  obtenerEntidadesAporte(): Observable<EntidadAporte[]> {
+    return this.http.get<EntidadAporte[]>(this.entidadAporteUrl);
+  }
+
+  /** Carga las entidades de aporte y actualiza el signal para que la tabla se refresque */
+  cargarEntidadesAporte(): void {
+    this.cargandoEntidadesAporte.set(true);
+    this.obtenerEntidadesAporte().subscribe({
+      next: (data) => {
+        this.entidadesAporte.set(data);
+        this.cargandoEntidadesAporte.set(false);
+      },
+      error: () => {
+        this.cargandoEntidadesAporte.set(false);
+      },
+    });
+  }
+
+  cambiarEstadoEntidadAporte(
+    id: number,
+    activo: boolean,
+  ): Observable<EntidadAporte> {
+    return this.http
+      .patch<EntidadAporte>(`${this.entidadAporteUrl}/cambiar_estado/${id}`, {
+        activo,
+      })
+      .pipe(tap(() => this.cargarEntidadesAporte()));
+  }
+
+  // ==========================================================
+  // MINERALES
+  // ==========================================================
+
+  // Recurso propio, no vive bajo /parametricas.
+  private readonly mineralUrl = `${this.baseUrl}/mineral`;
+
+  readonly minerales = signal<Mineral[]>([]);
+  readonly cargandoMinerales = signal<boolean>(false);
+
+  /** Un solo POST para crear y actualizar: sin `id` crea, con `id` actualiza */
+  guardarMineral(data: GuardarMineralRequest): Observable<Mineral> {
+    return this.http
+      .post<Mineral>(this.mineralUrl, data)
+      .pipe(tap(() => this.cargarMinerales()));
+  }
+
+  obtenerMineralesGestion(): Observable<Mineral[]> {
+    return this.http.get<Mineral[]>(this.baseUrl + '/allMinerales');
+  }
+
+  /** Carga los minerales y actualiza el signal para que la tabla se refresque */
+  cargarMinerales(): void {
+    this.cargandoMinerales.set(true);
+    this.obtenerMineralesGestion().subscribe({
+      next: (data) => {
+        this.minerales.set(data);
+        this.cargandoMinerales.set(false);
+      },
+      error: () => {
+        this.cargandoMinerales.set(false);
+      },
+    });
+  }
+
+  cambiarEstadoMineral(id: number, activo: boolean): Observable<Mineral> {
+    return this.http
+      .patch<Mineral>(`${this.mineralUrl}/cambiar_estado/${id}`, { activo })
+      .pipe(tap(() => this.cargarMinerales()));
   }
 }

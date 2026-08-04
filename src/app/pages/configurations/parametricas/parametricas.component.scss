@@ -30,6 +30,18 @@
   background: #f6c000;
 }
 
+.header-blue {
+  background: linear-gradient(135deg, #29b6f6, #0288d1);
+}
+
+.header-teal {
+  background: linear-gradient(135deg, #26a69a, #00796b);
+}
+
+.header-orange {
+  background: linear-gradient(135deg, #ff9800, #f57c00);
+}
+
 .card-footer {
   border-top: 1px solid #e0e0e0;
   display: flex !important;

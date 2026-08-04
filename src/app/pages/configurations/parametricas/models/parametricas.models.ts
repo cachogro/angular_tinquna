@@ -1,30 +1,3 @@
-// export interface Mineral {
-//   id: number;
-//   descripcion: string;
-//   simbolo: string;
-//   activo?: boolean;
-// }
-
-// export interface Codificacion {
-//   id: string;
-//   codigo: string;
-//   nombre: string;
-//   minerales: Mineral[];
-// }
-
-// export interface CrearCodificacionPayload {
-//   codigo: string;
-//   nombre: string;
-//   minerales: number[];
-// }
-
-// export interface ActualizarCodificacionPayload extends CrearCodificacionPayload {
-//   id: string;
-// }
-
-// // A futuro, cuando implementes Ley e Ingenio, agrega aquí sus interfaces
-// // siguiendo el mismo patrón: Ley, CrearLeyPayload, ActualizarLeyPayload, etc.
-
 export interface Mineral {
   id: number;
   descripcion: string;
@@ -35,6 +8,17 @@ export interface Mineral {
   calculoRegalia?: string | null;
   tipo?: string;
   activo?: boolean;
+}
+
+/** Un solo POST para crear y actualizar: sin `id` crea, con `id` actualiza */
+export interface GuardarMineralRequest {
+  id?: number;
+  descripcion: string;
+  simbolo?: string;
+  unidadCotizacion?: string;
+  detalleMineral?: string;
+  factorConversion?: number;
+  tipo?: string;
 }
 
 export interface Codificacion {
@@ -108,13 +92,14 @@ export interface CrearCotizacionRequest {
   fechaVigenciaFinal: string;
 }
 
-/** No se permite cambiar idMineral ni fechaVigenciaInicial */
+/** No se permite cambiar idMineral ni fechaVigenciaInicial.
+ *  Todos los campos salvo `id` son opcionales: lo que se omite, no se modifica. */
 export interface ActualizarCotizacionRequest {
   id: number;
-  cotizacionMineralDolares: number;
+  cotizacionMineralDolares?: number;
   alicuotaExterna?: number;
   alicuotaInterna?: number;
-  fechaVigenciaFinal: string;
+  fechaVigenciaFinal?: string;
 }
 
 export interface FiltrosCotizacion {
@@ -123,7 +108,7 @@ export interface FiltrosCotizacion {
   busqueda?: string;
   idMineral?: number;
   /** true = solo la cotización vigente de cada mineral */
-   /** Campo por el que se ordena. Por defecto 'id' */
+  /** Campo por el que se ordena. Por defecto 'id' */
   orderBy?: 'id' | 'nombre' | 'fechaRegistro';
   /** Por defecto 'DESC' (más nuevos primero) */
   orderDirection?: 'ASC' | 'DESC';
@@ -149,38 +134,9 @@ export interface Ingenio {
   fechaRegistro?: string;
 }
 
-
 // ==========================================================
 // ACTOR PRODUCTIVO MINERO (antes "Ingenio")
 // ==========================================================
-
-
-// export interface GuardarIngenioRequest {
-//   id?: string;
-//   nombre: string;
-//   direccion: string;
-//   telefono: string;
-// }
-
-// export interface FiltrosIngenio {
-//   page: number;
-//   limit: number;
-//   /** Solo se busca por nombre */
-//   busqueda?: string;
-//   activo?: boolean;
-//   /** Campo por el que se ordena. Por defecto 'id' */
-//   orderBy?: 'id' | 'nombre' | 'fechaRegistro';
-//   /** Por defecto 'DESC' (más nuevos primero) */
-//   orderDirection?: 'ASC' | 'DESC';
-// }
-
-// export interface IngeniosPaginados {
-//   data: Ingenio[];
-//   total: number;
-//   page: number;
-//   limit: number;
-// }
-
 
 export interface TipoActorProductivoMinero {
   id: number | string;
@@ -190,12 +146,6 @@ export interface TipoActorProductivoMinero {
   fechaUltimaModificacion?: string | null;
 }
 
-/**
- * Versión resumida del tipo tal como podría venir anidado en la
- * respuesta del listado (igual que `mineral` en Cotizacion). Si el
- * back no lo anida, el componente resuelve el nombre buscando en el
- * catálogo cacheado por `idTipoActorProductivoMinero`.
- */
 export interface ActorProductivoMinero {
   id: string;
   nombre: string;
@@ -209,10 +159,6 @@ export interface ActorProductivoMinero {
   fechaRegistro?: string;
 }
 
-/**
- * El back usa un solo POST tanto para crear como para actualizar:
- * sin `id` -> crea, con `id` -> actualiza.
- */
 export interface GuardarActorProductivoMineroRequest {
   id?: string;
   nombre: string;
@@ -241,4 +187,56 @@ export interface ActoresProductivosMinerosPaginados {
   limit: number;
 }
 
+export interface Laboratorio {
+  id: string;
+  nombre: string;
+  direccion?: string;
+  telefono?: string;
+  activo: boolean;
+  fechaRegistro?: string;
+  fechaUltimaModificacion?: string;
+  usuarioUltimaModificacion?: string;
+}
 
+export interface GuardarLaboratorioRequest {
+  id?: string | number;
+  nombre: string;
+  direccion?: string;
+  telefono?: string;
+}
+
+
+// Bases de cálculo del aporte: VBV = Valor Bruto de Venta, VNV = Valor Neto de Venta
+export type TipoBaseAporte = 'VBV' | 'VNV';
+
+// Detalle de cada aporte
+export interface DetalleAporte {
+  alicuota: number;
+  tipoBaseAporte: TipoBaseAporte;
+}
+
+/** Catálogo fijo, codificado en el front (el back no expone servicio para esto) */
+export interface TipoEntidadAporte {
+  id: number;
+  descripcion: string;
+}
+
+// Entidad de aporte completa
+export interface EntidadAporte {
+  id: number;               // En la respuesta es number, no string
+  descripcion: string;
+  activo: boolean;
+  usuarioUltimaModificacion: string | null;
+  fechaUltimaModificacion: string | null; // ISO date string o null
+  detalleAporte: DetalleAporte[] | null;  // Puede ser null
+  idTipoEntidadAporte: number | string;
+  tipoEntidadAporte?: TipoEntidadAporte;
+}
+
+/** Un solo POST para crear y actualizar: sin `id` crea, con `id` actualiza */
+export interface GuardarEntidadAporteRequest {
+  id?: number;
+  descripcion: string;
+  detalleAporte: DetalleAporte[];
+  idTipoEntidadAporte: number;
+}

@@ -5,6 +5,7 @@ import {
   signal,
   ViewChild,
   ViewEncapsulation,
+  effect, // <-- Importado para reaccionar a la Signal
 } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { MatSidenav, MatSidenavContent } from '@angular/material/sidenav';
@@ -23,6 +24,7 @@ import { AppNavItemComponent } from './sidebar/nav-item/nav-item.component';
 import { navItems } from './sidebar/sidebar-data';
 import { MatButtonModule } from '@angular/material/button';
 import { AuthService } from 'src/app/core/auth/services/auth.service';
+import { OverlayContainer } from '@angular/cdk/overlay'; // <-- Importado para los diálogos
 
 const MOBILE_VIEW = 'screen and (max-width: 768px)';
 const TABLET_VIEW = 'screen and (min-width: 769px) and (max-width: 1024px)';
@@ -72,8 +74,25 @@ export class FullComponent implements OnInit {
     private settings: CoreService,
     private router: Router,
     private breakpointObserver: BreakpointObserver,
+    private overlayContainer: OverlayContainer, // <-- Inyectado aquí
   ) {
     this.htmlElement = document.querySelector('html')!;
+
+    // === REACCIÓN AUTOMÁTICA PARA LOS DIÁLOGOS (OVERLAY) ===
+    effect(() => {
+      const darkActive = this.isDarkMode();
+      const containerElement = this.overlayContainer.getContainerElement();
+
+      if (darkActive) {
+        containerElement.classList.add('dark-theme');
+        containerElement.classList.remove('light-theme');
+      } else {
+        containerElement.classList.add('light-theme');
+        containerElement.classList.remove('dark-theme');
+      }
+    });
+    // =======================================================
+
     this.layoutChangesSubscription = this.breakpointObserver
       .observe([MOBILE_VIEW, TABLET_VIEW])
       .subscribe((state) => {
@@ -123,5 +142,4 @@ export class FullComponent implements OnInit {
   toggleTheme(): void {
     this.isDarkMode.update((value) => !value);
   }
-  
 }
