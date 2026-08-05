@@ -40,6 +40,9 @@
               @if (f.usuario.hasError('minlength') && f.usuario.touched) {
               <mat-error>Mínimo 4 caracteres</mat-error>
               }
+              @if (f.usuario.hasError('pattern') && f.usuario.touched) {
+              <mat-error>Solo letras, ñ y puntos, sin espacios</mat-error>
+              }
             </mat-form-field>
 
             <mat-form-field appearance="outline">
@@ -51,11 +54,14 @@
               @if (f.contrasena.hasError('minlength') && f.contrasena.touched) {
               <mat-error>Mínimo 8 caracteres</mat-error>
               }
+              @if (f.contrasena.hasError('pattern') && f.contrasena.touched) {
+              <mat-error>No se permiten espacios</mat-error>
+              }
             </mat-form-field>
 
             <mat-form-field appearance="outline">
               <mat-label>Rol</mat-label>
-              <mat-select formControlName="idRol">
+              <mat-select formControlName="idRol" [compareWith]="compararPorValor">
                 @for (rol of roles(); track rol.id) {
                 <mat-option [value]="rol.id">{{ rol.nombre }}</mat-option>
                 }
@@ -79,6 +85,9 @@
               @if (f.nombres.hasError('required') && f.nombres.touched) {
               <mat-error>Obligatorio</mat-error>
               }
+              @if (f.nombres.hasError('pattern') && f.nombres.touched) {
+              <mat-error>Solo letras (con ñ y acentos), en mayúsculas</mat-error>
+              }
             </mat-form-field>
 
             <mat-form-field appearance="outline">
@@ -87,13 +96,16 @@
               @if (f.apellidoPaterno.hasError('required') && f.apellidoPaterno.touched) {
               <mat-error>Obligatorio</mat-error>
               }
+              @if (f.apellidoPaterno.hasError('pattern') && f.apellidoPaterno.touched) {
+              <mat-error>Solo letras (con ñ y acentos), en mayúsculas</mat-error>
+              }
             </mat-form-field>
 
             <mat-form-field appearance="outline">
-              <mat-label>Apellido materno</mat-label>
+              <mat-label>Apellido materno (opcional)</mat-label>
               <input matInput formControlName="apellidoMaterno" />
-              @if (f.apellidoMaterno.hasError('required') && f.apellidoMaterno.touched) {
-              <mat-error>Obligatorio</mat-error>
+              @if (f.apellidoMaterno.hasError('pattern') && f.apellidoMaterno.touched) {
+              <mat-error>Solo letras (con ñ y acentos), en mayúsculas</mat-error>
               }
             </mat-form-field>
 
@@ -115,23 +127,27 @@
               <mat-error>Obligatorio</mat-error>
               }
               @if (f.celular.hasError('pattern') && f.celular.touched) {
-              <mat-error>Solo números (6 a 15 dígitos)</mat-error>
+              <mat-error>Solo números y el carácter +</mat-error>
               }
             </mat-form-field>
 
             <mat-form-field appearance="outline">
               <mat-label>Fecha de nacimiento</mat-label>
-              <input matInput [matDatepicker]="picker" formControlName="fechaNacimiento" />
+              <input matInput [matDatepicker]="picker" [max]="fechaMaximaNacimiento" placeholder="dd/mm/aaaa"
+                formControlName="fechaNacimiento" />
               <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
               <mat-datepicker #picker></mat-datepicker>
               @if (f.fechaNacimiento.hasError('required') && f.fechaNacimiento.touched) {
               <mat-error>Obligatorio</mat-error>
               }
+              @if (f.fechaNacimiento.hasError('edadMinima') && f.fechaNacimiento.touched) {
+              <mat-error>Debe ser mayor de 18 años</mat-error>
+              }
             </mat-form-field>
 
             <mat-form-field appearance="outline">
               <mat-label>Tipo de documento</mat-label>
-              <mat-select formControlName="idTipoDocumento">
+              <mat-select formControlName="idTipoDocumento" [compareWith]="compararPorValor">
                 @for (tipo of tiposDocumento(); track tipo.id) {
                 <mat-option [value]="tipo.id">{{ tipo.nombre }}</mat-option>
                 }
@@ -147,11 +163,17 @@
               @if (f.numeroDocumento.hasError('required') && f.numeroDocumento.touched) {
               <mat-error>Obligatorio</mat-error>
               }
+              @if (f.numeroDocumento.hasError('maxLetras') && f.numeroDocumento.touched) {
+              <mat-error>Máximo 3 letras</mat-error>
+              }
+              @if (f.numeroDocumento.hasError('pattern') && f.numeroDocumento.touched) {
+              <mat-error>Solo números, letras, guion y guion bajo</mat-error>
+              }
             </mat-form-field>
 
             <mat-form-field appearance="outline">
               <mat-label>Lugar de emisión</mat-label>
-              <mat-select formControlName="idLugarEmisionDocumento">
+              <mat-select formControlName="idLugarEmisionDocumento" [compareWith]="compararPorValor">
                 @for (lugar of lugaresEmision(); track lugar.id) {
                 <mat-option [value]="lugar.id">{{ lugar.nombre }}</mat-option>
                 }

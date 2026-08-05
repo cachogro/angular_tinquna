@@ -19,6 +19,8 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { StepperSelectionEvent } from '@angular/cdk/stepper';
+import { MatStepperModule } from '@angular/material/stepper';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Subject, debounceTime } from 'rxjs';
@@ -45,6 +47,12 @@ import {
   ValorizacionMineral,
 } from '../../models/valorizacion-mineral.models';
 import { ValorizacionMineralService } from '../../services/valorizacion-mineral.service';
+import {
+  DescuentoVisualizacion,
+  LeyPrecioVisualizacion,
+  VerValorizacionDialogComponent,
+  VerValorizacionDialogData,
+} from './ver-valorizacion-dialog/ver-valorizacion-dialog.component';
 
 /** Unidades disponibles para expresar la ley de un mineral */
 const LEY_UNIDADES: LeyUnidad[] = ['%', 'g/TM'];
@@ -120,6 +128,7 @@ interface CotizacionMineralEstado {
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
+    MatStepperModule,
     MatTooltipModule,
   ],
   templateUrl: './valorizacion-form.component.html',
@@ -146,6 +155,11 @@ export class ValorizacionFormComponent implements OnInit {
 
   /** Estado del autoguardado del borrador, para el indicador junto a los botones. */
   readonly estadoAutoguardado = signal<EstadoAutoguardado>('inactivo');
+  /** true por unos segundos justo después de un autoguardado exitoso: pinta
+   *  de verde el indicador para que se note el "Borrador guardado", y luego
+   *  vuelve solo a su color normal (ver resaltarAutoguardadoTemporalmente). */
+  readonly autoguardadoResaltado = signal(false);
+  private timeoutResaltado?: ReturnType<typeof setTimeout>;
   /** true mientras se hidratan los datos iniciales: evita que el primer
    *  patchValue dispare un autoguardado innecesario. */
   private cargandoInicial = true;
@@ -169,7 +183,7 @@ export class ValorizacionFormComponent implements OnInit {
 
   /** Líquido pagable = peso neto seco × suma de P/KL de todas las filas de ley. */
   readonly liquidoPagable = signal(0);
-  /** Saldo a pagar = líquido pagable − anticipo. */
+  /** Saldo a pagar = líquido pagable − anticipo − total de aportes (descuentos de ley). */
   readonly saldoAPagar = signal(0);
 
   readonly laboratorios = signal<Laboratorio[]>([]);
@@ -299,6 +313,12 @@ export class ValorizacionFormComponent implements OnInit {
       null as number | null,
       [Validators.required, Validators.min(0)],
     ],
+    /** Ajuste manual que teclea el operador: positivo suma al saldo a
+     *  pagar, negativo resta. 0 si no se ingresa nada. */
+    ajusteTransporte: [0 as number | null],
+    /** Otro anticipo aparte del de la recepción: siempre resta al saldo a
+     *  pagar. Debe ser 0 o mayor. */
+    otrosAnticipo: [0 as number | null, [Validators.min(0)]],
     aportes: this.fb.array([]),
     detallesMinerales: this.fb.array([]),
   });
@@ -333,6 +353,12 @@ export class ValorizacionFormComponent implements OnInit {
     this.form
       .get('tipoCambio')!
       .valueChanges.subscribe(() => this.recalcularTodasLasFilasLey());
+    this.form
+      .get('ajusteTransporte')!
+      .valueChanges.subscribe(() => this.recalcularTotalesAportes());
+    this.form
+      .get('otrosAnticipo')!
+      .valueChanges.subscribe(() => this.recalcularTotalesAportes());
 
     // Autoguardado de borrador: cualquier cambio del usuario en el form
     // (pesos, merma, filas de ley, aportes, etc.) dispara, con debounce, un
@@ -389,20 +415,35 @@ export class ValorizacionFormComponent implements OnInit {
       pesoNetoHumedoKilogramos:
         Number(v.recepcionMineral?.balanzaL ?? 0) || null,
       humedadPorcentaje: this.resolverHumedadInicial(v),
+      idLaboratorio: v.idLaboratorio ?? null,
+      tipoCambio: v.cotizacionDolar != null ? Number(v.cotizacionDolar) : null,
+      taraKilogramos: v.taraKilogramos != null ? Number(v.taraKilogramos) : 0,
+      mermaPorcentaje:
+        v.mermaPorcentaje != null ? Number(v.mermaPorcentaje) : 0,
+      mermaKilogramos:
+        v.mermaKilogramos != null ? Number(v.mermaKilogramos) : 0,
+      ajusteTransporte:
+        v.ajusteTransporte != null ? Number(v.ajusteTransporte) : 0,
+      otrosAnticipo:
+        v.otrosAnticipo != null ? Number(v.otrosAnticipo) : 0,
     });
     this.recalcularPesoNetoSeco();
-    // Cada fila que se agrega aquí dispara su propia verificación de
-    // cotización vigente por mineral (ver agregarFilaLey).
+    // Va antes de inicializarDetallesMinerales a propósito: cada fila que se
+    // agrega ahí recalcula su Precio por kilo usando el tipoCambio ya
+    // patcheado arriba (si no, quedaría en 0 al recuperar un borrador).
     this.inicializarDetallesMinerales(v);
-
-    // Recién ahora se considera "hidratado": los patchValue de arriba no
-    // deben disparar un autoguardado apenas se abre el formulario.
-    this.cargandoInicial = false;
-
-    // Va después de bajar cargandoInicial a propósito: si hay que agregar
-    // alguno de los 5 por defecto porque el borrador no lo tenía, eso SÍ debe
-    // disparar el autoguardado en cuanto tenga algo calculado.
+    // También antes de bajar cargandoInicial: reconstruir el FormArray de
+    // aportes (un push por fila) dispara valueChanges igual que cualquier
+    // otro control, así que si esto corriera después de cargandoInicial=false
+    // dispararía un autoguardado solo por abrir la página, sin que el
+    // usuario haya modificado nada. El autoguardado de los defaults recién
+    // calculados queda para la primera modificación real o el próximo
+    // cambio de step (ver onCambioStep), no para la carga inicial.
     this.inicializarAportes(v);
+
+    // Recién ahora se considera "hidratado": los patchValue/pushes de
+    // arriba no deben disparar un autoguardado apenas se abre el formulario.
+    this.cargandoInicial = false;
   }
 
   /** Humedad inicial: prioriza la ya guardada en la valorización; si no
@@ -550,8 +591,9 @@ export class ValorizacionFormComponent implements OnInit {
     return Number(`0.0000${Math.trunc(entero)}`);
   }
 
-  /** líquido pagable = peso neto seco × suma de P/KL de todas las filas
-   *  saldo a pagar = líquido pagable − anticipo */
+  /** líquido pagable = peso neto seco × suma de P/KL de todas las filas.
+   *  El saldo a pagar se recalcula después, dentro de
+   *  recalcularTotalesAportes() (depende también del total de aportes). */
   private recalcularTotales(): void {
     const pesoNetoSeco = Number(
       this.form.get('pesoNetoSecoKilogramos')?.value ?? 0,
@@ -562,9 +604,6 @@ export class ValorizacionFormComponent implements OnInit {
     );
     const liquido = this.redondear(pesoNetoSeco * sumaPKl, 2);
     this.liquidoPagable.set(liquido);
-
-    const anticipo = Number(this.valorizacion()?.anticipo ?? 0);
-    this.saldoAPagar.set(this.redondear(liquido - anticipo, 2));
 
     this.recalcularTodosLosAportes();
   }
@@ -721,24 +760,102 @@ export class ValorizacionFormComponent implements OnInit {
       .subscribe(() => this.verificarCotizacionMineral(idMineral));
   }
 
+  /** Abre la vista previa de la valorización (formato de ticket, ver
+   *  ver-valorizacion-dialog): arma acá todos los datos ya resueltos (leyes
+   *  por mineral, descuentos con su descripción de entidad, etc.) a partir
+   *  del form y los signals actuales, para que el diálogo sea puramente de
+   *  presentación. */
+  abrirVisualizador(): void {
+    const v = this.valorizacion();
+    if (!v) return;
+
+    const leyesYPrecios: LeyPrecioVisualizacion[] =
+      this.detallesMineralesArray.controls.map((c) => {
+        const idMineral = c.get('idMineral')?.value;
+        const mineral = this.buscarMineralPorId(idMineral);
+        return {
+          simbolo:
+            mineral?.simbolo ?? mineral?.descripcion ?? `Mineral #${idMineral}`,
+          ley: c.get('ley')?.value ?? null,
+          leyUnidad: c.get('leyUnidad')?.value ?? '%',
+          precioPorKilo: Number(c.get('precioPorKilo')?.value ?? 0),
+        };
+      });
+
+    const descuentos: DescuentoVisualizacion[] = this.aportesArray.controls
+      .filter(
+        (c) =>
+          c.get('aplicar')?.value !== false &&
+          c.get('idEntidadAporte')?.value != null,
+      )
+      .map((c) => {
+        const idEntidad = c.get('idEntidadAporte')?.value;
+        const entidad = this.entidadesAporte().find(
+          (e) => Number(e.id) === Number(idEntidad),
+        );
+        return {
+          entidad: entidad?.descripcion ?? `Entidad #${idEntidad}`,
+          porcentaje: Number(c.get('porcentajeAporte')?.value ?? 0),
+          importe: Number(c.get('importeBolivianos')?.value ?? 0),
+        };
+      });
+
+    const data: VerValorizacionDialogData = {
+      numero: v.id,
+      producto: this.productosTexto(v),
+      cliente: this.clienteTexto(v),
+      numeroDocumento: v.recepcionMineral?.persona?.numeroDocumento ?? '—',
+      lote: v.recepcionMineral?.codigoOperacion ?? '—',
+      fechaEntrega: this.formatFechaSolo(v.recepcionMineral?.fechaRecepcion),
+      fechaTransaccion: this.fechaTransaccionTexto,
+      cooperativa:
+        v.recepcionMineral?.persona?.actorProductivoMinero?.nombre ?? '—',
+      pesoBruto: this.pesoBrutoHumedo(),
+      pesoNeto: Number(this.form.get('pesoNetoSecoKilogramos')?.value ?? 0),
+      leyesYPrecios,
+      liquidoPagable: this.liquidoPagable(),
+      anticipo: Number(v.anticipo ?? 0),
+      otrosAnticipo: Number(this.form.get('otrosAnticipo')?.value ?? 0),
+      transporte: Number(this.form.get('ajusteTransporte')?.value ?? 0),
+      saldoAPagar: this.saldoAPagar(),
+      descuentos,
+      descuentoTotal: this.totalImporteAportes(),
+      telefonoCliente: v.recepcionMineral?.persona?.celular,
+    };
+
+    this.dialog.open(VerValorizacionDialogComponent, {
+      width: '900px',
+      maxWidth: '95vw',
+      autoFocus: false,
+      data,
+    });
+  }
+
   // ==========================================================
   // APORTES / DESCUENTOS DE LEY (dinámico)
   // ==========================================================
 
-  /** Rehidrata los aportes ya guardados del borrador (si la valorización
-   *  viene de la bandeja y ya los tenía) y completa con los que falten de
-   *  los 5 por defecto. Los que se agregan recién ahora (sin dato guardado)
-   *  no se autoguardan hasta tener algo realmente calculado (ver
-   *  construirAportesActuales): evita persistir filas en 0. */
+  /** Rehidrata los aportes ya guardados del borrador. El back NUNCA guarda
+   *  (ni devuelve) un aporte desmarcado: `calculoAportes` solo trae los que
+   *  el usuario tenía aplicados (el campo `activo` de cada fila es el flag
+   *  genérico de "no borrado" de toda entidad de este backend, no indica si
+   *  el checkbox estaba tildado). Por eso la regla es simple: si el id de
+   *  la entidad está en `calculoAportes`, va tildada; si no está, va
+   *  desmarcada — así se refleja exactamente lo que el back tiene
+   *  registrado, sin reinterpretar nada.
+   *
+   *  Excepción: un borrador recién creado, que TODAVÍA no tuvo ningún
+   *  autoguardado (`calculoAportes` viene vacío), sí precarga los 5 por
+   *  defecto tildados — es la conveniencia inicial ya existente para no
+   *  obligar a tildarlos a mano la primera vez. En cuanto ese borrador
+   *  guarda algo (aunque sea un solo aporte), cualquier default que falte
+   *  en la respuesta se entiende como desmarcado a propósito por el
+   *  usuario y deja de auto-tildarse. */
   private inicializarAportes(v: ValorizacionMineral): void {
     this.aportesArray.clear();
 
-    // NOTA: se asume que el back devuelve calculoAportes con la misma forma
-    // que se manda en el PATCH (idEntidadAporte, tipoBaseAporte,
-    // porcentajeAporte, y activo para las desactivadas). Si el nombre real
-    // difiere, ajustar los accesos de abajo.
     const guardados = (v.calculoAportes ?? []).filter(
-      (a) => a['activo'] !== false && a['idEntidadAporte'] != null,
+      (a) => a['idEntidadAporte'] != null,
     );
 
     guardados.forEach((a) => {
@@ -750,26 +867,32 @@ export class ValorizacionFormComponent implements OnInit {
           a['porcentajeAporte'] != null
             ? Number(a['porcentajeAporte'])
             : undefined,
+        aplicar: true,
       });
     });
 
     const idsGuardados = new Set(
       guardados.map((a) => Number(a['idEntidadAporte'])),
     );
+    const borradorNuevoSinGuardar = guardados.length === 0;
     ENTIDADES_APORTE_POR_DEFECTO.filter(
       (preset) => !idsGuardados.has(preset.id),
-    ).forEach((preset) => this.agregarAporte(preset));
+    ).forEach((preset) =>
+      this.agregarAporte({ ...preset, aplicar: borradorNuevoSinGuardar }),
+    );
   }
 
   /** @param preset opcional: entidad+base a precargar (ver
    *  inicializarAportes); `porcentajeGuardado` restaura el % ya editado
    *  previamente (relevante sobre todo para Regalía Minera, cuyo % es
-   *  editable a mano). Sin preset, la fila queda en blanco para que el
+   *  editable a mano); `aplicar` restaura si el checkbox estaba tildado o
+   *  no (por defecto true). Sin preset, la fila queda en blanco para que el
    *  usuario elija (botón "Agregar aporte"). */
   agregarAporte(preset?: {
     id: number;
     tipoBaseAporte: TipoBaseAporteCatalogo;
     porcentajeGuardado?: number;
+    aplicar?: boolean;
   }): void {
     const esRegaliaMinera = preset?.id === ID_REGALIA_MINERA;
     const fila = this.fb.group({
@@ -780,7 +903,7 @@ export class ValorizacionFormComponent implements OnInit {
       ],
       /** Si está destildado, el aporte no se aplica: no cuenta en los
        *  totales ni se manda al guardar. */
-      aplicar: [true],
+      aplicar: [preset?.aplicar ?? true],
       /** Calculado para el resto de entidades (de su detalleAporte).
        *  Para Regalía Minera es una SUGERENCIA editable (suma de
        *  alicuotaInterna de los minerales vigentes): por eso queda habilitado
@@ -892,6 +1015,13 @@ export class ValorizacionFormComponent implements OnInit {
     return detalle?.alicuota ?? 0;
   }
 
+  /** Recalcula los totales de aportes (alícuota e importe) y, con ellos, el
+   *  saldo a pagar (líquido pagable − anticipo − otros anticipos − total
+   *  aportes ± transporte). Se llama tanto en cascada desde
+   *  recalcularTotales() (cambios de peso/ley) como al tocar una fila de
+   *  aporte individual (check, %, base) o los campos Transporte/Otros
+   *  anticipos, así que es el único lugar que necesita mantener el saldo a
+   *  pagar al día. */
   private recalcularTotalesAportes(): void {
     const filasAplicadas = this.aportesArray.controls.filter(
       (c) => c.get('aplicar')?.value !== false,
@@ -906,6 +1036,22 @@ export class ValorizacionFormComponent implements OnInit {
     );
     this.totalAlicuotas.set(this.redondear(totalAlicuota, 2));
     this.totalImporteAportes.set(this.redondear(totalImporte, 2));
+
+    const anticipo = Number(this.valorizacion()?.anticipo ?? 0);
+    const otrosAnticipo = Number(this.form.get('otrosAnticipo')?.value ?? 0);
+    const ajusteTransporte = Number(
+      this.form.get('ajusteTransporte')?.value ?? 0,
+    );
+    this.saldoAPagar.set(
+      this.redondear(
+        this.liquidoPagable() -
+          anticipo -
+          otrosAnticipo -
+          this.totalImporteAportes() +
+          ajusteTransporte,
+        2,
+      ),
+    );
   }
 
   // ==========================================================
@@ -945,9 +1091,12 @@ export class ValorizacionFormComponent implements OnInit {
   }
 
   /** Solo se mandan los aportes con el check "aplicar" activado y que ya
-   *  tengan algo calculado (importe > 0): los recién precargados por
-   *  defecto que todavía no resolvieron cotización/ley no se guardan hasta
-   *  tener un valor real, para no persistir filas en 0. */
+   *  tengan algo calculado (importe > 0). Un aporte desmarcado NUNCA se
+   *  manda: el back no tiene forma de guardar "desmarcado" (no soporta
+   *  desactivar un calculoAportes ya existente vía este endpoint), así que
+   *  la única forma de que no quede registrado es no enviarlo. Ver
+   *  inicializarAportes: al recargar, "no está en calculoAportes" es
+   *  justamente lo que el form interpreta como desmarcado. */
   private construirAportesActuales(): AporteValorizacionRequest[] {
     return this.aportesArray.controls
       .map((c) => c.getRawValue())
@@ -984,6 +1133,8 @@ export class ValorizacionFormComponent implements OnInit {
       mermaPorcentaje: v.mermaPorcentaje ?? undefined,
       mermaKilogramos: v.mermaKilogramos ?? undefined,
       cotizacionDolar: v.tipoCambio ?? undefined,
+      ajusteTransporte: v.ajusteTransporte ?? 0,
+      otrosAnticipo: v.otrosAnticipo ?? 0,
       // TODO: cuando se implementen los descuentos de ley (fase 2), separar
       // totalValorBrutoBolivianos (antes de descuentos) de
       // liquidoPagableBolivianos (después). Por ahora son el mismo valor.
@@ -998,8 +1149,19 @@ export class ValorizacionFormComponent implements OnInit {
     const detalles = this.construirDetallesActuales();
     if (detalles.length > 0) payload.detalles = detalles;
 
+    // "aportes" el back lo trata como lote completo: si viene con
+    // contenido, compara contra los aportes activos actuales y, ante
+    // cualquier diferencia, desactiva TODOS los anteriores y crea desde
+    // cero solo los que vinieron en esta llamada. Pero mandar `aportes: []`
+    // NO hace nada (el back solo actúa si el array trae contenido O si
+    // viene `limpiarAportes`), así que si el usuario desmarcó todo hay que
+    // pedir la limpieza explícitamente con ese flag.
     const aportes = this.construirAportesActuales();
-    if (aportes.length > 0) payload.aportes = aportes;
+    if (aportes.length > 0) {
+      payload.aportes = aportes;
+    } else if ((this.valorizacion()?.calculoAportes?.length ?? 0) > 0) {
+      payload.limpiarAportes = true;
+    }
 
     return payload;
   }
@@ -1021,12 +1183,33 @@ export class ValorizacionFormComponent implements OnInit {
           console.log('[autoguardado] respuesta OK', actualizado);
           this.valorizacion.set(actualizado);
           this.estadoAutoguardado.set('guardado');
+          this.resaltarAutoguardadoTemporalmente();
         },
         error: (err) => {
           console.log('[autoguardado] error', err);
           this.estadoAutoguardado.set('error');
         },
       });
+  }
+
+  /** Pinta de verde el indicador de autoguardado por unos segundos cada vez
+   *  que se confirma un guardado exitoso, y luego lo vuelve a su color
+   *  normal solo. */
+  private resaltarAutoguardadoTemporalmente(): void {
+    this.autoguardadoResaltado.set(true);
+    if (this.timeoutResaltado) clearTimeout(this.timeoutResaltado);
+    this.timeoutResaltado = setTimeout(
+      () => this.autoguardadoResaltado.set(false),
+      3000,
+    );
+  }
+
+  /** Se dispara al avanzar/retroceder de paso o al hacer clic directo en el
+   *  encabezado de otro paso del stepper: guarda el borrador de inmediato
+   *  (sin esperar el debounce del autoguardado) para no perder lo tecleado
+   *  en el paso que se abandona. */
+  onCambioStep(_event: StepperSelectionEvent): void {
+    this.autoguardarBorrador();
   }
 
   /** Guarda y pasa a PRE-VALORIZADO (id 2): un paso intermedio, sigue

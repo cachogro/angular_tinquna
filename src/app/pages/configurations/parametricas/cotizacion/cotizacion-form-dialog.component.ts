@@ -27,15 +27,21 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 
 import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog/confirm-dialog.component';
-import { Cotizacion, Mineral } from '../models/parametricas.models';
+import { Cotizacion, FiltrosCotizacion, Mineral } from '../models/parametricas.models';
 import { ParametricasService } from '../../services/parametricas.service';
 import { ParametricaDialogShellComponent } from '../shared/parametrica-dialog-shell.component';
+
+interface OpcionOrden {
+  value: string;
+  label: string;
+}
 
 export interface CotizacionDialogData {
   cotizacion?: Cotizacion;
@@ -60,6 +66,7 @@ export interface CotizacionDialogData {
     MatSnackBarModule,
     MatTableModule,
     MatIconModule,
+    MatSelectModule,
     MatTooltipModule,
     MatCardModule,
     MatPaginatorModule,
@@ -105,6 +112,15 @@ export class CotizacionFormDialogComponent implements OnInit {
   pageIndex = 0; // 0-based, como espera mat-paginator
   pageSize = 10;
   private readonly busquedaChange$ = new Subject<void>();
+
+  readonly opcionesOrden: OpcionOrden[] = [
+    { value: 'id', label: 'ID' },
+    { value: 'mineral', label: 'Mineral' },
+    { value: 'fechaVigenciaInicial', label: 'Vigencia desde' },
+    { value: 'fechaVigenciaFinal', label: 'Vigencia hasta' },
+  ];
+  readonly orderByControl = new FormControl<string>('id');
+  readonly orderDirectionControl = new FormControl<'ASC' | 'DESC'>('DESC');
 
   // Estado propio del componente: permite pasar de "nuevo" a "edición"
   // sin depender solo de `data`.
@@ -181,6 +197,15 @@ export class CotizacionFormDialogComponent implements OnInit {
     this.mineralCtrl.valueChanges.subscribe((valor) => {
       const texto = typeof valor === 'string' ? valor : (valor?.descripcion ?? '');
       this.mineralesFiltrados = this.filtrarMinerales(texto);
+    });
+
+    this.orderByControl.valueChanges.subscribe(() => {
+      this.pageIndex = 0;
+      this.recargarTabla();
+    });
+    this.orderDirectionControl.valueChanges.subscribe(() => {
+      this.pageIndex = 0;
+      this.recargarTabla();
     });
 
     this.recargarTabla();
@@ -281,6 +306,8 @@ export class CotizacionFormDialogComponent implements OnInit {
       limit: this.pageSize,
       busqueda: this.searchControl.value?.trim() || undefined,
       vigente: this.soloVigentes || undefined,
+      orderBy: (this.orderByControl.value as FiltrosCotizacion['orderBy']) ?? undefined,
+      orderDirection: this.orderDirectionControl.value ?? undefined,
     });
   }
 
@@ -293,6 +320,12 @@ export class CotizacionFormDialogComponent implements OnInit {
   onToggleSoloVigentes(): void {
     this.pageIndex = 0;
     this.recargarTabla();
+  }
+
+  toggleOrden(): void {
+    this.orderDirectionControl.setValue(
+      this.orderDirectionControl.value === 'ASC' ? 'DESC' : 'ASC',
+    );
   }
 
   guardar(): void {

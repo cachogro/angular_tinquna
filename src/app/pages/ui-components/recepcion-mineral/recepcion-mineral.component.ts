@@ -26,14 +26,17 @@ import { RolCodigo } from 'src/app/core/auth/models/auth.models';
 import {
   ESTADOS_OPERACION,
   ESTADO_LIQUIDADO_ID,
+  FiltrosRegistroMineral,
+  OrdenDireccion,
   RegistroMineral,
 } from '../models/registro-mineral.models';
 import { RegistroMineralService } from '../services/registro-mineral.service';
 import { VerRecepcionDialogComponent } from './ver-recepcion-dialog/ver-recepcion-dialog.component';
 import { ValorizacionMineralService } from '../services/valorizacion-mineral.service';
-import { formatNumeroSinCeros } from 'src/app/shared/utils/numero.util';
-
-
+import { formatNumeroSinCeros } from 'src/app/shared/utils/numero.util';interface OpcionOrden {
+  value: string;
+  label: string;
+}
 
 @Component({
   selector: 'app-recepcion-mineral',
@@ -127,6 +130,16 @@ export class RecepcionMineralComponent implements OnInit {
   readonly fechaDesdeControl = new FormControl<Date | null>(null);
   readonly fechaHastaControl = new FormControl<Date | null>(null);
 
+  readonly opcionesOrden: OpcionOrden[] = [
+    { value: 'id', label: 'ID' },
+    { value: 'codigoOperacion', label: 'Código de operación' },
+    { value: 'fechaRecepcion', label: 'Fecha de recepción' },
+    { value: 'numeroDocumento', label: 'N° de documento' },
+    { value: 'estado', label: 'Estado' },
+  ];
+  readonly orderByControl = new FormControl<string>('id');
+  readonly orderDirectionControl = new FormControl<OrdenDireccion>('DESC');
+
   /** ADMINISTRADOR y OPERADOR pueden editar y cambiar estado; TÉCNICO solo lista y crea. */
   get puedeGestionar(): boolean {
     return this.authService.hasRole(
@@ -153,6 +166,10 @@ export class RecepcionMineralComponent implements OnInit {
       this.reiniciarYcargar(),
     );
     this.fechaHastaControl.valueChanges.subscribe(() =>
+      this.reiniciarYcargar(),
+    );
+    this.orderByControl.valueChanges.subscribe(() => this.reiniciarYcargar());
+    this.orderDirectionControl.valueChanges.subscribe(() =>
       this.reiniciarYcargar(),
     );
 
@@ -199,6 +216,8 @@ export class RecepcionMineralComponent implements OnInit {
         idEstado: this.estadoControl.value ?? undefined,
         fechaDesde: this.formatFecha(this.fechaDesdeControl.value),
         fechaHasta: this.formatFecha(this.fechaHastaControl.value),
+        orderBy: (this.orderByControl.value as FiltrosRegistroMineral['orderBy']) ?? undefined,
+        orderDirection: this.orderDirectionControl.value ?? undefined,
       })
       .subscribe({
         next: (res) => {
@@ -225,6 +244,12 @@ export class RecepcionMineralComponent implements OnInit {
     this.cargarRegistros();
   }
 
+  toggleOrden(): void {
+    this.orderDirectionControl.setValue(
+      this.orderDirectionControl.value === 'ASC' ? 'DESC' : 'ASC',
+    );
+  }
+
   limpiarFiltros(): void {
     this.searchControl.setValue('', { emitEvent: false });
     this.codigoControl.setValue('', { emitEvent: false });
@@ -232,6 +257,8 @@ export class RecepcionMineralComponent implements OnInit {
     this.estadoControl.setValue(null, { emitEvent: false });
     this.fechaDesdeControl.setValue(null, { emitEvent: false });
     this.fechaHastaControl.setValue(null, { emitEvent: false });
+    this.orderByControl.setValue('id', { emitEvent: false });
+    this.orderDirectionControl.setValue('DESC', { emitEvent: false });
     this.reiniciarYcargar();
   }
 

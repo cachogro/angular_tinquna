@@ -57,6 +57,19 @@
           <mat-datepicker #pickerHasta></mat-datepicker>
         </mat-form-field>
 
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-select [formControl]="orderByControl" placeholder="Ordenar por">
+            @for (opcion of opcionesOrden; track opcion.value) {
+            <mat-option [value]="opcion.value">{{ opcion.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <button mat-icon-button (click)="toggleOrden()"
+          [matTooltip]="orderDirectionControl.value === 'ASC' ? 'Ascendente' : 'Descendente'">
+          <mat-icon>{{ orderDirectionControl.value === 'ASC' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+        </button>
+
         <button mat-button (click)="limpiarFiltros()" class="recepcion-toolbar__clear">
           <mat-icon>filter_alt_off</mat-icon>
           Limpiar

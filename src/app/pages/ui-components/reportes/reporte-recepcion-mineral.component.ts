@@ -18,6 +18,7 @@ import { ReactiveFormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import {
   ESTADOS_OPERACION,
+  FiltrosRegistroMineral,
   OrdenDireccion,
   RegistroMineral,
 } from '../models/registro-mineral.models';
@@ -57,6 +58,7 @@ export class ReporteRecepcionMineralComponent implements OnInit {
   private readonly snackBar = inject(MatSnackBar);
 
   readonly displayedColumns = [
+    'id',
     'fecha',
     'operacion',
     'proveedor',
@@ -70,9 +72,11 @@ export class ReporteRecepcionMineralComponent implements OnInit {
 
   readonly estados = ESTADOS_OPERACION;
   readonly opcionesOrden: OpcionOrden[] = [
-    { value: 'fechaRecepcion', label: 'Fecha de recepción' },
+    { value: 'id', label: 'ID' },
     { value: 'codigoOperacion', label: 'Código de operación' },
-    { value: 'correlativo', label: 'Correlativo' },
+    { value: 'fechaRecepcion', label: 'Fecha de recepción' },
+    { value: 'numeroDocumento', label: 'N° de documento' },
+    { value: 'estado', label: 'Estado' },
   ];
 
   readonly registros = signal<RegistroMineral[]>([]);
@@ -157,7 +161,7 @@ export class ReporteRecepcionMineralComponent implements OnInit {
     return `${p.nombres} ${p.apellidoPaterno} ${p.apellidoMaterno}`.trim();
   }
 
-  private filtrosActuales() {
+  private filtrosActuales(): FiltrosRegistroMineral {
     return {
       page: this.pageIndex + 1,
       limit: this.pageSize,
@@ -167,7 +171,9 @@ export class ReporteRecepcionMineralComponent implements OnInit {
       idEstado: this.estadoControl.value ?? undefined,
       fechaDesde: this.formatFecha(this.fechaDesdeControl.value),
       fechaHasta: this.formatFecha(this.fechaHastaControl.value),
-      orderBy: this.orderByControl.value ?? undefined,
+      orderBy:
+        (this.orderByControl.value as FiltrosRegistroMineral['orderBy']) ??
+        undefined,
       orderDirection: this.orderDirectionControl.value ?? undefined,
     };
   }

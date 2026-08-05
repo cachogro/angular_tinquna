@@ -120,6 +120,17 @@
           <mat-checkbox color="primary" [(ngModel)]="soloVigentes" (change)="onToggleSoloVigentes()">
             Solo vigentes
           </mat-checkbox>
+
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-select [formControl]="orderByControl" placeholder="Ordenar por">
+              <mat-option *ngFor="let opcion of opcionesOrden" [value]="opcion.value">{{ opcion.label }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <button mat-icon-button type="button" (click)="toggleOrden()"
+            [matTooltip]="orderDirectionControl.value === 'ASC' ? 'Ascendente' : 'Descendente'">
+            <mat-icon>{{ orderDirectionControl.value === 'ASC' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+          </button>
         </div>
 
         <div class="tabla-scroll">

@@ -12,9 +12,10 @@ export const APP_CONFIG = {
 
   //direccion de prubas comentar o descomentasr
   apiUrl: 'http://localhost:3000/api',
+  // apiUrl: 'https://h461n4n3-3000.brs.devtunnels.ms/api',
 
   //direccion de red local comentar  o descomentar
- // apiUrl: 'http://192.168.100.165:3000/api',
+  // apiUrl: 'http://192.168.100.165:3000/api',
   //apiUrl: 'http://192.168.100',
 
   applicationName: 'Sistema Tinkuriquna',

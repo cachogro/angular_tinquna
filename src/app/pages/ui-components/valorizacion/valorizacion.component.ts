@@ -22,9 +22,16 @@ import { AuthService } from 'src/app/core/auth/services/auth.service';
 import {
   ESTADOS_VALORIZACION,
   ESTADO_VALORIZACION_BORRADOR_ID,
+  FiltrosValorizacionMineral,
+  OrdenDireccionValorizacion,
   ValorizacionMineral,
 } from '../models/valorizacion-mineral.models';
 import { ValorizacionMineralService } from '../services/valorizacion-mineral.service';
+
+interface OpcionOrden {
+  value: string;
+  label: string;
+}
 
 @Component({
   selector: 'app-valorizacion',
@@ -85,6 +92,17 @@ export class ValorizacionComponent implements OnInit {
   readonly fechaDesdeControl = new FormControl<Date | null>(null);
   readonly fechaHastaControl = new FormControl<Date | null>(null);
 
+  readonly opcionesOrden: OpcionOrden[] = [
+    { value: 'id', label: 'ID' },
+    { value: 'codigoOperacion', label: 'Código de operación' },
+    { value: 'fechaValorizacion', label: 'Fecha de valorización' },
+    { value: 'numeroDocumento', label: 'N° de documento' },
+    { value: 'estado', label: 'Estado' },
+  ];
+  readonly orderByControl = new FormControl<string>('id');
+  readonly orderDirectionControl =
+    new FormControl<OrdenDireccionValorizacion>('DESC');
+
   /** Solo ADMINISTRADOR y OPERADOR tienen acceso al módulo de valorización. */
   get puedeGestionar(): boolean {
     return this.authService.hasRole(
@@ -111,6 +129,10 @@ export class ValorizacionComponent implements OnInit {
       this.reiniciarYcargar(),
     );
     this.fechaHastaControl.valueChanges.subscribe(() =>
+      this.reiniciarYcargar(),
+    );
+    this.orderByControl.valueChanges.subscribe(() => this.reiniciarYcargar());
+    this.orderDirectionControl.valueChanges.subscribe(() =>
       this.reiniciarYcargar(),
     );
 
@@ -153,6 +175,8 @@ export class ValorizacionComponent implements OnInit {
         idEstadoValorizacion: this.estadoControl.value ?? undefined,
         fechaDesde: this.formatFecha(this.fechaDesdeControl.value),
         fechaHasta: this.formatFecha(this.fechaHastaControl.value),
+        orderBy: (this.orderByControl.value as FiltrosValorizacionMineral['orderBy']) ?? undefined,
+        orderDirection: this.orderDirectionControl.value ?? undefined,
       })
       .subscribe({
         next: (res) => {
@@ -177,6 +201,12 @@ export class ValorizacionComponent implements OnInit {
     this.cargarRegistros();
   }
 
+  toggleOrden(): void {
+    this.orderDirectionControl.setValue(
+      this.orderDirectionControl.value === 'ASC' ? 'DESC' : 'ASC',
+    );
+  }
+
   limpiarFiltros(): void {
     this.searchControl.setValue('', { emitEvent: false });
     this.codigoControl.setValue('', { emitEvent: false });
@@ -184,6 +214,8 @@ export class ValorizacionComponent implements OnInit {
     this.estadoControl.setValue(null, { emitEvent: false });
     this.fechaDesdeControl.setValue(null, { emitEvent: false });
     this.fechaHastaControl.setValue(null, { emitEvent: false });
+    this.orderByControl.setValue('id', { emitEvent: false });
+    this.orderDirectionControl.setValue('DESC', { emitEvent: false });
     this.reiniciarYcargar();
   }
 

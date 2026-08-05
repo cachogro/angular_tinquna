@@ -61,9 +61,9 @@ export class PersonaService {
       params = params.set('idTipoPersona', filtros.idTipoPersona);
     if (filtros.activo !== undefined)
       params = params.set('activo', filtros.activo);
-
-    const urlCompleta = `${this.baseUrl}/persona_ci?${params.toString()}`;
-    console.log('URL enviada:', urlCompleta);
+    if (filtros.orderBy) params = params.set('orderBy', filtros.orderBy);
+    if (filtros.orderDirection)
+      params = params.set('orderDirection', filtros.orderDirection);
 
     return this.http.get<PersonasPaginadas>(`${this.baseUrl}/persona_ci`, {
       params,

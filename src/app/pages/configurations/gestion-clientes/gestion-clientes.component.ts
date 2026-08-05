@@ -19,12 +19,21 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterModule } from '@angular/router';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog/confirm-dialog.component';
-import { PersonaCI, PersonaTipoCatalogo } from '../models/persona.models';
+import {
+  FiltrosPersona,
+  PersonaCI,
+  PersonaTipoCatalogo,
+} from '../models/persona.models';
 import { PersonaService } from '../services/persona.service';
 import {
   PersonaFormDialogComponent,
   PersonaFormDialogData,
 } from './persona-form-dialog/persona-form-dialog.component';
+
+interface OpcionOrden {
+  value: string;
+  label: string;
+}
 
 @Component({
   selector: 'app-gestion-clientes',
@@ -77,6 +86,14 @@ export class GestionClientesComponent implements OnInit {
   readonly tipoControl = new FormControl<number | null>(null);
   readonly estadoControl = new FormControl<string | null>(null); // 'true' | 'false' | null
 
+  readonly opcionesOrden: OpcionOrden[] = [
+    { value: 'id', label: 'ID' },
+    { value: 'nombres', label: 'Nombres' },
+    { value: 'numeroDocumento', label: 'N° de documento' },
+  ];
+  readonly orderByControl = new FormControl<string>('id');
+  readonly orderDirectionControl = new FormControl<'ASC' | 'DESC'>('DESC');
+
   ngOnInit(): void {
     this.personaService.getAllPersonaTipo().subscribe({
       next: (tipos) => this.tiposPersona.set(tipos),
@@ -93,6 +110,10 @@ export class GestionClientesComponent implements OnInit {
 
     this.tipoControl.valueChanges.subscribe(() => this.reiniciarYcargar());
     this.estadoControl.valueChanges.subscribe(() => this.reiniciarYcargar());
+    this.orderByControl.valueChanges.subscribe(() => this.reiniciarYcargar());
+    this.orderDirectionControl.valueChanges.subscribe(() =>
+      this.reiniciarYcargar(),
+    );
 
     this.cargarPersonas();
   }
@@ -114,6 +135,8 @@ export class GestionClientesComponent implements OnInit {
         numeroDocumento: this.documentoControl.value || undefined,
         idTipoPersona: this.tipoControl.value ?? undefined,
         activo: estado === null ? undefined : estado === 'true',
+        orderBy: (this.orderByControl.value as FiltrosPersona['orderBy']) ?? undefined,
+        orderDirection: this.orderDirectionControl.value ?? undefined,
       })
       .subscribe({
         next: (res) => {
@@ -140,11 +163,19 @@ export class GestionClientesComponent implements OnInit {
     this.cargarPersonas();
   }
 
+  toggleOrden(): void {
+    this.orderDirectionControl.setValue(
+      this.orderDirectionControl.value === 'ASC' ? 'DESC' : 'ASC',
+    );
+  }
+
   limpiarFiltros(): void {
     this.searchControl.setValue('', { emitEvent: false });
     this.documentoControl.setValue('', { emitEvent: false });
     this.tipoControl.setValue(null, { emitEvent: false });
     this.estadoControl.setValue(null, { emitEvent: false });
+    this.orderByControl.setValue('id', { emitEvent: false });
+    this.orderDirectionControl.setValue('DESC', { emitEvent: false });
     this.reiniciarYcargar();
   }
 

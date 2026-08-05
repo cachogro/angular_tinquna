@@ -1,0 +1,201 @@
+.ticket-titulo {
+  margin: 0;
+}
+
+.ticket-content {
+  min-width: 320px;
+}
+
+.ticket {
+  border: 2px solid rgba(0, 0, 0, 0.75);
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.87);
+}
+
+.ticket__encabezado {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 10px 12px;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.75);
+  font-weight: 700;
+}
+
+.ticket__encabezado-titulo {
+  font-size: 16px;
+  letter-spacing: 0.5px;
+}
+
+.ticket__encabezado-no {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  padding: 2px 10px;
+  border-radius: 4px;
+}
+
+.ticket__datos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.75);
+}
+
+.ticket__datos-col {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  &:first-child {
+    border-right: 1px solid rgba(0, 0, 0, 0.3);
+  }
+}
+
+.ticket__fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.ticket__label {
+  font-weight: 700;
+}
+
+.ticket__label--separado {
+  margin-left: 12px;
+}
+
+.ticket__valor {
+  color: rgba(0, 0, 0, 0.75);
+}
+
+.ticket__cuerpo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 12px;
+}
+
+.ticket__izquierda {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ticket__tabla {
+  width: 100%;
+  border-collapse: collapse;
+
+  td {
+    border: 1px solid rgba(0, 0, 0, 0.3);
+    padding: 4px 8px;
+  }
+}
+
+.ticket__td-label {
+  font-weight: 600;
+  width: 60%;
+}
+
+.ticket__td-valor {
+  text-align: right;
+  font-weight: 700;
+}
+
+.ticket__saldo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 2px solid rgba(0, 0, 0, 0.75);
+  padding: 8px 12px;
+  font-weight: 700;
+}
+
+.ticket__saldo-valor {
+  font-size: 16px;
+  color: #28c76f;
+}
+
+.ticket__derecha {
+  display: flex;
+  flex-direction: column;
+}
+
+.ticket__tabla-descuentos {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid rgba(0, 0, 0, 0.3);
+
+  th {
+    text-align: center;
+    font-weight: 700;
+    padding: 6px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.3);
+    background: rgba(0, 0, 0, 0.04);
+  }
+
+  td {
+    padding: 4px 8px;
+    border-top: 1px solid rgba(0, 0, 0, 0.15);
+  }
+
+  tfoot td {
+    font-weight: 700;
+    border-top: 2px solid rgba(0, 0, 0, 0.5);
+  }
+}
+
+.ticket__td-entidad {
+  width: 55%;
+}
+
+.ticket__td-porcentaje {
+  text-align: right;
+  width: 20%;
+}
+
+.ticket__td-importe {
+  text-align: right;
+  width: 25%;
+}
+
+.ticket__td-vacio {
+  text-align: center;
+  font-style: italic;
+  color: rgba(0, 0, 0, 0.5);
+  padding: 12px 8px;
+}
+
+.ticket__pie {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  padding: 24px 16px 12px;
+  border-top: 2px solid rgba(0, 0, 0, 0.75);
+}
+
+.ticket__firma {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.ticket__firma-linea {
+  width: 100%;
+  border-top: 1px dashed rgba(0, 0, 0, 0.5);
+  margin-top: 24px;
+}
+
+.ticket__firma-titulo {
+  font-weight: 700;
+}
+
+.ticket__firma .ticket__fila {
+  justify-content: center;
+  width: 100%;
+}

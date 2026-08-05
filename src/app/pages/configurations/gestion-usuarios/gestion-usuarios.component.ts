@@ -21,10 +21,19 @@ import { UsuarioAdminService } from '../services/usuario-admin.service';
 import { CatalogosService } from '../services/catalogos.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AuthService } from 'src/app/core/auth/services/auth.service';
-import { obtenerRolUsuario, UsuarioAdmin } from './models/usuario-admin.models';
+import {
+  FiltrosListadoUsuarios,
+  obtenerRolUsuario,
+  UsuarioAdmin,
+} from './models/usuario-admin.models';
 import { CatalogoItem } from './models/catalogos.models';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog/confirm-dialog.component';
+
+interface OpcionOrden {
+  value: string;
+  label: string;
+}
 
 const AVATAR_PALETTE = [
   '#7367F0',
@@ -78,8 +87,8 @@ export class GestionUsuariosComponent implements OnInit {
 
   get displayedColumns(): string[] {
     return this.puedeGestionar
-      ? ['usuario', 'contacto', 'rol', 'estado', 'acciones']
-      : ['usuario', 'contacto', 'rol', 'estado'];
+      ? ['id', 'usuario', 'contacto', 'rol', 'estado', 'acciones']
+      : ['id', 'usuario', 'contacto', 'rol', 'estado'];
   }
 
   readonly usuarios = signal<UsuarioAdmin[]>([]);
@@ -94,6 +103,14 @@ export class GestionUsuariosComponent implements OnInit {
   readonly rolControl = new FormControl<string | null>(null);
   readonly estadoControl = new FormControl<string | null>(null); // 'true' | 'false' | null
 
+  readonly opcionesOrden: OpcionOrden[] = [
+    { value: 'id', label: 'ID' },
+    { value: 'usuario', label: 'Usuario' },
+    { value: 'nombres', label: 'Nombres' },
+  ];
+  readonly orderByControl = new FormControl<string>('id');
+  readonly orderDirectionControl = new FormControl<'ASC' | 'DESC'>('DESC');
+
   ngOnInit(): void {
     this.catalogosService.getRoles().subscribe({
       next: (roles) => this.roles.set(roles),
@@ -106,6 +123,10 @@ export class GestionUsuariosComponent implements OnInit {
 
     this.rolControl.valueChanges.subscribe(() => this.reiniciarYcargar());
     this.estadoControl.valueChanges.subscribe(() => this.reiniciarYcargar());
+    this.orderByControl.valueChanges.subscribe(() => this.reiniciarYcargar());
+    this.orderDirectionControl.valueChanges.subscribe(() =>
+      this.reiniciarYcargar(),
+    );
 
     this.cargarUsuarios();
   }
@@ -127,6 +148,8 @@ export class GestionUsuariosComponent implements OnInit {
         busqueda: this.searchControl.value || undefined,
         idRol: this.rolControl.value || undefined,
         activo: estado === null ? undefined : estado === 'true',
+        orderBy: (this.orderByControl.value as FiltrosListadoUsuarios['orderBy']) ?? undefined,
+        orderDirection: this.orderDirectionControl.value ?? undefined,
       })
       .subscribe({
         next: (res) => {
@@ -153,10 +176,18 @@ export class GestionUsuariosComponent implements OnInit {
     this.cargarUsuarios();
   }
 
+  toggleOrden(): void {
+    this.orderDirectionControl.setValue(
+      this.orderDirectionControl.value === 'ASC' ? 'DESC' : 'ASC',
+    );
+  }
+
   limpiarFiltros(): void {
     this.searchControl.setValue('', { emitEvent: false });
     this.rolControl.setValue(null, { emitEvent: false });
     this.estadoControl.setValue(null, { emitEvent: false });
+    this.orderByControl.setValue('id', { emitEvent: false });
+    this.orderDirectionControl.setValue('DESC', { emitEvent: false });
     this.reiniciarYcargar();
   }
 
@@ -179,12 +210,24 @@ export class GestionUsuariosComponent implements OnInit {
     return AVATAR_PALETTE[Math.abs(index) || 0];
   }
 
+  /**
+   * Normaliza `activo` a un boolean real. El backend a veces lo serializa
+   * como string ("true"/"false") o número (0/1); comparar directo con `!` o
+   * `?:` sobre un valor no-boolean rompe tanto el badge como el ícono de
+   * cambio de estado (se quedan siempre en la misma rama).
+   */
+  estaActivo(usuario: UsuarioAdmin): boolean {
+    const valor = usuario.activo as unknown;
+    if (typeof valor === 'string') return valor.trim().toLowerCase() === 'true' || valor === '1';
+    return Boolean(valor);
+  }
+
   confirmarCambioEstado(usuario: UsuarioAdmin): void {
     // Defensa extra: aunque el botón esté oculto para OPERADOR, nunca confiar
     // solo en la UI para una acción sensible como dar de baja a un usuario.
     if (!this.puedeGestionar) return;
 
-    const activar = !usuario.activo;
+    const activar = !this.estaActivo(usuario);
 
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       data: {

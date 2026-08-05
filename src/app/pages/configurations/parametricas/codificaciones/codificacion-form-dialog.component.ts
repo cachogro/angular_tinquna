@@ -66,7 +66,7 @@ export class CodificacionFormDialogComponent implements OnInit {
 
   minerales: Mineral[] = [];
   guardando = false;
-  columnas = ['codigo', 'nombre', 'acciones'];
+  columnas = ['id', 'codigo', 'nombre', 'acciones'];
 
   // Ahora es estado propio del componente, no depende solo de `data`.
   // Así el mismo modal puede pasar de "nuevo" a "edición" y viceversa.

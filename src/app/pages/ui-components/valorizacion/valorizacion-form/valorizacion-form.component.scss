@@ -72,16 +72,6 @@
   color: #28c76f;
 }
 
-.valorizacion-form__titulo {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 14px;
-  font-weight: 700;
-  margin: 8px 0 4px;
-  color: rgba(0, 0, 0, 0.65);
-}
 
 .form-grid {
   display: grid;
@@ -287,6 +277,10 @@
   justify-self: center;
 }
 
+
+
+
+
 .valorizacion-form__resumen {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -343,17 +337,108 @@
   gap: 8px;
 }
 
+.valorizacion-form__pie {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.valorizacion-form__botones-finales {
+  grid-column: 2;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.valorizacion-form__stepper {
+  background: transparent;
+
+  ::ng-deep .mat-horizontal-stepper-header-container,
+  ::ng-deep .mat-vertical-content {
+    background: transparent;
+  }
+
+  ::ng-deep .mat-step-header {
+    padding: 12px 8px;
+  }
+}
+
+.valorizacion-form__step-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.valorizacion-form__step-actions--inline {
+  margin-top: 0;
+}
+
 .valorizacion-form__autoguardado {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex: 1 1 auto;
   font-size: 12px;
   color: rgba(0, 0, 0, 0.55);
+  transition: color 0.3s ease;
 
   mat-icon {
     font-size: 16px;
     width: 16px;
     height: 16px;
+  }
+}
+
+.valorizacion-form__autoguardado--resaltado {
+  color: #28c76f;
+}
+
+
+
+////---------------scss de totales-----------------////
+
+.valorizacion-form__titulo {
+  margin: 0 0 16px;
+}
+
+.valorizacion-form__totales {
+  display: flex;
+  flex-direction: column;
+  max-width: 420px;
+  gap: 12px;
+}
+
+.valorizacion-form__campo {
+  width: 100%;
+}
+
+/* Alinear el valor de los inputs a la derecha */
+.valorizacion-form__campo input {
+  text-align: right;
+}
+
+
+
+
+
+.valorizacion-form__saldo-pagar {
+  ::ng-deep .mat-mdc-input-element {
+    color: #28c76f;
+    font-weight: 700;
+    -webkit-text-fill-color: #28c76f;
+  }
+
+  ::ng-deep .mat-mdc-form-field-label {
+    color: #28c76f !important;
+  }
+
+  ::ng-deep .mdc-notched-outline__leading,
+  ::ng-deep .mdc-notched-outline__notch,
+  ::ng-deep .mdc-notched-outline__trailing {
+    border-color: rgba(40, 199, 111, 0.4) !important;
   }
 }

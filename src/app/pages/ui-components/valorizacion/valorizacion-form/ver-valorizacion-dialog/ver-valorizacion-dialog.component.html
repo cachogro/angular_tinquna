@@ -1,0 +1,170 @@
+<h2 mat-dialog-title class="ticket-titulo">Vista previa de la valorización</h2>
+
+<mat-dialog-content class="ticket-content">
+  <div class="ticket">
+    <div class="ticket__encabezado">
+      <span class="ticket__encabezado-titulo">VALORIZACIÓN DE MINERALES</span>
+      <span class="ticket__encabezado-no">
+        No
+        <strong>{{ data.numero }}</strong>
+      </span>
+    </div>
+
+    <div class="ticket__datos">
+      <div class="ticket__datos-col">
+        <div class="ticket__fila">
+          <span class="ticket__label">PRODUCTO:</span>
+          <span class="ticket__valor">{{ data.producto }}</span>
+        </div>
+        <div class="ticket__fila">
+          <span class="ticket__label">CLIENTE:</span>
+          <span class="ticket__valor">{{ data.cliente }}</span>
+        </div>
+        <div class="ticket__fila">
+          <span class="ticket__label">LOTE:</span>
+          <span class="ticket__valor">{{ data.lote }}</span>
+          <span class="ticket__label ticket__label--separado">C.I.:</span>
+          <span class="ticket__valor">{{ data.numeroDocumento }}</span>
+        </div>
+      </div>
+      <div class="ticket__datos-col">
+        <div class="ticket__fila">
+          <span class="ticket__label">FECHA DE ENTREGA:</span>
+          <span class="ticket__valor">{{ data.fechaEntrega }}</span>
+        </div>
+        <div class="ticket__fila">
+          <span class="ticket__label">FECHA DE TRANSACCIÓN:</span>
+          <span class="ticket__valor">{{ data.fechaTransaccion }}</span>
+        </div>
+        <div class="ticket__fila">
+          <span class="ticket__label">Tipo APM:</span>
+          <span class="ticket__valor">{{ data.cooperativa }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="ticket__cuerpo">
+      <div class="ticket__izquierda">
+        <table class="ticket__tabla">
+          <tbody>
+            <tr>
+              <td class="ticket__td-label">PESO BRUTO</td>
+              <td class="ticket__td-valor">{{ formatNumero(data.pesoBruto) }}</td>
+            </tr>
+            <tr>
+              <td class="ticket__td-label">PESO NETO</td>
+              <td class="ticket__td-valor">{{ formatNumero(data.pesoNeto) }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        @if (data.leyesYPrecios.length > 0) {
+        <table class="ticket__tabla">
+          <tbody>
+            @for (item of data.leyesYPrecios; track item.simbolo) {
+            <tr>
+              <td class="ticket__td-label">LEY {{ item.simbolo }} {{ item.leyUnidad }}</td>
+              <td class="ticket__td-valor">{{ formatNumero(item.ley) }}</td>
+            </tr>
+            }
+          </tbody>
+        </table>
+        }
+
+        <table class="ticket__tabla">
+          <tbody>
+            @for (item of data.leyesYPrecios; track item.simbolo) {
+            <tr>
+              <td class="ticket__td-label">PRECIO KILO {{ item.simbolo }}</td>
+              <td class="ticket__td-valor">{{ formatNumero(item.precioPorKilo) }}</td>
+            </tr>
+            }
+            <tr>
+              <td class="ticket__td-label">LIQUIDO PAGABLE</td>
+              <td class="ticket__td-valor">{{ formatNumero(data.liquidoPagable) }}</td>
+            </tr>
+            <tr>
+              <td class="ticket__td-label">ANTICIPO</td>
+              <td class="ticket__td-valor">{{ formatNumero(data.anticipo) }}</td>
+            </tr>
+            @if (data.otrosAnticipo) {
+            <tr>
+              <td class="ticket__td-label">OTROS ANTICIPOS</td>
+              <td class="ticket__td-valor">{{ formatNumero(data.otrosAnticipo) }}</td>
+            </tr>
+            }
+            @if (data.transporte) {
+            <tr>
+              <td class="ticket__td-label">TRANSPORTE</td>
+              <td class="ticket__td-valor">{{ formatNumero(data.transporte) }}</td>
+            </tr>
+            }
+          </tbody>
+        </table>
+
+        <div class="ticket__saldo">
+          <span>SALDO A PAGAR</span>
+          <span class="ticket__saldo-valor">{{ formatNumero(data.saldoAPagar) }}</span>
+        </div>
+      </div>
+
+      <div class="ticket__derecha">
+        <table class="ticket__tabla-descuentos">
+          <thead>
+            <tr>
+              <th colspan="3">DESCUENTOS DE LEY</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (data.descuentos.length === 0) {
+            <tr>
+              <td colspan="3" class="ticket__td-vacio">Sin descuentos aplicados</td>
+            </tr>
+            } @else {
+            @for (d of data.descuentos; track d.entidad) {
+            <tr>
+              <td class="ticket__td-entidad">{{ d.entidad }}</td>
+              <td class="ticket__td-porcentaje">{{ formatNumero(d.porcentaje) }}%</td>
+              <td class="ticket__td-importe">{{ formatNumero(d.importe) }}</td>
+            </tr>
+            }
+            }
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="2">DESCUENTO TOTAL</td>
+              <td class="ticket__td-importe">{{ formatNumero(data.descuentoTotal) }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <div class="ticket__pie">
+      <div class="ticket__firma">
+        <span class="ticket__firma-linea"></span>
+        <span class="ticket__firma-titulo">LIQUIDADOR</span>
+      </div>
+      <div class="ticket__firma">
+        <span class="ticket__firma-linea"></span>
+        <span class="ticket__firma-titulo">FIRMA</span>
+        <div class="ticket__fila">
+          <span class="ticket__label">CLIENTE:</span>
+          <span class="ticket__valor">{{ data.cliente }}</span>
+        </div>
+        <div class="ticket__fila">
+          <span class="ticket__label">C.I.:</span>
+          <span class="ticket__valor">{{ data.numeroDocumento }}</span>
+        </div>
+        <div class="ticket__fila">
+          <span class="ticket__label">TELÉFONO:</span>
+          <span class="ticket__valor">{{ data.telefonoCliente || '—' }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-flat-button color="primary" (click)="cerrar()">Cerrar</button>
+</mat-dialog-actions>

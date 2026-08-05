@@ -123,7 +123,9 @@ export interface FiltrosRegistroMineral {
   idEstado?: number;
   fechaDesde?: string; // 'YYYY-MM-DD'
   fechaHasta?: string; // 'YYYY-MM-DD'
-  orderBy?: string;
+  /** Campo por el que se ordena. Por defecto 'id' */
+  orderBy?: 'id' | 'codigoOperacion' | 'fechaRecepcion' | 'numeroDocumento' | 'estado';
+  /** Por defecto 'DESC' (más nuevos primero) */
   orderDirection?: OrdenDireccion;
 }
 

@@ -64,6 +64,12 @@ export interface ValorizacionMineral {
   totalAportesBolivianos: string | null;
   cotizacionDolar: string | null;
   anticipo: string;
+  /** Ajuste manual de transporte que teclea el operador: positivo suma al
+   *  saldo a pagar, negativo resta. 0 si no se ingresó nada. */
+  ajusteTransporte?: string | null;
+  /** Otro anticipo aparte del de la recepción: siempre resta al saldo a
+   *  pagar. 0 si no se ingresó nada. */
+  otrosAnticipo?: string | null;
   liquidoPagableBolivianos: string | null;
   saldoPagarBolivianos: string;
   observaciones?: string | null;
@@ -131,11 +137,20 @@ export interface ActualizarValorizacionRequest {
   totalValorBrutoBolivianos?: number;
   totalAportesBolivianos?: number;
   cotizacionDolar?: number;
+  /** Positivo suma al saldo a pagar, negativo resta; 0 si no se ingresó nada. */
+  ajusteTransporte?: number;
+  /** 0 o mayor; siempre resta al saldo a pagar. */
+  otrosAnticipo?: number;
   liquidoPagableBolivianos?: number;
   saldoPagarBolivianos?: number;
   observaciones?: string;
   detalles?: DetalleValorizacionRequest[];
   aportes?: AporteValorizacionRequest[];
+  /** true = desactiva explícitamente todos los aportes activos, sin
+   *  necesidad de mandar `aportes`. Es la única forma de comunicar "el
+   *  usuario desmarcó todo": mandar `aportes: []` no hace nada en el back
+   *  (solo reemplaza si el array trae contenido). */
+  limpiarAportes?: boolean;
 }
 
 // ==========================================================
@@ -159,7 +174,9 @@ export interface FiltrosValorizacionMineral {
   idEstadoValorizacion?: number;
   fechaDesde?: string; // 'YYYY-MM-DD'
   fechaHasta?: string; // 'YYYY-MM-DD'
-  orderBy?: string;
+  /** Campo por el que se ordena. Por defecto 'id' */
+  orderBy?: 'id' | 'codigoOperacion' | 'fechaValorizacion' | 'numeroDocumento' | 'estado';
+  /** Por defecto 'DESC' (más nuevos primero) */
   orderDirection?: OrdenDireccionValorizacion;
 }
 

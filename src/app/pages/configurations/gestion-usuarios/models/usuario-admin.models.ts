@@ -107,4 +107,8 @@ export interface FiltrosListadoUsuarios {
   busqueda?: string;
   idRol?: string;
   activo?: boolean;
+  /** Campo por el que se ordena. Por defecto 'id' */
+  orderBy?: 'id' | 'usuario' | 'nombres';
+  /** Por defecto 'DESC' (más nuevos primero) */
+  orderDirection?: 'ASC' | 'DESC';
 }

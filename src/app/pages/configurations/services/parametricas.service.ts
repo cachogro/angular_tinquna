@@ -123,6 +123,9 @@ export class ParametricasService {
       params = params.set('vigente', filtros.vigente);
     if (filtros.activo !== undefined)
       params = params.set('activo', filtros.activo);
+    if (filtros.orderBy) params = params.set('orderBy', filtros.orderBy);
+    if (filtros.orderDirection)
+      params = params.set('orderDirection', filtros.orderDirection);
 
     return this.http.get<CotizacionesPaginadas>(
       `${this.baseUrl}/cotizacionPag`,

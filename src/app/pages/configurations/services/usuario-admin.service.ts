@@ -48,6 +48,9 @@ export class UsuarioAdminService {
     if (filtros.idRol) params = params.set('idRol', filtros.idRol);
     if (filtros.activo !== undefined)
       params = params.set('activo', filtros.activo);
+    if (filtros.orderBy) params = params.set('orderBy', filtros.orderBy);
+    if (filtros.orderDirection)
+      params = params.set('orderDirection', filtros.orderDirection);
 
     return this.http.get<UsuariosPaginados>(`${this.baseUrl}/listar_usuarios`, {
       params,

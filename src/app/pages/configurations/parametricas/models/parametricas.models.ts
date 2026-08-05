@@ -109,7 +109,7 @@ export interface FiltrosCotizacion {
   idMineral?: number;
   /** true = solo la cotización vigente de cada mineral */
   /** Campo por el que se ordena. Por defecto 'id' */
-  orderBy?: 'id' | 'nombre' | 'fechaRegistro';
+  orderBy?: 'id' | 'mineral' | 'fechaVigenciaInicial' | 'fechaVigenciaFinal';
   /** Por defecto 'DESC' (más nuevos primero) */
   orderDirection?: 'ASC' | 'DESC';
   vigente?: boolean;
@@ -175,7 +175,7 @@ export interface FiltrosActorProductivoMinero {
   activo?: boolean;
   idTipoActorProductivoMinero?: number | string;
   /** Campo por el que se ordena. Por defecto 'id' */
-  orderBy?: 'id' | 'nombre' | 'fechaRegistro';
+  orderBy?: 'id' | 'nombre' | 'direccion' | 'telefono' | 'tipoActorProductivoMinero';
   /** Por defecto 'DESC' (más nuevos primero) */
   orderDirection?: 'ASC' | 'DESC';
 }

@@ -30,12 +30,18 @@ import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog
 import { ParametricaDialogShellComponent } from '../shared/parametrica-dialog-shell.component';
 import {
   ActorProductivoMinero,
+  FiltrosActorProductivoMinero,
   TipoActorProductivoMinero,
 } from '../models/parametricas.models';
 import { ParametricasService } from '../../services/parametricas.service';
 
 export interface ActorProductivoMineroDialogData {
   actorProductivoMinero?: ActorProductivoMinero;
+}
+
+interface OpcionOrden {
+  value: string;
+  label: string;
 }
 
 @Component({
@@ -85,6 +91,16 @@ export class ActorProductivoMineroFormDialogComponent implements OnInit {
   pageSize = 10;
   private readonly busquedaChange$ = new Subject<void>();
 
+  readonly opcionesOrden: OpcionOrden[] = [
+    { value: 'id', label: 'ID' },
+    { value: 'nombre', label: 'Nombre' },
+    { value: 'direccion', label: 'Dirección' },
+    { value: 'telefono', label: 'Teléfono' },
+    { value: 'tipoActorProductivoMinero', label: 'Tipo' },
+  ];
+  readonly orderByControl = new FormControl<string>('id');
+  readonly orderDirectionControl = new FormControl<'ASC' | 'DESC'>('DESC');
+
   // Estado propio del componente: permite pasar de "nuevo" a "edición"
   // sin depender solo de `data`.
   actorEditando: ActorProductivoMinero | null = null;
@@ -118,6 +134,15 @@ export class ActorProductivoMineroFormDialogComponent implements OnInit {
     );
 
     this.filtroTipoControl.valueChanges.subscribe(() => {
+      this.pageIndex = 0;
+      this.recargarTabla();
+    });
+
+    this.orderByControl.valueChanges.subscribe(() => {
+      this.pageIndex = 0;
+      this.recargarTabla();
+    });
+    this.orderDirectionControl.valueChanges.subscribe(() => {
       this.pageIndex = 0;
       this.recargarTabla();
     });
@@ -159,8 +184,10 @@ export class ActorProductivoMineroFormDialogComponent implements OnInit {
       limit: this.pageSize,
       busqueda: this.searchControl.value?.trim() || undefined,
       idTipoActorProductivoMinero: this.filtroTipoControl.value ?? undefined,
-      orderBy: 'id',
-      orderDirection: 'DESC',
+      orderBy:
+        (this.orderByControl.value as FiltrosActorProductivoMinero['orderBy']) ??
+        undefined,
+      orderDirection: this.orderDirectionControl.value ?? undefined,
     });
   }
 
@@ -168,8 +195,16 @@ export class ActorProductivoMineroFormDialogComponent implements OnInit {
   limpiarBusqueda(): void {
     this.searchControl.setValue('', { emitEvent: false });
     this.filtroTipoControl.setValue(null, { emitEvent: false });
+    this.orderByControl.setValue('id', { emitEvent: false });
+    this.orderDirectionControl.setValue('DESC', { emitEvent: false });
     this.pageIndex = 0;
     this.recargarTabla();
+  }
+
+  toggleOrden(): void {
+    this.orderDirectionControl.setValue(
+      this.orderDirectionControl.value === 'ASC' ? 'DESC' : 'ASC',
+    );
   }
 
   onPageChange(event: PageEvent): void {
@@ -307,13 +342,8 @@ export class ActorProductivoMineroFormDialogComponent implements OnInit {
     });
   }
 
-  /** Respaldo: ordena descendente por id en el cliente mientras el back
-   *  no soporte los parámetros orderBy/orderDirection. Una vez el back
-   *  ordene server-side, esto queda como un no-op. */
   get actores(): ActorProductivoMinero[] {
-    return [...this.parametricasService.actoresProductivosMineros()].sort(
-      (a, b) => Number(b.id) - Number(a.id),
-    );
+    return this.parametricasService.actoresProductivosMineros();
   }
 
   get totalActores(): number {

@@ -70,6 +70,10 @@ export interface FiltrosPersona {
   numeroDocumento?: string;
   idTipoPersona?: number;
   activo?: boolean;
+  /** Campo por el que se ordena. Por defecto 'id' */
+  orderBy?: 'id' | 'nombres' | 'numeroDocumento';
+  /** Por defecto 'DESC' (más nuevos primero) */
+  orderDirection?: 'ASC' | 'DESC';
 }
 
 export interface PersonasPaginadas {

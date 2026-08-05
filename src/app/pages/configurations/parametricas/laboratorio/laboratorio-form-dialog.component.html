@@ -81,10 +81,16 @@
                 <button mat-icon-button color="primary" matTooltip="Editar" (click)="editar(row)">
                   <mat-icon>edit</mat-icon>
                 </button>
+
+
+
                 <button mat-icon-button [color]="row.activo ? 'warn' : 'primary'"
                   [matTooltip]="row.activo ? 'Desactivar' : 'Activar'" (click)="cambiarEstado(row)">
                   <mat-icon>{{ row.activo ? 'toggle_on' : 'toggle_off' }}</mat-icon>
                 </button>
+
+
+                
               </td>
             </ng-container>
 

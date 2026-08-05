@@ -74,6 +74,15 @@
       <mat-card-content>
         <div class="tabla-scroll">
           <table mat-table [dataSource]="codificaciones" class="tabla mat-elevation-z1">
+            <!-- ID -->
+            <ng-container matColumnDef="id">
+              <th mat-header-cell *matHeaderCellDef>
+                ID
+              </th>
+              <td mat-cell *matCellDef="let row">
+                {{ row.id }}
+              </td>
+            </ng-container>
             <!-- Código -->
             <ng-container matColumnDef="codigo">
               <th mat-header-cell *matHeaderCellDef>
