@@ -120,9 +120,14 @@ export interface FiltrosRegistroMineral {
   busqueda?: string; // nombre de proveedor
   codigoOperacion?: string; // código o número de operación/correlativo
   numeroDocumento?: string; // carnet
+  idCodificacion?: string | number; // codificación de mineral (ej. ICC), ver Codificacion.codigo
   idEstado?: number;
-  fechaDesde?: string; // 'YYYY-MM-DD'
-  fechaHasta?: string; // 'YYYY-MM-DD'
+  fechaDesde?: string; // 'YYYY-MM-DD'. No combinar con anio/mes/semana.
+  fechaHasta?: string; // 'YYYY-MM-DD'. No combinar con anio/mes/semana.
+  /** Alternativa a fechaDesde/fechaHasta para fraccionar exportaciones grandes por mes o semana ISO. */
+  anio?: number;
+  mes?: number; // 1-12, junto con anio
+  semana?: number; // 1-53 (ISO), junto con anio
   /** Campo por el que se ordena. Por defecto 'id' */
   orderBy?: 'id' | 'codigoOperacion' | 'fechaRecepcion' | 'numeroDocumento' | 'estado';
   /** Por defecto 'DESC' (más nuevos primero) */

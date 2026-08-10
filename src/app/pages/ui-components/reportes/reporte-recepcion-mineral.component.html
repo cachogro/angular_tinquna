@@ -9,9 +9,16 @@
         <mat-icon>arrow_back</mat-icon>
         Volver
       </button> -->
-      <button mat-stroked-button color="primary" (click)="exportarPdf()">
-        <mat-icon>picture_as_pdf</mat-icon>
-        Exportar PDF
+      <button mat-stroked-button color="primary" (click)="exportarPdf()" [disabled]="exportandoPdf()">
+        @if (exportandoPdf()) {
+        <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
+        <span>Generando...</span>
+        } @else {
+        <ng-container>
+          <mat-icon>picture_as_pdf</mat-icon>
+          <span>Exportar PDF</span>
+        </ng-container>
+        }
       </button>
       <button mat-flat-button color="primary" (click)="exportarExcel()" [disabled]="exportando()">
         @if (exportando()) {
@@ -21,10 +28,7 @@
         <ng-container>
           <mat-icon>grid_on</mat-icon>
           <span>Exportar Excel</span>
-
         </ng-container>
-
-
         }
       </button>
     </div>
@@ -34,19 +38,19 @@
     <div class="reporte-page">
 
       <div class="reporte-toolbar">
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <!-- <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-icon matPrefix>numbers</mat-icon>
           <input matInput placeholder="Código / N° de operación" [formControl]="codigoControl" />
-        </mat-form-field>
+        </mat-form-field> -->
 
         <mat-form-field appearance="outline" class="reporte-toolbar__search" subscriptSizing="dynamic">
           <mat-icon matPrefix>search</mat-icon>
           <input matInput placeholder="Buscar por proveedor" [formControl]="searchControl" />
         </mat-form-field>
 
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <!-- <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <input matInput placeholder="N° de carnet" [formControl]="documentoControl" />
-        </mat-form-field>
+        </mat-form-field> -->
 
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-select [formControl]="estadoControl" placeholder="Estado">
@@ -58,17 +62,12 @@
         </mat-form-field>
 
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label>Desde</mat-label>
-          <input matInput [matDatepicker]="pickerDesde" [max]="hoy" [formControl]="fechaDesdeControl" />
-          <mat-datepicker-toggle matSuffix [for]="pickerDesde"></mat-datepicker-toggle>
-          <mat-datepicker #pickerDesde></mat-datepicker>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label>Hasta</mat-label>
-          <input matInput [matDatepicker]="pickerHasta" [max]="hoy" [formControl]="fechaHastaControl" />
-          <mat-datepicker-toggle matSuffix [for]="pickerHasta"></mat-datepicker-toggle>
-          <mat-datepicker #pickerHasta></mat-datepicker>
+          <mat-select [formControl]="codificacionControl" placeholder="Código de mineral">
+            <mat-option [value]="null">Todos los códigos</mat-option>
+            @for (c of codificaciones(); track c.id) {
+            <mat-option [value]="c.id">{{ c.codigo }} — {{ c.nombre }}</mat-option>
+            }
+          </mat-select>
         </mat-form-field>
 
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
@@ -88,6 +87,56 @@
           <mat-icon>filter_alt_off</mat-icon>
           Limpiar
         </button>
+      </div>
+
+      <div class="reporte-toolbar">
+        <mat-button-toggle-group [formControl]="periodoModoControl" aria-label="Tipo de período">
+          <mat-button-toggle value="fechas">Rango de fechas</mat-button-toggle>
+          <mat-button-toggle value="mes">Mes</mat-button-toggle>
+          <mat-button-toggle value="semana">Semana</mat-button-toggle>
+        </mat-button-toggle-group>
+
+        @if (periodoModoControl.value === 'fechas') {
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Desde</mat-label>
+          <input matInput [matDatepicker]="pickerDesde" [max]="hoy" [formControl]="fechaDesdeControl" />
+          <mat-datepicker-toggle matSuffix [for]="pickerDesde"></mat-datepicker-toggle>
+          <mat-datepicker #pickerDesde></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Hasta</mat-label>
+          <input matInput [matDatepicker]="pickerHasta" [max]="hoy" [formControl]="fechaHastaControl" />
+          <mat-datepicker-toggle matSuffix [for]="pickerHasta"></mat-datepicker-toggle>
+          <mat-datepicker #pickerHasta></mat-datepicker>
+        </mat-form-field>
+        }
+
+        @if (periodoModoControl.value === 'mes') {
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="reporte-toolbar__anio">
+          <mat-label>Año</mat-label>
+          <input matInput type="number" [formControl]="anioControl" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Mes</mat-label>
+          <mat-select [formControl]="mesControl">
+            @for (m of meses; track m.value) {
+            <mat-option [value]="m.value">{{ m.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        }
+
+        @if (periodoModoControl.value === 'semana') {
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="reporte-toolbar__anio">
+          <mat-label>Año</mat-label>
+          <input matInput type="number" [formControl]="anioControl" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="reporte-toolbar__anio">
+          <mat-label>Semana (1-53)</mat-label>
+          <input matInput type="number" min="1" max="53" [formControl]="semanaControl" />
+        </mat-form-field>
+        }
       </div>
 
       <div class="reporte-resumen">
@@ -159,27 +208,27 @@
 
           <ng-container matColumnDef="sacos">
             <th mat-header-cell *matHeaderCellDef>Sacos</th>
-            <td mat-cell *matCellDef="let r">{{ r.numeroSacos ?? '—' }}</td>
+            <td mat-cell *matCellDef="let r">{{ formatNumero(r.numeroSacos) || '—' }}</td>
           </ng-container>
 
           <ng-container matColumnDef="balanzaL">
             <th mat-header-cell *matHeaderCellDef>Balanza L</th>
-            <td mat-cell *matCellDef="let r">{{ r.balanzaL }}</td>
+            <td mat-cell *matCellDef="let r">{{ formatNumero(r.balanzaL) }}</td>
           </ng-container>
 
           <ng-container matColumnDef="balanzaT">
             <th mat-header-cell *matHeaderCellDef>Balanza T</th>
-            <td mat-cell *matCellDef="let r">{{ r.balanzaT }}</td>
+            <td mat-cell *matCellDef="let r">{{ formatNumero(r.balanzaT) }}</td>
           </ng-container>
 
           <ng-container matColumnDef="anticipo">
             <th mat-header-cell *matHeaderCellDef>Anticipo</th>
-            <td mat-cell *matCellDef="let r">{{ r.anticipo }}</td>
+            <td mat-cell *matCellDef="let r">{{ formatNumero(r.anticipo) }}</td>
           </ng-container>
 
           <ng-container matColumnDef="humedad">
             <th mat-header-cell *matHeaderCellDef>Humedad</th>
-            <td mat-cell *matCellDef="let r">{{ r.humedad ?? '—' }}</td>
+            <td mat-cell *matCellDef="let r">{{ formatNumero(r.humedad) || '—' }}</td>
           </ng-container>
 
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>

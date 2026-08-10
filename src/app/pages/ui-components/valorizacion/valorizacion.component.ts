@@ -6,6 +6,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -17,11 +18,22 @@ import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterModule } from '@angular/router';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
+import { formatNumeroSinCeros } from 'src/app/shared/utils/numero.util';
 import { RolCodigo } from 'src/app/core/auth/models/auth.models';
 import { AuthService } from 'src/app/core/auth/services/auth.service';
+import { Mineral } from 'src/app/pages/configurations/parametricas/models/parametricas.models';
+import { ParametricasService } from 'src/app/pages/configurations/services/parametricas.service';
+import {
+  DescuentoVisualizacion,
+  LeyPrecioVisualizacion,
+  VerValorizacionDialogComponent,
+  VerValorizacionDialogData,
+} from './valorizacion-form/ver-valorizacion-dialog/ver-valorizacion-dialog.component';
 import {
   ESTADOS_VALORIZACION,
   ESTADO_VALORIZACION_BORRADOR_ID,
+  ESTADO_VALORIZACION_VALORIZADO_ID,
+  EntidadAporte,
   FiltrosValorizacionMineral,
   OrdenDireccionValorizacion,
   ValorizacionMineral,
@@ -61,8 +73,15 @@ export class ValorizacionComponent implements OnInit {
   private readonly valorizacionMineralService = inject(
     ValorizacionMineralService,
   );
+  private readonly parametricasService = inject(ParametricasService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly authService = inject(AuthService);
+  private readonly dialog = inject(MatDialog);
+
+  /** Catálogos usados solo para resolver nombres al armar el visualizador
+   *  (ver visualizar()): símbolo del mineral y descripción de la entidad de aporte. */
+  private readonly mineralesCatalogo = signal<Mineral[]>([]);
+  private readonly entidadesAporte = signal<EntidadAporte[]>([]);
 
   /** Fecha máxima seleccionable en los filtros "Desde"/"Hasta": no se permiten fechas futuras. */
   readonly hoy = new Date();
@@ -77,6 +96,7 @@ export class ValorizacionComponent implements OnInit {
   ];
   readonly estados = ESTADOS_VALORIZACION;
   readonly ESTADO_VALORIZACION_BORRADOR_ID = ESTADO_VALORIZACION_BORRADOR_ID;
+  readonly ESTADO_VALORIZACION_VALORIZADO_ID = ESTADO_VALORIZACION_VALORIZADO_ID;
 
   readonly registros = signal<ValorizacionMineral[]>([]);
   readonly total = signal(0);
@@ -135,6 +155,13 @@ export class ValorizacionComponent implements OnInit {
     this.orderDirectionControl.valueChanges.subscribe(() =>
       this.reiniciarYcargar(),
     );
+
+    this.parametricasService
+      .obtenerMinerales()
+      .subscribe((data) => this.mineralesCatalogo.set(data));
+    this.parametricasService
+      .obtenerAllEntidadesAporte()
+      .subscribe((data: EntidadAporte[]) => this.entidadesAporte.set(data));
 
     this.cargarRegistros();
   }
@@ -228,12 +255,105 @@ export class ValorizacionComponent implements OnInit {
   detalleTexto(v: ValorizacionMineral): string {
     const r = v.recepcionMineral;
     if (!r) return '—';
-    return `${r.codificacion?.codigo ?? '—'} · ${r.numeroSacos ?? 0} sacos · ${r.balanzaL} kg`;
+    return `${r.codificacion?.codigo ?? '—'} · ${r.numeroSacos ?? 0} sacos · ${formatNumeroSinCeros(r.balanzaL)} kg`;
   }
 
-  /** Mientras esté en BORRADOR se puede entrar a editar; en el resto de estados, no. */
+  /** En BORRADOR y PRE-VALORIZADO se puede seguir editando; VALORIZADO queda cerrado. */
   puedeEditar(v: ValorizacionMineral): boolean {
-    return v.idEstadoValorizacion === ESTADO_VALORIZACION_BORRADOR_ID;
+    return v.idEstadoValorizacion !== ESTADO_VALORIZACION_VALORIZADO_ID;
+  }
+
+  /** Visualizar/Imprimir solo tienen sentido una vez que ya se guardó algo
+   *  más allá del borrador (PRE-VALORIZADO o VALORIZADO). */
+  puedeVerImprimir(v: ValorizacionMineral): boolean {
+    return v.idEstadoValorizacion !== ESTADO_VALORIZACION_BORRADOR_ID;
+  }
+
+  /** Abre la vista previa (formato de ticket) de una valorización ya
+   *  guardada, a partir de los datos persistidos en el backend (a diferencia
+   *  del visualizador del formulario, que arma los datos desde el form en
+   *  edición). */
+  visualizar(v: ValorizacionMineral): void {
+    const leyesYPrecios: LeyPrecioVisualizacion[] = (v.detalles ?? []).map(
+      (d) => {
+        const idMineral = Number(d['idMineral']);
+        const mineral = this.mineralesCatalogo().find(
+          (m) => Number(m.id) === idMineral,
+        );
+        return {
+          simbolo:
+            mineral?.simbolo ?? mineral?.descripcion ?? `Mineral #${idMineral}`,
+          ley: (d['ley'] as number | string | null) ?? null,
+          leyUnidad: (d['leyUnidad'] as string) ?? '%',
+          precioPorKilo: Number(d['precioKilo'] ?? 0),
+        };
+      },
+    );
+
+    const descuentos: DescuentoVisualizacion[] = (v.calculoAportes ?? [])
+      .filter((a) => a['idEntidadAporte'] != null)
+      .map((a) => {
+        const idEntidad = Number(a['idEntidadAporte']);
+        const entidad = this.entidadesAporte().find(
+          (e) => Number(e.id) === idEntidad,
+        );
+        return {
+          entidad: entidad?.descripcion ?? `Entidad #${idEntidad}`,
+          porcentaje: Number(a['porcentajeAporte'] ?? 0),
+          importe: Number(a['importeBolivianos'] ?? 0),
+        };
+      });
+
+    const data: VerValorizacionDialogData = {
+      numero: v.id,
+      producto: this.productosTexto(v),
+      cliente: this.nombreProveedor(v),
+      numeroDocumento: v.recepcionMineral?.persona?.numeroDocumento ?? '—',
+      lote: v.recepcionMineral?.codigoOperacion ?? '—',
+      fechaEntrega: this.formatFechaSolo(v.recepcionMineral?.fechaRecepcion),
+      fechaTransaccion: this.formatFechaTabla(v.fechaValorizacion),
+      cooperativa:
+        v.recepcionMineral?.persona?.actorProductivoMinero?.nombre ?? '—',
+      pesoBruto: Number(v.pesoBrutoHumedoKilogramos ?? 0),
+      pesoNeto: Number(v.pesoNetoSecoKilogramos ?? 0),
+      leyesYPrecios,
+      liquidoPagable: Number(v.liquidoPagableBolivianos ?? 0),
+      anticipo: Number(v.anticipo ?? 0),
+      otrosAnticipo: Number(v.otrosAnticipo ?? 0),
+      transporte: Number(v.ajusteTransporte ?? 0),
+      saldoAPagar: Number(v.saldoPagarBolivianos ?? 0),
+      descuentos,
+      descuentoTotal: Number(v.totalAportesBolivianos ?? 0),
+      telefonoCliente: v.recepcionMineral?.persona?.celular,
+    };
+
+    this.dialog.open(VerValorizacionDialogComponent, {
+      width: '900px',
+      maxWidth: '95vw',
+      autoFocus: false,
+      data,
+    });
+  }
+
+  /** Pide al backend el PDF ya generado (con el liquidador resuelto del
+   *  usuario autenticado) y lo abre en una pestaña nueva. */
+  imprimir(v: ValorizacionMineral): void {
+    this.valorizacionMineralService.descargarPdf(v.id);
+  }
+
+  private productosTexto(v: ValorizacionMineral): string {
+    const minerales = v.recepcionMineral?.codificacion?.minerales ?? [];
+    return minerales.map((m) => m.descripcion).join(', ') || '—';
+  }
+
+  /** Igual que formatFechaTabla, pero sin hora: se usa para la fecha de
+   *  entrega en el visualizador. */
+  private formatFechaSolo(fecha: string | null | undefined): string {
+    if (!fecha) return '—';
+    const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(fecha);
+    if (!match) return fecha;
+    const [, anio, mes, dia] = match;
+    return `${dia}-${mes}-${anio}`;
   }
 
   claseEstado(idEstadoValorizacion: number): string {

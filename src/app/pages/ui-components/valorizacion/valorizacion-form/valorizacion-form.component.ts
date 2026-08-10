@@ -1,6 +1,13 @@
 // src/app/pages/ui-components/valorizacion/valorizacion-form/valorizacion-form.component.ts
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  OnDestroy,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import {
   FormArray,
   FormBuilder,
@@ -23,7 +30,7 @@ import { StepperSelectionEvent } from '@angular/cdk/stepper';
 import { MatStepperModule } from '@angular/material/stepper';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { Subject, debounceTime } from 'rxjs';
+import { switchMap } from 'rxjs';
 import { CotizacionFormDialogComponent } from 'src/app/pages/configurations/parametricas/cotizacion/cotizacion-form-dialog.component';
 import {
   Cotizacion,
@@ -134,7 +141,7 @@ interface CotizacionMineralEstado {
   templateUrl: './valorizacion-form.component.html',
   styleUrl: './valorizacion-form.component.scss',
 })
-export class ValorizacionFormComponent implements OnInit {
+export class ValorizacionFormComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
@@ -163,7 +170,13 @@ export class ValorizacionFormComponent implements OnInit {
   /** true mientras se hidratan los datos iniciales: evita que el primer
    *  patchValue dispare un autoguardado innecesario. */
   private cargandoInicial = true;
-  private readonly autoguardar$ = new Subject<void>();
+  /** Temporizador del debounce manual del autoguardado (ver programarAutoguardado). */
+  private autoguardadoTimeout?: ReturnType<typeof setTimeout>;
+  /** Mutex simple: true mientras hay un PATCH de guardado (auto o explícito)
+   *  en vuelo hacia el backend. Evita que dos guardados corran en paralelo
+   *  y que una respuesta vieja pise a una más nueva (ver autoguardarBorrador
+   *  y confirmarYGuardarConEstado). */
+  private guardadoEnCurso = false;
 
   /** Primer mineral de la codificación de la recepción: solo se usa para el
    *  encabezado. La ley/cotización real se maneja por fila (ver
@@ -307,12 +320,6 @@ export class ValorizacionFormComponent implements OnInit {
       null as number | null,
       [Validators.required, Validators.min(0.01)],
     ],
-    /** Precio final que realmente se usa para pagar: decisión del liquidador,
-     *  se sugiere a partir del calculado pero es 100% editable. */
-    precioKiloFinal: [
-      null as number | null,
-      [Validators.required, Validators.min(0)],
-    ],
     /** Ajuste manual que teclea el operador: positivo suma al saldo a
      *  pagar, negativo resta. 0 si no se ingresa nada. */
     ajusteTransporte: [0 as number | null],
@@ -361,15 +368,13 @@ export class ValorizacionFormComponent implements OnInit {
       .valueChanges.subscribe(() => this.recalcularTotalesAportes());
 
     // Autoguardado de borrador: cualquier cambio del usuario en el form
-    // (pesos, merma, filas de ley, aportes, etc.) dispara, con debounce, un
-    // PATCH parcial. Mientras se hidratan los datos iniciales (cargandoInicial)
-    // se ignora para no autoguardar apenas se abre el formulario.
+    // (pesos, merma, filas de ley, aportes, etc.) dispara, con debounce
+    // manual (programarAutoguardado), un PATCH parcial. Mientras se hidratan
+    // los datos iniciales (cargandoInicial) se ignora para no autoguardar
+    // apenas se abre el formulario.
     this.form.valueChanges.subscribe(() => {
-      if (!this.cargandoInicial) this.autoguardar$.next();
+      if (!this.cargandoInicial) this.programarAutoguardado();
     });
-    this.autoguardar$
-      .pipe(debounceTime(1500))
-      .subscribe(() => this.autoguardarBorrador());
 
     this.parametricasService.obtenerLaboratorios().subscribe((data) => {
       this.laboratorios.set(data);
@@ -382,6 +387,11 @@ export class ValorizacionFormComponent implements OnInit {
       .subscribe((data) => this.mineralesCatalogo.set(data));
 
     this.cargarValorizacion();
+  }
+
+  ngOnDestroy(): void {
+    if (this.autoguardadoTimeout) clearTimeout(this.autoguardadoTimeout);
+    if (this.timeoutResaltado) clearTimeout(this.timeoutResaltado);
   }
 
   private cargarValorizacion(): void {
@@ -1166,27 +1176,49 @@ export class ValorizacionFormComponent implements OnInit {
     return payload;
   }
 
+  /** (Re)programa el autoguardado 1.5s después del último cambio del
+   *  usuario, cancelando cualquier temporizador pendiente anterior — así un
+   *  cambio nuevo siempre reinicia la espera en vez de acumular llamadas. */
+  private programarAutoguardado(): void {
+    if (this.autoguardadoTimeout) clearTimeout(this.autoguardadoTimeout);
+    this.autoguardadoTimeout = setTimeout(
+      () => this.autoguardarBorrador(),
+      1500,
+    );
+  }
+
   /** Autoguardado silencioso: se dispara solo, con debounce, ante cualquier
    *  cambio del usuario. Nunca cambia idEstadoValorizacion (se queda en
    *  BORRADOR) y no bloquea la UI ni usa el spinner de los botones. */
   private autoguardarBorrador(): void {
     if (!this.esEditable || this.cargandoInicial) return;
 
+    // Ya hay un guardado (auto o explícito) en vuelo: no lanzar otro PATCH
+    // en paralelo — evita que dos respuestas lleguen desordenadas y una
+    // vieja pise a una más nueva. Se reintenta apenas termine el actual.
+    if (this.guardadoEnCurso) {
+      this.programarAutoguardado();
+      return;
+    }
+
     const payload = this.construirPayloadActual();
     console.log('[autoguardado] PATCH valorizacion_mineral', this.valorizacionId, payload);
 
+    this.guardadoEnCurso = true;
     this.estadoAutoguardado.set('guardando');
     this.valorizacionMineralService
       .actualizarValorizacion(this.valorizacionId, payload)
       .subscribe({
         next: (actualizado) => {
           console.log('[autoguardado] respuesta OK', actualizado);
+          this.guardadoEnCurso = false;
           this.valorizacion.set(actualizado);
           this.estadoAutoguardado.set('guardado');
           this.resaltarAutoguardadoTemporalmente();
         },
         error: (err) => {
           console.log('[autoguardado] error', err);
+          this.guardadoEnCurso = false;
           this.estadoAutoguardado.set('error');
         },
       });
@@ -1209,6 +1241,13 @@ export class ValorizacionFormComponent implements OnInit {
    *  (sin esperar el debounce del autoguardado) para no perder lo tecleado
    *  en el paso que se abandona. */
   onCambioStep(_event: StepperSelectionEvent): void {
+    // Cancela el debounce pendiente: si no, además de este guardado
+    // inmediato, el temporizador original igual dispararía otro PATCH
+    // redundante ~1.5s después.
+    if (this.autoguardadoTimeout) {
+      clearTimeout(this.autoguardadoTimeout);
+      this.autoguardadoTimeout = undefined;
+    }
     this.autoguardarBorrador();
   }
 
@@ -1244,18 +1283,50 @@ export class ValorizacionFormComponent implements OnInit {
       return;
     }
 
-    const request: ActualizarValorizacionRequest = {
-      ...this.construirPayloadActual(),
-      idEstadoValorizacion,
-    };
-    console.log('[guardar]', request);
+    // Cancela cualquier autoguardado programado: el guardado explícito de
+    // acá abajo ya manda el estado más reciente del form, así que ese
+    // temporizador quedaría redundante (y podría disparar un PATCH en
+    // paralelo con el de más abajo).
+    if (this.autoguardadoTimeout) {
+      clearTimeout(this.autoguardadoTimeout);
+      this.autoguardadoTimeout = undefined;
+    }
+    // Si hay un autoguardado en vuelo justo ahora, se espera a que termine
+    // en vez de lanzar un segundo PATCH en paralelo sobre el mismo recurso.
+    if (this.guardadoEnCurso) {
+      this.snackBar.open(
+        'Espera un momento, se está guardando el borrador...',
+        'Cerrar',
+        { duration: 3000 },
+      );
+      return;
+    }
+
+    // El cambio de estado usa el endpoint dedicado (PATCH .../estado), que
+    // valida contra lo YA guardado en el back (saldoPagarBolivianos > 0,
+    // detalle de mineral registrado). Por eso primero se persiste el estado
+    // actual del form con el PATCH normal (sin idEstadoValorizacion, para no
+    // pisar el endpoint de estado) y recién después se dispara el cambio de
+    // estado propiamente dicho.
+    const payload = this.construirPayloadActual();
+    console.log('[guardar] PATCH datos', payload);
 
     this.guardando.set(true);
+    this.guardadoEnCurso = true;
     this.valorizacionMineralService
-      .actualizarValorizacion(this.valorizacionId, request)
+      .actualizarValorizacion(this.valorizacionId, payload)
+      .pipe(
+        switchMap(() =>
+          this.valorizacionMineralService.cambiarEstadoValorizacion(
+            this.valorizacionId,
+            idEstadoValorizacion,
+          ),
+        ),
+      )
       .subscribe({
         next: (actualizado) => {
           console.log('[guardar] respuesta OK', actualizado);
+          this.guardadoEnCurso = false;
           this.guardando.set(false);
           this.valorizacion.set(actualizado);
           this.snackBar.open(
@@ -1269,6 +1340,7 @@ export class ValorizacionFormComponent implements OnInit {
         },
         error: (err) => {
           console.log('[guardar] error', err);
+          this.guardadoEnCurso = false;
           this.guardando.set(false);
           const mensaje =
             err?.error?.message ??

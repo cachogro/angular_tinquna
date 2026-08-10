@@ -64,12 +64,14 @@ export const navItems: NavItem[] = [
         subItemIcon: true,
         iconName: 'solar:user-plus-rounded-line-duotone',
         route: '/configuraciones/gestion-usuarios',
+        roles: [RolCodigo.ADMINISTRADOR],
       },
       {
         displayName: 'Parametricas',
         subItemIcon: true,
         iconName: 'solar:round-alt-arrow-right-line-duotone',
         route: '/configuraciones/parametricas',
+        roles: [RolCodigo.ADMINISTRADOR],
       },
 
       {

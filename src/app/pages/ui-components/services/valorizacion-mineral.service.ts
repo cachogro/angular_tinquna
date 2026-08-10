@@ -5,6 +5,7 @@ import { Observable, shareReplay } from 'rxjs';
 import { APP_CONFIG } from 'src/app/config';
 import {
   ActualizarValorizacionRequest,
+  CambiarEstadoValorizacionRequest,
   CrearBorradorValorizacionRequest,
   EstadoValorizacion,
   FiltrosValorizacionMineral,
@@ -37,9 +38,7 @@ export class ValorizacionMineralService {
    * aprobada / rechazada a tol / en remuestreo. El backend responde 400 si la
    * recepción ya tiene una valorización registrada.
    */
-  crearBorrador(
-    idRecepcionMineral: string,
-  ): Observable<ValorizacionMineral> {
+  crearBorrador(idRecepcionMineral: string): Observable<ValorizacionMineral> {
     const body: CrearBorradorValorizacionRequest = { idRecepcionMineral };
     return this.http.post<ValorizacionMineral>(
       `${this.baseUrl}/valorizacion_mineral`,
@@ -58,6 +57,24 @@ export class ValorizacionMineralService {
     return this.http.patch<ValorizacionMineral>(
       `${this.baseUrl}/valorizacion_mineral/${id}`,
       data,
+    );
+  }
+
+  /**
+   * Cambia el estado de una valorización (PRE-VALORIZADO=2 o VALORIZADO=3)
+   * vía el endpoint dedicado. Al pasar a VALORIZADO, el backend además marca
+   * la recepción de mineral asociada como TRANZADO. El backend responde 400
+   * si la valorización no está activa, la recepción ya fue tranzada, no
+   * tiene saldoPagarBolivianos > 0, o no tiene detalle de mineral registrado.
+   */
+  cambiarEstadoValorizacion(
+    id: string,
+    idEstadoValorizacion: number,
+  ): Observable<ValorizacionMineral> {
+    const body: CambiarEstadoValorizacionRequest = { idEstadoValorizacion };
+    return this.http.patch<ValorizacionMineral>(
+      `${this.baseUrl}/valorizacion_mineral/${id}/estado`,
+      body,
     );
   }
 
@@ -85,6 +102,20 @@ export class ValorizacionMineralService {
     );
   }
 
+  /** Descarga el PDF de la valorización (generado por el backend) y lo abre
+   *  en una pestaña nueva. El nombre del "Liquidador" en el PDF sale del
+   *  usuario autenticado (token), no de este llamado. */
+  descargarPdf(id: string): void {
+    this.http
+      .get(`${this.baseUrl}/valorizacion_mineral/pdf/${id}`, {
+        responseType: 'blob',
+      })
+      .subscribe((blob) => {
+        const url = window.URL.createObjectURL(blob);
+        window.open(url, '_blank');
+      });
+  }
+
   private construirParams(filtros: FiltrosValorizacionMineral): HttpParams {
     let params = new HttpParams()
       .set('page', filtros.page)
@@ -96,10 +127,7 @@ export class ValorizacionMineralService {
     if (filtros.numeroDocumento)
       params = params.set('numeroDocumento', filtros.numeroDocumento);
     if (filtros.idEstadoValorizacion)
-      params = params.set(
-        'idEstadoValorizacion',
-        filtros.idEstadoValorizacion,
-      );
+      params = params.set('idEstadoValorizacion', filtros.idEstadoValorizacion);
     if (filtros.fechaDesde)
       params = params.set('fechaDesde', filtros.fechaDesde);
     if (filtros.fechaHasta)

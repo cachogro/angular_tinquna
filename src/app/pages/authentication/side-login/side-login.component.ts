@@ -66,14 +66,29 @@ export class AppSideLoginComponent {
         },
         error: (err) => {
           this.loading = false;
-          this.errorMessage =
-            err?.status === 401
-              ? 'Usuario o contraseña incorrectos'
-              : 'No se pudo conectar con el servidor. Intenta nuevamente.';
+          this.errorMessage = this.resolveErrorMessage(err);
         },
         complete: () => {
           this.loading = false;
         },
       });
+  }
+
+  private resolveErrorMessage(err: unknown): string {
+    const httpErr = err as {
+      status?: number;
+      error?: { message?: string };
+    };
+
+    if (httpErr?.status === 0) {
+      return 'No se pudo conectar con el servidor. Intenta nuevamente.';
+    }
+
+    return (
+      httpErr?.error?.message ??
+      (httpErr?.status === 401
+        ? 'Usuario o contraseña incorrectos'
+        : 'Ocurrió un error al iniciar sesión. Intenta nuevamente.')
+    );
   }
 }

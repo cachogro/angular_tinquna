@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormControl } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -17,6 +18,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { ReactiveFormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import {
+  CodificacionCatalogo,
   ESTADOS_OPERACION,
   FiltrosRegistroMineral,
   OrdenDireccion,
@@ -24,11 +26,29 @@ import {
 } from '../models/registro-mineral.models';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { RegistroMineralService } from '../services/registro-mineral.service';
+import { formatNumeroSinCeros } from 'src/app/shared/utils/numero.util';
 
 interface OpcionOrden {
   value: string;
   label: string;
 }
+
+type ModoPeriodo = 'fechas' | 'mes' | 'semana';
+
+const MESES = [
+  { value: 1, label: 'Enero' },
+  { value: 2, label: 'Febrero' },
+  { value: 3, label: 'Marzo' },
+  { value: 4, label: 'Abril' },
+  { value: 5, label: 'Mayo' },
+  { value: 6, label: 'Junio' },
+  { value: 7, label: 'Julio' },
+  { value: 8, label: 'Agosto' },
+  { value: 9, label: 'Septiembre' },
+  { value: 10, label: 'Octubre' },
+  { value: 11, label: 'Noviembre' },
+  { value: 12, label: 'Diciembre' },
+];
 
 @Component({
   selector: 'app-reporte-recepcion-mineral',
@@ -44,6 +64,7 @@ interface OpcionOrden {
     MatDatepickerModule,
     MatNativeDateModule,
     MatButtonModule,
+    MatButtonToggleModule,
     MatIconModule,
     MatTableModule,
     MatPaginatorModule,
@@ -71,6 +92,8 @@ export class ReporteRecepcionMineralComponent implements OnInit {
   ];
 
   readonly estados = ESTADOS_OPERACION;
+  readonly codificaciones = signal<CodificacionCatalogo[]>([]);
+  readonly meses = MESES;
   readonly opcionesOrden: OpcionOrden[] = [
     { value: 'id', label: 'ID' },
     { value: 'codigoOperacion', label: 'Código de operación' },
@@ -83,6 +106,7 @@ export class ReporteRecepcionMineralComponent implements OnInit {
   readonly total = signal(0);
   readonly loading = signal(true);
   readonly exportando = signal(false);
+  readonly exportandoPdf = signal(false);
 
   pageIndex = 0;
   pageSize = 10;
@@ -94,8 +118,19 @@ export class ReporteRecepcionMineralComponent implements OnInit {
   readonly codigoControl = new FormControl('');
   readonly documentoControl = new FormControl('');
   readonly estadoControl = new FormControl<number | null>(null);
+  readonly codificacionControl = new FormControl<string | null>(null);
   readonly fechaDesdeControl = new FormControl<Date | null>(null);
   readonly fechaHastaControl = new FormControl<Date | null>(null);
+
+  /** Alternativa a fechaDesde/fechaHasta: fraccionar por mes o semana ISO
+   *  (útil para exportar Excel de rangos grandes sin acotar por fecha exacta). */
+  readonly periodoModoControl = new FormControl<ModoPeriodo>('fechas', {
+    nonNullable: true,
+  });
+  readonly anioControl = new FormControl<number | null>(null);
+  readonly mesControl = new FormControl<number | null>(null);
+  readonly semanaControl = new FormControl<number | null>(null);
+
   readonly orderByControl = new FormControl<string>('fechaRecepcion');
   readonly orderDirectionControl = new FormControl<OrdenDireccion>('DESC');
 
@@ -119,16 +154,38 @@ export class ReporteRecepcionMineralComponent implements OnInit {
       .subscribe(() => this.reiniciarYcargar());
 
     this.estadoControl.valueChanges.subscribe(() => this.reiniciarYcargar());
+    this.codificacionControl.valueChanges.subscribe(() =>
+      this.reiniciarYcargar(),
+    );
     this.fechaDesdeControl.valueChanges.subscribe(() =>
       this.reiniciarYcargar(),
     );
     this.fechaHastaControl.valueChanges.subscribe(() =>
       this.reiniciarYcargar(),
     );
+
+    this.periodoModoControl.valueChanges.subscribe(() => {
+      // Los tres modos son mutuamente excluyentes para el backend: al
+      // cambiar de modo se limpian los campos de los otros dos.
+      this.fechaDesdeControl.setValue(null, { emitEvent: false });
+      this.fechaHastaControl.setValue(null, { emitEvent: false });
+      this.anioControl.setValue(null, { emitEvent: false });
+      this.mesControl.setValue(null, { emitEvent: false });
+      this.semanaControl.setValue(null, { emitEvent: false });
+      this.reiniciarYcargar();
+    });
+    this.anioControl.valueChanges.subscribe(() => this.reiniciarYcargar());
+    this.mesControl.valueChanges.subscribe(() => this.reiniciarYcargar());
+    this.semanaControl.valueChanges.subscribe(() => this.reiniciarYcargar());
+
     this.orderByControl.valueChanges.subscribe(() => this.reiniciarYcargar());
     this.orderDirectionControl.valueChanges.subscribe(() =>
       this.reiniciarYcargar(),
     );
+
+    this.registroMineralService
+      .getAllCodificaciones()
+      .subscribe((data) => this.codificaciones.set(data));
 
     this.cargarRegistros();
   }
@@ -161,21 +218,40 @@ export class ReporteRecepcionMineralComponent implements OnInit {
     return `${p.nombres} ${p.apellidoPaterno} ${p.apellidoMaterno}`.trim();
   }
 
+  formatNumero(valor: number | string | null | undefined): string {
+    return formatNumeroSinCeros(valor);
+  }
+
   private filtrosActuales(): FiltrosRegistroMineral {
-    return {
+    const filtros: FiltrosRegistroMineral = {
       page: this.pageIndex + 1,
       limit: this.pageSize,
       busqueda: this.searchControl.value || undefined,
       codigoOperacion: this.codigoControl.value || undefined,
       numeroDocumento: this.documentoControl.value || undefined,
+      idCodificacion: this.codificacionControl.value ?? undefined,
       idEstado: this.estadoControl.value ?? undefined,
-      fechaDesde: this.formatFecha(this.fechaDesdeControl.value),
-      fechaHasta: this.formatFecha(this.fechaHastaControl.value),
       orderBy:
         (this.orderByControl.value as FiltrosRegistroMineral['orderBy']) ??
         undefined,
       orderDirection: this.orderDirectionControl.value ?? undefined,
     };
+
+    switch (this.periodoModoControl.value) {
+      case 'mes':
+        filtros.anio = this.anioControl.value ?? undefined;
+        filtros.mes = this.mesControl.value ?? undefined;
+        break;
+      case 'semana':
+        filtros.anio = this.anioControl.value ?? undefined;
+        filtros.semana = this.semanaControl.value ?? undefined;
+        break;
+      default:
+        filtros.fechaDesde = this.formatFecha(this.fechaDesdeControl.value);
+        filtros.fechaHasta = this.formatFecha(this.fechaHastaControl.value);
+    }
+
+    return filtros;
   }
 
   cargarRegistros(): void {
@@ -231,8 +307,13 @@ export class ReporteRecepcionMineralComponent implements OnInit {
     this.codigoControl.setValue('', { emitEvent: false });
     this.documentoControl.setValue('', { emitEvent: false });
     this.estadoControl.setValue(null, { emitEvent: false });
+    this.codificacionControl.setValue(null, { emitEvent: false });
+    this.periodoModoControl.setValue('fechas', { emitEvent: false });
     this.fechaDesdeControl.setValue(null, { emitEvent: false });
     this.fechaHastaControl.setValue(null, { emitEvent: false });
+    this.anioControl.setValue(null, { emitEvent: false });
+    this.mesControl.setValue(null, { emitEvent: false });
+    this.semanaControl.setValue(null, { emitEvent: false });
     this.orderByControl.setValue('fechaRecepcion', { emitEvent: false });
     this.orderDirectionControl.setValue('DESC', { emitEvent: false });
     this.reiniciarYcargar();
@@ -262,14 +343,27 @@ export class ReporteRecepcionMineralComponent implements OnInit {
       });
   }
 
-  /** El backend todavía no tiene un endpoint de PDF para el reporte completo. */
   exportarPdf(): void {
-    this.snackBar.open(
-      'La exportación a PDF estará disponible próximamente',
-      'Cerrar',
-      {
-        duration: 4000,
-      },
-    );
+    this.exportandoPdf.set(true);
+    this.registroMineralService
+      .exportarReportePdf(this.filtrosActuales())
+      .subscribe({
+        next: (blob) => {
+          this.exportandoPdf.set(false);
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `recepcion-mineral-${this.formatFecha(new Date()) ?? 'reporte'}.pdf`;
+          a.click();
+          window.URL.revokeObjectURL(url);
+        },
+        error: (error) => {
+          this.exportandoPdf.set(false);
+          console.error(error);
+          this.snackBar.open('No se pudo generar el PDF', 'Cerrar', {
+            duration: 4000,
+          });
+        },
+      });
   }
 }

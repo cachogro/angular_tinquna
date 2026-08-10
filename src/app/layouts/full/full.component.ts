@@ -25,6 +25,7 @@ import { navItems } from './sidebar/sidebar-data';
 import { MatButtonModule } from '@angular/material/button';
 import { AuthService } from 'src/app/core/auth/services/auth.service';
 import { OverlayContainer } from '@angular/cdk/overlay'; // <-- Importado para los diálogos
+import { FilterByRolePipe } from 'src/app/shared/pipes/filter-by-role.pipe';
 
 const MOBILE_VIEW = 'screen and (max-width: 768px)';
 const TABLET_VIEW = 'screen and (min-width: 769px) and (max-width: 1024px)';
@@ -40,6 +41,7 @@ const TABLET_VIEW = 'screen and (min-width: 769px) and (max-width: 1024px)';
     TablerIconsModule,
     HeaderComponent,
     MatButtonModule,
+    FilterByRolePipe,
   ],
   templateUrl: './full.component.html',
   styleUrls: [],

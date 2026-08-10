@@ -52,6 +52,16 @@ export class RegistroMineralService {
     });
   }
 
+  /** Descarga el PDF del listado con los mismos filtros/columnas que el Excel. */
+  exportarReportePdf(filtros: FiltrosRegistroMineral): Observable<Blob> {
+    const params = this.construirParams(filtros);
+
+    return this.http.get(`${this.baseUrl}/recepcion_mineral/reporte_pdf`, {
+      params,
+      responseType: 'blob',
+    });
+  }
+
   private construirParams(filtros: FiltrosRegistroMineral): HttpParams {
     let params = new HttpParams()
       .set('page', filtros.page)
@@ -62,11 +72,16 @@ export class RegistroMineralService {
       params = params.set('codigoOperacion', filtros.codigoOperacion);
     if (filtros.numeroDocumento)
       params = params.set('numeroDocumento', filtros.numeroDocumento);
+    if (filtros.idCodificacion)
+      params = params.set('idCodificacion', filtros.idCodificacion);
     if (filtros.idEstado) params = params.set('idEstado', filtros.idEstado);
     if (filtros.fechaDesde)
       params = params.set('fechaDesde', filtros.fechaDesde);
     if (filtros.fechaHasta)
       params = params.set('fechaHasta', filtros.fechaHasta);
+    if (filtros.anio) params = params.set('anio', filtros.anio);
+    if (filtros.mes) params = params.set('mes', filtros.mes);
+    if (filtros.semana) params = params.set('semana', filtros.semana);
     if (filtros.orderBy) params = params.set('orderBy', filtros.orderBy);
     if (filtros.orderDirection)
       params = params.set('orderDirection', filtros.orderDirection);

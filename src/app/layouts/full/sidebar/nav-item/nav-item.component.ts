@@ -14,10 +14,17 @@ import { TranslateModule } from '@ngx-translate/core';
 import { TablerIconsModule } from 'angular-tabler-icons';
 import { MaterialModule } from 'src/app/material.module';
 import { CommonModule } from '@angular/common';
+import { FilterByRolePipe } from 'src/app/shared/pipes/filter-by-role.pipe';
 
 @Component({
   selector: 'app-nav-item',
-  imports: [TranslateModule, TablerIconsModule, MaterialModule, CommonModule],
+  imports: [
+    TranslateModule,
+    TablerIconsModule,
+    MaterialModule,
+    CommonModule,
+    FilterByRolePipe,
+  ],
   templateUrl: './nav-item.component.html',
   styleUrls: [],
 })

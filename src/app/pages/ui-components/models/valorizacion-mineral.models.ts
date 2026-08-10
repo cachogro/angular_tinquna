@@ -153,6 +153,17 @@ export interface ActualizarValorizacionRequest {
   limpiarAportes?: boolean;
 }
 
+/**
+ * Body del PATCH dedicado a cambiar de estado (.../valorizacion_mineral/:id/estado).
+ * Solo acepta 2 (PRE-VALORIZADO) o 3 (VALORIZADO); ambos exigen que la
+ * valorización esté activa, tenga saldoPagarBolivianos > 0 y al menos un
+ * detalle de mineral registrado. Pasar a VALORIZADO además marca la
+ * recepción de mineral asociada como TRANZADO.
+ */
+export interface CambiarEstadoValorizacionRequest {
+  idEstadoValorizacion: number;
+}
+
 // ==========================================================
 // ENTIDADES DE APORTE
 //
