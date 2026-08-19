@@ -27,6 +27,13 @@ FORMULARIO
     gap: 18px;
 }
 
+/* Fila 3: alícuota interna, alícuota externa */
+.fila-tres {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+}
+
 .input-mayusculas {
     text-transform: uppercase;
 }
@@ -149,7 +156,8 @@ RESPONSIVE
 
 @media (max-width: 700px) {
     .fila-uno,
-    .fila-dos {
+    .fila-dos,
+    .fila-tres {
         grid-template-columns: 1fr;
     }
 

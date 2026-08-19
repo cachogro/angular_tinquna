@@ -7,6 +7,10 @@ export interface Mineral {
   factorConversion?: number;
   calculoRegalia?: string | null;
   tipo?: string;
+  /** Estáticas por mineral (no varían por cotización); no todos los
+   *  minerales tienen alícuota configurada. */
+  alicuotaExterna?: number;
+  alicuotaInterna?: number;
   activo?: boolean;
 }
 
@@ -19,6 +23,8 @@ export interface GuardarMineralRequest {
   detalleMineral?: string;
   factorConversion?: number;
   tipo?: string;
+  alicuotaExterna?: number;
+  alicuotaInterna?: number;
 }
 
 export interface Codificacion {
@@ -72,8 +78,6 @@ export interface Cotizacion {
   id: number;
   idMineral: number;
   cotizacionMineralDolares: number;
-  alicuotaExterna: number;
-  alicuotaInterna: number;
   fechaVigenciaInicial: string;
   fechaVigenciaFinal: string;
   activo?: boolean;
@@ -87,8 +91,6 @@ export interface Cotizacion {
 export interface CrearCotizacionRequest {
   idMineral: number;
   cotizacionMineralDolares: number;
-  alicuotaExterna?: number;
-  alicuotaInterna?: number;
   fechaVigenciaFinal: string;
 }
 
@@ -97,8 +99,6 @@ export interface CrearCotizacionRequest {
 export interface ActualizarCotizacionRequest {
   id: number;
   cotizacionMineralDolares?: number;
-  alicuotaExterna?: number;
-  alicuotaInterna?: number;
   fechaVigenciaFinal?: string;
 }
 

@@ -95,7 +95,7 @@ const CLAVE_CODIFICACION_BCL = 'BCL';
 
 /** Regalía minera no tiene alícuota configurada en su detalleAporte (a
  *  diferencia del resto de entidades de aporte): la suya sale de la suma de
- *  alicuotaInterna de las cotizaciones vigentes de los minerales que
+ *  alicuotaInterna (estática, registrada por mineral) de los minerales que
  *  intervienen en la valorización. Se deja como sugerencia editable. */
 const ID_REGALIA_MINERA = 60;
 
@@ -1728,10 +1728,10 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
        *  totales ni se manda al guardar. */
       aplicar: [preset?.aplicar ?? true],
       /** Se precarga con la alícuota calculada (detalleAporte de la entidad,
-       *  o suma de alicuotaInterna de los minerales vigentes en Regalía
-       *  Minera) pero siempre queda editable: en cuanto el usuario la toca
-       *  deja de autoactualizarse (ver recalcularAporte) y esa es la que se
-       *  usa en los cálculos y se guarda. */
+       *  o suma de alicuotaInterna de los minerales en Regalía Minera) pero
+       *  siempre queda editable: en cuanto el usuario la toca deja de
+       *  autoactualizarse (ver recalcularAporte) y esa es la que se usa en
+       *  los cálculos y se guarda. */
       porcentajeAporte: [0],
       /** Calculado: siempre es el líquido pagable vigente. */
       baseCalculo: [{ value: this.valorBrutoVenta(), disabled: true }],
@@ -1840,15 +1840,35 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     this.aportesArray.controls.forEach((_, i) => this.recalcularAporte(i));
   }
 
-  /** Suma de alicuotaInterna de la cotización vigente de cada mineral que
-   *  interviene en la tabla de ley (0 para los que aún no resolvieron
-   *  cotización). Es la base de la sugerencia de Regalía Minera. */
+  /** Minerales de la tabla de ley que tienen alicuotaInterna configurada
+   *  (estática en Mineral, ya no en Cotizacion). Base de la sugerencia de
+   *  Regalía Minera, tanto para la suma como para el resumen del tooltip. */
+  private mineralesConAlicuotaInterna(): Mineral[] {
+    const catalogo = this.mineralesCatalogo();
+    return this.idsMineralesEnFilas()
+      .map((id) => catalogo.find((m) => Number(m.id) === id))
+      .filter(
+        (m): m is Mineral => !!m && m.alicuotaInterna != null,
+      );
+  }
+
+  /** Suma de alicuotaInterna de cada mineral que interviene en la tabla de
+   *  ley (0 para los que no tienen alícuota configurada). */
   private sumaAlicuotaInternaMinerales(): number {
-    const estados = this.cotizacionesPorMineral();
-    return this.idsMineralesEnFilas().reduce(
-      (acc, id) => acc + Number(estados[id]?.cotizacion?.alicuotaInterna ?? 0),
+    return this.mineralesConAlicuotaInterna().reduce(
+      (acc, m) => acc + Number(m.alicuotaInterna ?? 0),
       0,
     );
+  }
+
+  /** Resumen para el tooltip de Regalía Minera, ej. "AG 6, PB 3". */
+  tooltipRegaliaMinera(): string {
+    const detalle = this.mineralesConAlicuotaInterna()
+      .map((m) => `${(m.simbolo ?? '').toUpperCase()} ${m.alicuotaInterna}`)
+      .join(', ');
+    return detalle
+      ? ` ${detalle}.`
+      : 'Sin minerales con alícuota interna configurada. Editable.';
   }
 
   private buscarAlicuotaAporte(
@@ -2239,10 +2259,16 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
   /** peso neto seco = peso bruto húmedo − (peso bruto húmedo × humedad%).
    *  RAM/estándar no aplican merma (por eso no hay peso bruto seco acá): la
    *  cadena con merma es propia de BCL (ver recalcularPesoNetoSecoBcl), para
-   *  no tocar este cálculo ya probado en el resto de codificaciones. */
+   *  no tocar este cálculo ya probado en el resto de codificaciones. RAM
+   *  tiene su propia variante (ver recalcularPesoNetoSecoRam) que trunca en
+   *  vez de redondear, así que esta rama queda solo para estándar/ICC. */
   private recalcularPesoNetoSeco(): void {
     if (this.esCodificacionBcl()) {
       this.recalcularPesoNetoSecoBcl();
+      return;
+    }
+    if (this.esCodificacionRam()) {
+      this.recalcularPesoNetoSecoRam();
       return;
     }
     const bruto = this.pesoBrutoHumedo();
@@ -2251,6 +2277,21 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     this.form
       .get('pesoNetoSecoKilogramos')
       ?.setValue(this.redondear(neto), { emitEvent: false });
+    this.recalcularTotales();
+  }
+
+  /** Solo RAM, tal cual el Excel de referencia "valorizacion cargas
+   *  RAM.xlsx" (hoja "LIQ.", celda E14): peso neto seco = ROUNDDOWN(peso
+   *  bruto húmedo − (peso bruto húmedo × humedad%), 3) — trunca a 3
+   *  decimales en vez de redondear (a diferencia de estándar/ICC, ver
+   *  recalcularPesoNetoSeco). */
+  private recalcularPesoNetoSecoRam(): void {
+    const bruto = this.pesoBrutoHumedo();
+    const humedad = Number(this.form.get('humedadPorcentaje')?.value ?? 0);
+    const neto = bruto - (bruto * humedad) / 100;
+    this.form
+      .get('pesoNetoSecoKilogramos')
+      ?.setValue(this.truncarDecimales(neto, 3), { emitEvent: false });
     this.recalcularTotales();
   }
 

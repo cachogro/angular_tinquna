@@ -692,20 +692,20 @@
                       <mat-form-field appearance="outline" subscriptSizing="dynamic"
                         class="valorizacion-form__aportes-campo valorizacion-form__aportes-campo--porcentaje">
                         <input matInput type="number" formControlName="porcentajeAporte" (input)="recalcularAporte(i)"
-                          [matTooltip]="fila.get('idEntidadAporte')?.value === ID_REGALIA_MINERA ? 'Sugerido: suma de alicuotaInterna. Editable.' : ''" />
+                          [matTooltip]="fila.get('idEntidadAporte')?.value === ID_REGALIA_MINERA ? tooltipRegaliaMinera() : ''" />
                       </mat-form-field>
                     </td>
 
                     <td>
                       <mat-form-field appearance="outline" subscriptSizing="dynamic"
-                        class="valorizacion-form__aportes-campo">
+                        class="valorizacion-form__aportes-campo valorizacion-form__aportes-campo--derecha">
                         <input matInput type="number" formControlName="baseCalculo" />
                       </mat-form-field>
                     </td>
 
                     <td>
                       <mat-form-field appearance="outline" subscriptSizing="dynamic"
-                        class="valorizacion-form__aportes-campo">
+                        class="valorizacion-form__aportes-campo valorizacion-form__aportes-campo--derecha">
                         <input matInput type="number" formControlName="importeBolivianos" />
                       </mat-form-field>
                     </td>
@@ -722,7 +722,7 @@
                 <tfoot>
                   <tr class="valorizacion-form__aportes-fila-totales">
                     <td colspan="4">Totales</td>
-                    <td>{{ totalImporteAportes() | number:'1.0-0' }} Bs</td>
+                    <td class="col-importe-total">{{ totalImporteAportes() | number:'1.0-0' }} Bs</td>
                     <td></td>
                   </tr>
                 </tfoot>
@@ -773,8 +773,8 @@
                   matTooltip="Positivo suma, negativo resta al VLV" />
               </mat-form-field>
 
-              <mat-form-field appearance="outline"
-                class="valorizacion-form__campo valorizacion-form__saldo-pagar" subscriptSizing="dynamic">
+              <mat-form-field appearance="outline" class="valorizacion-form__campo valorizacion-form__saldo-pagar"
+                subscriptSizing="dynamic">
                 <mat-label>Saldo a pagar (VLV)</mat-label>
                 <input matInput type="number" [value]="valorLiquidoVentaBs()" disabled />
                 <!-- <mat-hint>

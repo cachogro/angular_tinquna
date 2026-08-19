@@ -63,6 +63,8 @@ export class MineralFormDialogComponent implements OnInit {
     'simbolo',
     'unidadCotizacion',
     'factorConversion',
+    'alicuotaExterna',
+    'alicuotaInterna',
     'tipo',
     'estado',
     'acciones',
@@ -87,6 +89,15 @@ export class MineralFormDialogComponent implements OnInit {
     detalleMineral: ['', [Validators.maxLength(44)]],
     factorConversion: [null, [MineralFormDialogComponent.numeroPositivo()]],
     tipo: ['', [Validators.maxLength(50)]],
+    // No obligatorias: algunos minerales no tienen alícuota configurada.
+    alicuotaExterna: [
+      null as number | null,
+      [Validators.min(0), this.validarMaxDecimales(5)],
+    ],
+    alicuotaInterna: [
+      null as number | null,
+      [Validators.min(0), this.validarMaxDecimales(5)],
+    ],
   });
 
   /** No es obligatorio, pero si se llena debe ser un número mayor a cero */
@@ -95,6 +106,16 @@ export class MineralFormDialogComponent implements OnInit {
       const valor = control.value;
       if (valor === null || valor === undefined || valor === '') return null;
       return Number(valor) > 0 ? null : { numeroPositivo: true };
+    };
+  }
+
+  /** El back acepta como máximo 5 decimales en las alícuotas */
+  private validarMaxDecimales(max: number) {
+    return (control: AbstractControl): ValidationErrors | null => {
+      const valor = control.value;
+      if (valor === null || valor === undefined || valor === '') return null;
+      const decimales = valor.toString().split('.')[1]?.length ?? 0;
+      return decimales > max ? { maxDecimales: { max } } : null;
     };
   }
 
@@ -151,6 +172,8 @@ export class MineralFormDialogComponent implements OnInit {
       detalleMineral,
       factorConversion,
       tipo,
+      alicuotaExterna,
+      alicuotaInterna,
     } = this.form.getRawValue();
 
     // Un solo POST: si hay mineral en edición, se manda su id y el back
@@ -164,6 +187,8 @@ export class MineralFormDialogComponent implements OnInit {
         detalleMineral: detalleMineral?.trim() || undefined,
         factorConversion: factorConversion ?? undefined,
         tipo: tipo?.trim() || undefined,
+        alicuotaExterna: alicuotaExterna ?? undefined,
+        alicuotaInterna: alicuotaInterna ?? undefined,
       })
       .subscribe({
         next: () => {
@@ -200,6 +225,8 @@ export class MineralFormDialogComponent implements OnInit {
       detalleMineral: mineral.detalleMineral ?? '',
       factorConversion: mineral.factorConversion ?? null,
       tipo: mineral.tipo ?? '',
+      alicuotaExterna: mineral.alicuotaExterna ?? null,
+      alicuotaInterna: mineral.alicuotaInterna ?? null,
     });
   }
 
@@ -212,6 +239,8 @@ export class MineralFormDialogComponent implements OnInit {
       detalleMineral: '',
       factorConversion: null,
       tipo: '',
+      alicuotaExterna: null,
+      alicuotaInterna: null,
     });
     this.mineralEditando = null;
   }

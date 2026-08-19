@@ -186,6 +186,10 @@
   text-align: center;
 }
 
+.valorizacion-form__aportes-campo--derecha input {
+  text-align: right;
+}
+
 .valorizacion-form__aportes-fila-totales {
   background: rgba(115, 103, 240, 0.06);
   font-weight: 700;
@@ -194,6 +198,10 @@
 .valorizacion-form__aportes-fila-totales td {
   padding: 8px;
   color: #7367f0;
+}
+
+.valorizacion-form__aportes-fila-totales .col-importe-total {
+  text-align: right;
 }
 
 .valorizacion-form__ley-tabla-wrap {

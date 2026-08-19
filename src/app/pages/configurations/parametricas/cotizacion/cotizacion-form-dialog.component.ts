@@ -98,8 +98,6 @@ export class CotizacionFormDialogComponent implements OnInit {
     'id',
     'mineral',
     'cotizacion',
-    'alicuotaExterna',
-    'alicuotaInterna',
     'vigenciaInicial',
     'vigenciaFinal',
     'estado',
@@ -148,14 +146,6 @@ export class CotizacionFormDialogComponent implements OnInit {
       null as number | null,
       [Validators.required, Validators.min(0), this.validarMaxDecimales(5)],
     ],
-    alicuotaExterna: [
-      null as number | null,
-      [Validators.min(0), this.validarMaxDecimales(5)],
-    ],
-    alicuotaInterna: [
-      null as number | null,
-      [Validators.min(0), this.validarMaxDecimales(5)],
-    ],
     fechaVigenciaFinal: [
       '',
       [Validators.required, this.validarFechaNoAnteriorAHoy],
@@ -170,7 +160,7 @@ export class CotizacionFormDialogComponent implements OnInit {
     return `${year}-${month}-${day}`;
   }
 
-  /** El back acepta como máximo 5 decimales en cotización y alícuotas */
+  /** El back acepta como máximo 5 decimales en cotización */
   private validarMaxDecimales(max: number) {
     return (control: AbstractControl): ValidationErrors | null => {
       const value = control.value;
@@ -357,26 +347,8 @@ export class CotizacionFormDialogComponent implements OnInit {
 
   private persistir(): void {
     this.guardando = true;
-    const {
-      idMineral,
-      cotizacionMineralDolares,
-      alicuotaExterna,
-      alicuotaInterna,
-      fechaVigenciaFinal,
-    } = this.form.getRawValue();
-
-    // Si el usuario deja alicuotaExterna/alicuotaInterna vacías, no se
-    // incluyen en el body: el back solo aplica su fallback (heredar de la
-    // última cotización, o no modificar en edición) cuando la propiedad es
-    // undefined. Mandar null o 0 explícito rompería esa lógica.
-    const alicuotas: { alicuotaExterna?: number; alicuotaInterna?: number } =
-      {};
-    if (alicuotaExterna !== null && alicuotaExterna !== '') {
-      alicuotas.alicuotaExterna = alicuotaExterna;
-    }
-    if (alicuotaInterna !== null && alicuotaInterna !== '') {
-      alicuotas.alicuotaInterna = alicuotaInterna;
-    }
+    const { idMineral, cotizacionMineralDolares, fechaVigenciaFinal } =
+      this.form.getRawValue();
 
     const request$ =
       this.modoEdicion && this.cotizacionEditando
@@ -384,13 +356,11 @@ export class CotizacionFormDialogComponent implements OnInit {
             id: this.cotizacionEditando.id,
             cotizacionMineralDolares,
             fechaVigenciaFinal,
-            ...alicuotas,
           })
         : this.parametricasService.crearCotizacion({
             idMineral,
             cotizacionMineralDolares,
             fechaVigenciaFinal,
-            ...alicuotas,
           });
 
     request$.subscribe({
@@ -426,8 +396,6 @@ export class CotizacionFormDialogComponent implements OnInit {
     this.form.patchValue({
       idMineral: cotizacion.idMineral,
       cotizacionMineralDolares: cotizacion.cotizacionMineralDolares,
-      alicuotaExterna: cotizacion.alicuotaExterna,
-      alicuotaInterna: cotizacion.alicuotaInterna,
       fechaVigenciaFinal: this.aInputDate(cotizacion.fechaVigenciaFinal),
     });
     this.form.get('idMineral')!.disable();
@@ -439,8 +407,6 @@ export class CotizacionFormDialogComponent implements OnInit {
     this.form.reset({
       idMineral: null,
       cotizacionMineralDolares: null,
-      alicuotaExterna: null,
-      alicuotaInterna: null,
       fechaVigenciaFinal: '',
     });
     this.form.get('idMineral')!.enable();
