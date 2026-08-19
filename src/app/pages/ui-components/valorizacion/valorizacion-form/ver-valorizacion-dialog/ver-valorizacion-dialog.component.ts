@@ -37,11 +37,11 @@ export interface VerValorizacionDialogData {
   pesoBruto: number;
   pesoNeto: number;
   leyesYPrecios: LeyPrecioVisualizacion[];
-  liquidoPagable: number;
+  totalValorBrutoBolivianos: number;
   anticipo: number;
   otrosAnticipo: number;
   transporte: number;
-  saldoAPagar: number;
+  totalValorLiquidoVentaBolivianos: number;
   descuentos: DescuentoVisualizacion[];
   descuentoTotal: number;
   telefonoCliente?: string;

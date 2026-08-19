@@ -90,6 +90,20 @@ export class AuthService {
   }
 
   logout(navigateToLogin = true): void {
+    const refreshToken = this.tokenStorage.getRefreshToken();
+    if (refreshToken) {
+      // Revoca el refresh token en el backend. Best-effort: si falla (red caída,
+      // token ya expirado, etc.) igual cerramos sesión localmente.
+      const headers = new HttpHeaders().set(
+        'Authorization',
+        `Bearer ${refreshToken}`,
+      );
+      this.http
+        .post(`${this.apiUrl}/logout`, {}, { headers })
+        .pipe(catchError(() => throwError(() => null)))
+        .subscribe();
+    }
+
     this.tokenStorage.clear();
     this._user.set(null);
     if (navigateToLogin) {

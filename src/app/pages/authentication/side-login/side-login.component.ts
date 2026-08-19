@@ -84,6 +84,12 @@ export class AppSideLoginComponent {
       return 'No se pudo conectar con el servidor. Intenta nuevamente.';
     }
 
+    if (httpErr?.status === 429) {
+      return 'Demasiados intentos de inicio de sesión. Espera un minuto antes de volver a intentarlo.';
+    }
+
+    // 403 (cuenta bloqueada temporalmente) ya llega con un mensaje en español
+    // listo para mostrar tal cual, vía httpErr.error.message.
     return (
       httpErr?.error?.message ??
       (httpErr?.status === 401

@@ -80,8 +80,8 @@
             </tr>
             }
             <tr>
-              <td class="ticket__td-label">LIQUIDO PAGABLE</td>
-              <td class="ticket__td-valor">{{ formatNumero(data.liquidoPagable) }}</td>
+              <td class="ticket__td-label">Valor Bruto de Venta (Bs)</td>
+              <td class="ticket__td-valor">{{ formatNumero(data.totalValorBrutoBolivianos) }}</td>
             </tr>
             <tr>
               <td class="ticket__td-label">ANTICIPO</td>
@@ -103,8 +103,8 @@
         </table>
 
         <div class="ticket__saldo">
-          <span>SALDO A PAGAR</span>
-          <span class="ticket__saldo-valor">{{ formatNumero(data.saldoAPagar) }}</span>
+          <span>SALDO A PAGAR (VLV)</span>
+          <span class="ticket__saldo-valor">{{ formatNumero(data.totalValorLiquidoVentaBolivianos) }}</span>
         </div>
       </div>
 

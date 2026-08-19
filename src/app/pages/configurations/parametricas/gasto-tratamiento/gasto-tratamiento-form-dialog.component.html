@@ -1,0 +1,115 @@
+<div class="blue_theme">
+  <app-parametrica-dialog-shell [titulo]="modoEdicion ? 'Modificar Gasto de Tratamiento' : 'Nuevo Gasto de Tratamiento'">
+
+    <!-- ==================== FORMULARIO ==================== -->
+    <form [formGroup]="form" (ngSubmit)="guardar()" class="gasto-tratamiento-form">
+
+      <mat-form-field appearance="outline">
+        <mat-label>Descripción</mat-label>
+        <input matInput formControlName="descripcion" maxlength="150" placeholder="Ej: MAQUILA" />
+        <mat-error *ngIf="form.get('descripcion')?.hasError('required')">
+          La descripción es obligatoria
+        </mat-error>
+      </mat-form-field>
+
+      <div class="fila-triple">
+        <mat-form-field appearance="outline">
+          <mat-label>Cargo base</mat-label>
+          <input matInput type="number" step="0.01" formControlName="base" />
+          <mat-error *ngIf="form.get('base')?.hasError('required')">Obligatorio</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Unidad</mat-label>
+          <input matInput formControlName="unidad" maxlength="20" placeholder="Ej: USD/TMS" />
+          <mat-error *ngIf="form.get('unidad')?.hasError('required')">Obligatoria</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Escalador</mat-label>
+          <input matInput type="number" step="0.01" formControlName="escalador" />
+          <mat-hint>Ajuste sobre el cargo base real vs. acordado; 0 si no aplica</mat-hint>
+        </mat-form-field>
+      </div>
+
+    </form>
+
+    <!-- ==================== BOTONES ==================== -->
+    <div class="acciones">
+      <button mat-stroked-button type="button" (click)="cancelar()" [disabled]="guardando">
+        {{ modoEdicion ? 'Cancelar edición' : 'Limpiar' }}
+      </button>
+      <button mat-flat-button color="primary" type="button" (click)="guardar()" [disabled]="guardando">
+        {{ modoEdicion ? 'Actualizar' : 'Guardar' }}
+      </button>
+    </div>
+
+    <!-- ==================== TABLA ==================== -->
+    <mat-card class="tabla-card">
+      <mat-card-title>Gastos de tratamiento registrados</mat-card-title>
+
+      <mat-card-content>
+
+        <div class="tabla-scroll">
+          <table mat-table [dataSource]="gastos" class="tabla mat-elevation-z1">
+
+            <ng-container matColumnDef="numero">
+              <th mat-header-cell *matHeaderCellDef>N°</th>
+              <td mat-cell *matCellDef="let row; let i = index">{{ i + 1 }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="descripcion">
+              <th mat-header-cell *matHeaderCellDef>Descripción</th>
+              <td mat-cell *matCellDef="let row">{{ row.descripcion }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="base">
+              <th mat-header-cell *matHeaderCellDef>Cargo base</th>
+              <td mat-cell *matCellDef="let row">{{ row.extras?.base ?? '—' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="unidad">
+              <th mat-header-cell *matHeaderCellDef>Unidad</th>
+              <td mat-cell *matCellDef="let row">{{ row.extras?.unidad ?? '—' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="escalador">
+              <th mat-header-cell *matHeaderCellDef>Escalador</th>
+              <td mat-cell *matCellDef="let row">{{ row.extras?.escalador ?? '—' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="estado">
+              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <td mat-cell *matCellDef="let row">
+                <span class="badge" [class.badge--vigente]="row.activo" [class.badge--vencida]="!row.activo">
+                  {{ row.activo ? 'Activo' : 'Inactivo' }}
+                </span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef>Acciones</th>
+              <td mat-cell *matCellDef="let row">
+                <button mat-icon-button color="primary" matTooltip="Editar" (click)="editar(row)">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button mat-icon-button [color]="row.activo ? 'warn' : 'primary'"
+                  [matTooltip]="row.activo ? 'Desactivar' : 'Activar'" (click)="cambiarEstado(row)">
+                  <mat-icon>{{ row.activo ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+            <tr mat-row *matRowDef="let row; columns: columnas"></tr>
+          </table>
+        </div>
+
+        <p *ngIf="!cargando && gastos.length === 0" class="sin-datos">
+          No hay gastos de tratamiento registrados.
+        </p>
+
+      </mat-card-content>
+    </mat-card>
+  </app-parametrica-dialog-shell>
+</div>

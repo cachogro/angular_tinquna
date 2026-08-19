@@ -1,0 +1,122 @@
+.bitacora-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.bitacora-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.bitacora-toolbar__search {
+  flex: 1 1 240px;
+  min-width: 220px;
+}
+
+.bitacora-toolbar__clear {
+  color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.bitacora-table-wrapper {
+  min-height: 200px;
+}
+
+.bitacora-loading,
+.bitacora-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 56px 24px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.bitacora-table {
+  width: 100%;
+}
+
+.usuario-cell {
+  display: flex;
+  flex-direction: column;
+}
+
+.usuario-cell__nombre {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.usuario-cell__aviso {
+  font-size: 11px;
+  color: #ea5455;
+}
+
+// Badge de tipo de evento
+.evento-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.evento-badge--exito {
+  background: rgba(40, 199, 111, 0.15);
+  color: #1e874b;
+}
+
+.evento-badge--advertencia {
+  background: rgba(255, 159, 67, 0.18);
+  color: #b8621b;
+}
+
+.evento-badge--peligro {
+  background: rgba(234, 84, 85, 0.15);
+  color: #c53030;
+}
+
+.evento-badge--neutro {
+  background: rgba(0, 0, 0, 0.08);
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.icono-exito {
+  color: #28c76f;
+}
+
+.icono-error {
+  color: #ea5455;
+}
+
+.user-agent-cell {
+  display: inline-block;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.row-fallido {
+  background: rgba(234, 84, 85, 0.04);
+}
+
+.mat-mdc-header-row {
+  background: #0d6efd !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}

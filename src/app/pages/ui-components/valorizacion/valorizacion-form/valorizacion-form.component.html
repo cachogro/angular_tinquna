@@ -33,22 +33,30 @@
       </div>
       }
 
-      @if (verificandoCotizacion) {
+      @if (verificandoPrecioVigente) {
       <div class="valorizacion-preview__aviso valorizacion-preview__aviso--info">
         <mat-spinner diameter="18"></mat-spinner>
-        <span>Verificando cotización vigente de los minerales...</span>
+        <span>
+          {{ esCodificacionRam() ? 'Verificando tabla de escala de precio vigente de los minerales...' :
+          'Verificando cotización vigente de los minerales...' }}
+        </span>
       </div>
-      } @else if (mineralesSinCotizacion.length > 0) {
+      } @else if (mineralesSinPrecioVigente.length > 0) {
       <div class="valorizacion-preview__aviso valorizacion-preview__aviso--alerta">
         <mat-icon>error_outline</mat-icon>
         <div class="valorizacion-preview__aviso-contenido">
-          <span>Los siguientes minerales no tienen cotización vigente. No se puede valorizar hasta registrarla:</span>
-          @for (m of mineralesSinCotizacion; track m.id) {
+          <span>
+            {{ esCodificacionRam() ?
+            'Los siguientes minerales no tienen tabla de escala de precio vigente. No se puede valorizar hasta
+            registrarla:'
+            : 'Los siguientes minerales no tienen cotización vigente. No se puede valorizar hasta registrarla:' }}
+          </span>
+          @for (m of mineralesSinPrecioVigente; track m.id) {
           <div class="valorizacion-preview__mineral-sin-cotizacion">
             <span>{{ m.descripcion }}{{ m.simbolo ? ' (' + m.simbolo + ')' : '' }}</span>
-            <button mat-stroked-button color="primary" type="button" (click)="abrirRegistrarCotizacion(m.id)">
+            <button mat-stroked-button color="primary" type="button" (click)="abrirRegistrarPrecioVigente(m.id)">
               <mat-icon>request_quote</mat-icon>
-              Registrar cotización
+              {{ esCodificacionRam() ? 'Registrar tabla' : 'Registrar cotización' }}
             </button>
           </div>
           }
@@ -57,13 +65,16 @@
       } @else if (detallesMineralesArray.length > 0) {
       <div class="valorizacion-preview__aviso valorizacion-preview__aviso--ok">
         <mat-icon>check_circle</mat-icon>
-        <span>Cotización vigente verificada para todos los minerales de la ley.</span>
+        <span>
+          {{ esCodificacionRam() ? 'Tabla de escala de precio vigente verificada para todos los minerales de la ley.'
+          : 'Cotización vigente verificada para todos los minerales de la ley.' }}
+        </span>
       </div>
       }
 
       <!-- Datos de la recepción de mineral: solo lectura -->
 
-      <div class="card mt-2">
+      <div class="card mt-2 valorizacion-form__datos-recepcion">
         <div class="card-body">
           <div class="row">
             <!-- Columna izquierda: 3 elementos -->
@@ -110,14 +121,71 @@
 
           <mat-step label="Datos de la valorización, ley mineral y laboratorio">
 
-            <h3 class="valorizacion-form__titulo">Cálculo de peso neto</h3>
+            <h3 class="valorizacion-form__titulo valorizacion-form__titulo--con-accion">
+              Cálculo de peso neto
+              <button mat-icon-button type="button" (click)="abrirVistaPreviaRecepcion()"
+                matTooltip="Ver recepción de mineral">
+                <mat-icon>visibility</mat-icon>
+              </button>
+            </h3>
             <br>
+            @if (esCodificacionBcl()) {
+            <!-- BCL: la sección "PESOS" del contrato de fundición aplica merma además de
+                 humedad (ver recalcularPesoNetoSecoBcl). RAM/estándar no la aplican. -->
             <div class="form-grid">
+              <div class="valorizacion-form__peso-bruto">
+                <mat-form-field appearance="outline">
+                  <mat-label>Peso bruto húmedo / PHB (kg)</mat-label>
+                  <input matInput type="number" [value]="pesoBrutoHumedo()" disabled />
+                  <mat-hint>{{ usarBalanzaT() ? 'Balanza T' : 'Balanza L' }} de la recepción</mat-hint>
+                </mat-form-field>
+                <mat-checkbox [checked]="usarBalanzaT()" (change)="onCambioBalanza($event.checked)"
+                  [disabled]="!esEditable">
+                  Usar Balanza T
+                </mat-checkbox>
+              </div>
+
               <mat-form-field appearance="outline">
-                <mat-label>Peso bruto húmedo (kg)</mat-label>
-                <input matInput type="number" [value]="pesoBrutoHumedo()" disabled />
-                <mat-hint>Balanza L de la recepción</mat-hint>
+                <mat-label>Humedad / H2O (%)</mat-label>
+                <input matInput type="number" step="0.01" formControlName="humedadPorcentaje" />
               </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Peso bruto seco / PSB (kg)</mat-label>
+                <input matInput type="number" formControlName="pesoBrutoSecoKilogramos" />
+                <mat-hint>Calculado: peso bruto húmedo − (peso bruto húmedo × humedad%)</mat-hint>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Merma (%)</mat-label>
+                <input matInput type="number" step="0.01" formControlName="mermaPorcentaje" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Merma (kg)</mat-label>
+                <input matInput type="number" formControlName="mermaKilogramos" />
+                <mat-hint>Calculado: peso bruto seco × merma%</mat-hint>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Peso neto seco / PNS (kg)</mat-label>
+                <input matInput type="number" step="0.001" formControlName="pesoNetoSecoKilogramos" />
+                <mat-hint>Calculado: peso bruto seco − merma</mat-hint>
+              </mat-form-field>
+            </div>
+            } @else {
+            <div class="form-grid">
+              <div class="valorizacion-form__peso-bruto">
+                <mat-form-field appearance="outline">
+                  <mat-label>Peso bruto húmedo (kg)</mat-label>
+                  <input matInput type="number" [value]="pesoBrutoHumedo()" disabled />
+                  <mat-hint>{{ usarBalanzaT() ? 'Balanza T' : 'Balanza L' }} de la recepción</mat-hint>
+                </mat-form-field>
+                <mat-checkbox [checked]="usarBalanzaT()" (change)="onCambioBalanza($event.checked)"
+                  [disabled]="!esEditable">
+                  Usar Balanza T
+                </mat-checkbox>
+              </div>
 
               <mat-form-field appearance="outline">
                 <mat-label>Humedad (%)</mat-label>
@@ -130,6 +198,7 @@
                 <mat-hint>Calculado: peso bruto húmedo − (peso bruto húmedo × humedad%)</mat-hint>
               </mat-form-field>
             </div>
+            }
             <!-- <h3 class="valorizacion-form__titulo">Precio por kilo</h3> -->
             <br>
             <div class="form-grid">
@@ -137,6 +206,15 @@
                 <mat-label>Tipo de cambio (Bs/USD)</mat-label>
                 <input matInput type="number" step="0.01" formControlName="tipoCambio" />
                 <mat-hint>Ingrésalo antes de cargar la ley: lo usa el Precio por kilo de cada fila</mat-hint>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Laboratorio</mat-label>
+                <mat-select formControlName="idLaboratorio">
+                  @for (lab of laboratorios(); track lab.id) {
+                  <mat-option [value]="lab.id">{{ lab.nombre }}</mat-option>
+                  }
+                </mat-select>
               </mat-form-field>
 
               <!-- <mat-form-field appearance="outline">
@@ -151,7 +229,6 @@
               @if (esCodificacionRam()) {
               <button mat-stroked-button type="button" color="primary" (click)="agregarMineralLey()">
                 <mat-icon>add</mat-icon>
-                Agregar mineral
               </button>
               }
             </h3>
@@ -164,11 +241,172 @@
               <p class="valorizacion-preview__nota">Aún no hay minerales con ley registrada.</p>
               } @else {
               @for (fila of detallesMineralesArray.controls; track $index; let i = $index) {
+              @if (esCodificacionRam()) {
+              <!-- RAM: el precio no sale de una cotización de mercado, sale de la tabla de
+                   Escala de Precio del mineral, buscando el tramo que corresponde a la ley
+                   ajustada (ley real +/- puntos que carga el liquidador). -->
+              <div [formGroupName]="i" class="valorizacion-form__ley-fila valorizacion-form__ley-fila--ram">
+                <mat-form-field appearance="outline"
+                  class="valorizacion-form__ley-campo valorizacion-form__ley-campo--mineral">
+                  <mat-label>Mineral / Producto</mat-label>
+                  <mat-select formControlName="idMineral" [compareWith]="compararIds"
+                    (selectionChange)="onMineralFilaChange(i)">
+                    @for (m of opcionesMineral(i); track m.id) {
+                    <mat-option [value]="m.id">{{ m.descripcion }} ({{ m.simbolo }})</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline"
+                  class="valorizacion-form__ley-campo valorizacion-form__ley-campo--ley">
+                  <mat-label>Ley</mat-label>
+                  <input matInput type="number" step="0.01" formControlName="ley" (input)="recalcularFilaLey(i)" />
+                  <button matSuffix mat-icon-button type="button" matTooltip="Ver tabla de precio vigente"
+                    [disabled]="!fila.get('idMineral')?.value" (click)="verTablaPrecioVigente(i)">
+                    <mat-icon>table_chart</mat-icon>
+                  </button>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline"
+                  class="valorizacion-form__ley-campo valorizacion-form__ley-campo--ley-unidad">
+                  <mat-label>Ley Unidad</mat-label>
+                  <mat-select formControlName="leyUnidad">
+                    @for (unidad of leyUnidades; track unidad) {
+                    <mat-option [value]="unidad">{{ unidad }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline"
+                  class="valorizacion-form__ley-campo valorizacion-form__ley-campo--ajuste-puntos">
+                  <mat-label>Ajuste de puntos</mat-label>
+                  <input matInput type="number" step="1" formControlName="ajustePuntosLey"
+                    (input)="recalcularFilaLey(i)" />
+                  <mat-hint>Entero que se resta a la ley (negativo para sumar)</mat-hint>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline"
+                  class="valorizacion-form__ley-campo valorizacion-form__ley-campo--ley-ajustada">
+                  <mat-label>Ley ajustada</mat-label>
+                  <input matInput type="number" formControlName="leyAjustada" />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline"
+                  class="valorizacion-form__ley-campo valorizacion-form__ley-campo--precio-punto-escala">
+                  <mat-label>USD/Punto (tabla)</mat-label>
+                  <input matInput type="number" formControlName="precioPuntoEscala" />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline"
+                  class="valorizacion-form__ley-campo valorizacion-form__ley-campo--precio-kilo">
+                  <mat-label>USD/TM (tabla)</mat-label>
+                  <input matInput type="number" formControlName="precioTmEscala" />
+                </mat-form-field>
+
+                <button mat-icon-button color="warn" type="button" (click)="quitarMineralLey(i)"
+                  class="valorizacion-form__ley-eliminar" matTooltip="Quitar mineral">
+                  <mat-icon>delete</mat-icon>
+                </button>
+
+                @if (filaSinTablaPrecioVigente(i)) {
+                <div class="valorizacion-form__ley-tramo-aviso">
+                  <mat-icon inline="true">error_outline</mat-icon>
+                  <span>Este mineral no tiene tabla de precio vigente.</span>
+                  <button mat-stroked-button type="button" color="primary"
+                    (click)="abrirRegistrarPrecioVigente(fila.get('idMineral')?.value)">
+                    <mat-icon>request_quote</mat-icon>
+                    Registrar tabla
+                  </button>
+                </div>
+                }
+              </div>
+              } @else if (esCodificacionBcl()) {
+              <!-- BCL (Plata y Plomo con la misma mecánica de ley): sin descuento de
+                   cotización, la ley se recalcula con el factor de conversión antes de
+                   aplicar el % Adición. Ver recalcularFilaLeyBcl. Layout propio, no
+                   comparte grilla con RAM/estándar. -->
+              <div [formGroupName]="i" class="valorizacion-form__ley-fila-bcl">
+                <!-- Fila 1: Mineral, Ley, Cotización vigente, Cotización ajustada (solo Plomo),
+                     Descuento, Total (USD/TM) -->
+                <mat-form-field appearance="outline"
+                  class="valorizacion-form__ley-campo valorizacion-form__ley-campo--mineral">
+                  <mat-label>Mineral / Producto</mat-label>
+                  <mat-select formControlName="idMineral" [compareWith]="compararIds"
+                    (selectionChange)="onMineralFilaChange(i)">
+                    @for (m of opcionesMineral(i); track m.id) {
+                    <mat-option [value]="m.id">{{ m.descripcion }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline"
+                  class="valorizacion-form__ley-campo valorizacion-form__ley-campo--ley">
+                  <mat-label>Ley</mat-label>
+                  <input matInput type="number" step="0.01" formControlName="ley" (input)="recalcularFilaLey(i)" />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline"
+                  class="valorizacion-form__ley-campo valorizacion-form__ley-campo--cotizacion">
+                  <mat-label>Cotización vigente</mat-label>
+                  <input matInput type="number" formControlName="cotizacionAplicada" />
+                </mat-form-field>
+
+                @if (!esMineralPlata(fila.get('idMineral')?.value)) {
+                <mat-form-field appearance="outline"
+                  class="valorizacion-form__ley-campo valorizacion-form__ley-campo--cotizacion-ajustada">
+                  <mat-label>Cotización ajustada</mat-label>
+                  <input matInput type="number" formControlName="cotizacionAjustada" />
+                  <mat-hint>Cotización vigente × factor de conversión × 1000</mat-hint>
+                </mat-form-field>
+                }
+
+                <mat-form-field appearance="outline"
+                  class="valorizacion-form__ley-campo valorizacion-form__ley-campo--descuento-ley">
+                  <mat-label>Descuento</mat-label>
+                  <input matInput type="number" step="0.001" formControlName="descuentoLey"
+                    (input)="recalcularFilaLey(i)" />
+                  <mat-hint>Se resta a la ley aplicada (ej. 0.05)</mat-hint>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline"
+                  class="valorizacion-form__ley-campo valorizacion-form__ley-campo--total">
+                  <mat-label>Total (USD/TM)</mat-label>
+                  <input matInput type="number" formControlName="totalUsdTm" />
+                </mat-form-field>
+
+                <!-- Fila 2: (Mineral sigue ocupando su columna), Ley Unidad, Factor de conversión, % Adición -->
+                <mat-form-field appearance="outline"
+                  class="valorizacion-form__ley-campo valorizacion-form__ley-campo--ley-unidad">
+                  <mat-label>Ley Unidad</mat-label>
+                  <mat-select formControlName="leyUnidad" (selectionChange)="recalcularFilaLey(i)">
+                    @for (unidad of leyUnidades; track unidad) {
+                    <mat-option [value]="unidad">{{ unidad }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline"
+                  class="valorizacion-form__ley-campo valorizacion-form__ley-campo--factor-conversion">
+                  <mat-label>Factor de conversión</mat-label>
+                  <input matInput type="number" [value]="factorConversionMineral(fila.get('idMineral')?.value)"
+                    disabled />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline"
+                  class="valorizacion-form__ley-campo valorizacion-form__ley-campo--adicion">
+                  <mat-label>% Adición</mat-label>
+                  <input matInput type="number" step="0.01" min="0" max="100" formControlName="porcentajeAdicion"
+                    (input)="recalcularFilaLey(i)" />
+                  <mat-hint>Porcentaje, ej. 83 = 83%</mat-hint>
+                </mat-form-field>
+              </div>
+              } @else {
               <div [formGroupName]="i" class="valorizacion-form__ley-fila">
                 <mat-form-field appearance="outline"
                   class="valorizacion-form__ley-campo valorizacion-form__ley-campo--mineral">
                   <mat-label>Mineral / Producto</mat-label>
-                  <mat-select formControlName="idMineral" (selectionChange)="onMineralFilaChange(i)">
+                  <mat-select formControlName="idMineral" [compareWith]="compararIds"
+                    (selectionChange)="onMineralFilaChange(i)">
                     @for (m of opcionesMineral(i); track m.id) {
                     <mat-option [value]="m.id">{{ m.descripcion }}</mat-option>
                     }
@@ -206,9 +444,10 @@
 
                 <mat-form-field appearance="outline"
                   class="valorizacion-form__ley-campo valorizacion-form__ley-campo--pct-cotizacion">
-                  <mat-label>% Cotización</mat-label>
-                  <input matInput type="number" step="0.01" formControlName="porcentajeCotizacion"
+                  <mat-label>Descuento cotización</mat-label>
+                  <input matInput type="number" step="1" min="0" formControlName="porcentajeCotizacion"
                     (input)="recalcularFilaLey(i)" />
+                  <mat-hint>Entero que se resta a la cotización vigente</mat-hint>
                 </mat-form-field>
 
                 <mat-form-field appearance="outline"
@@ -241,49 +480,40 @@
                   <mat-label>P/KL</mat-label>
                   <input matInput type="number" formControlName="pKl" />
                 </mat-form-field>
-
-                @if (esCodificacionRam()) {
-                <button mat-icon-button color="warn" type="button" (click)="quitarMineralLey(i)"
-                  class="valorizacion-form__ley-eliminar" matTooltip="Quitar mineral">
-                  <mat-icon>delete</mat-icon>
-                </button>
-                }
               </div>
               }
               }
-            </div>
-
-
-            <h3 class="valorizacion-form__titulo">Datos de laboratorio</h3>
-            <div class="form-grid">
-              <mat-form-field appearance="outline">
-                <mat-label>Laboratorio</mat-label>
-                <mat-select formControlName="idLaboratorio">
-                  @for (lab of laboratorios(); track lab.id) {
-                  <mat-option [value]="lab.id">{{ lab.nombre }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
-
-              <!-- <mat-form-field appearance="outline">
-            <mat-label>Peso neto húmedo (kg)</mat-label>
-            <input matInput type="number" step="0.001" formControlName="pesoNetoHumedoKilogramos" />
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Tara (kg)</mat-label>
-            <input matInput type="number" step="0.001" formControlName="taraKilogramos" />
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Merma (%)</mat-label>
-            <input matInput type="number" step="0.01" formControlName="mermaPorcentaje" />
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Merma (kg)</mat-label>
-            <input matInput type="number" step="0.001" formControlName="mermaKilogramos" />
-          </mat-form-field> -->
+              @if (esCodificacionRam()) {
+              <div class="valorizacion-form__ley-totales">
+                <div class="valorizacion-form__ley-totales-item">
+                  <span class="valorizacion-form__ley-totales-label">Valor Tonelada (USD)</span>
+                  <span class="valorizacion-form__ley-totales-valor">{{ totalUsdTmRam() }}</span>
+                </div>
+                <div class="valorizacion-form__ley-totales-item">
+                  <span class="valorizacion-form__ley-totales-label">Valor Tonelada (Bs)</span>
+                  <span class="valorizacion-form__ley-totales-valor">{{ truncarDecimales(valorToneladaBsRam()) }}</span>
+                </div>
+                <div class="valorizacion-form__ley-totales-item">
+                  <span class="valorizacion-form__ley-totales-label">Valor Bruto de Venta (Bs)</span>
+                  <span class="valorizacion-form__ley-totales-valor">{{ valorBrutoVenta() }}</span>
+                </div>
+              </div>
+              } @else if (esCodificacionBcl()) {
+              <div class="valorizacion-form__ley-totales">
+                <div class="valorizacion-form__ley-totales-item">
+                  <span class="valorizacion-form__ley-totales-label">Total (USD/TM)</span>
+                  <span class="valorizacion-form__ley-totales-valor">{{ totalUsdTmBcl() }}</span>
+                </div>
+              </div>
+              } @else {
+              <div class="valorizacion-form__ley-totales">
+                <div class="valorizacion-form__ley-totales-item">
+                  <span class="valorizacion-form__ley-totales-label">Valor Bruto de Venta (Bs)</span>
+                  <span class="valorizacion-form__ley-totales-valor">{{ valorBrutoVenta() }}</span>
+                </div>
+              </div>
+              }
+              }
             </div>
 
             <!-- fin calculo de precio por quilo mineral -->
@@ -293,6 +523,114 @@
             </div>
 
           </mat-step>
+
+          @if (esCodificacionBcl()) {
+          <mat-step label="Gastos de Tratamiento y Penalidades">
+
+            <h3 class="valorizacion-form__titulo">Gastos de Tratamiento</h3>
+            <div class="valorizacion-form__aportes-tabla-wrap">
+              @if (gastosActivosBcl.length === 0) {
+              <p class="valorizacion-preview__nota">No hay gastos de tratamiento activos en el catálogo.</p>
+              } @else {
+              <table class="valorizacion-form__aportes-tabla">
+                <thead>
+                  <tr>
+                    <th>Descripción</th>
+                    <th>Actual</th>
+                    <th>Base</th>
+                    <th>Actual − Base</th>
+                    <th>Escalador</th>
+                    <th>Importe (Bs)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (g of gastosActivosBcl; track g.id) {
+                  <tr>
+                    <td>{{ g.descripcion }}</td>
+                    <td>
+                      <mat-form-field appearance="outline" subscriptSizing="dynamic"
+                        class="valorizacion-form__aportes-campo">
+                        <input matInput type="number" step="0.01" [value]="gastoActual(g.id)"
+                          (input)="onGastoActualChange(g.id, $any($event.target).value)" />
+                      </mat-form-field>
+                    </td>
+                    <td>
+                      <mat-form-field appearance="outline" subscriptSizing="dynamic"
+                        class="valorizacion-form__aportes-campo">
+                        <input matInput type="number" step="0.01" [value]="gastoBase(g)"
+                          (input)="onGastoBaseChange(g.id, $any($event.target).value)" />
+                      </mat-form-field>
+                    </td>
+                    <td>{{ calcularGastoBcl(g).diferencia }}</td>
+                    <td>{{ g.extras?.escalador }}</td>
+                    <td>{{ calcularGastoBcl(g).importeBs }}</td>
+                  </tr>
+                  }
+                </tbody>
+              </table>
+              }
+            </div>
+
+            <h3 class="valorizacion-form__titulo">Penalidades</h3>
+            <div class="valorizacion-form__aportes-tabla-wrap">
+              @if (penalidadesActivasBcl.length === 0) {
+              <p class="valorizacion-preview__nota">No hay penalidades activas en el catálogo.</p>
+              } @else {
+              <table class="valorizacion-form__aportes-tabla">
+                <thead>
+                  <tr>
+                    <th>Elemento</th>
+                    <th>Ley</th>
+                    <th>Ley libre</th>
+                    <th>Cargo</th>
+                    <th>Cada</th>
+                    <th>Importe (Bs)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (p of penalidadesActivasBcl; track p.id) {
+                  <tr>
+                    <td>{{ p.descripcion }}</td>
+                    <td>
+                      <mat-form-field appearance="outline" subscriptSizing="dynamic"
+                        class="valorizacion-form__aportes-campo">
+                        <input matInput type="number" step="0.01" [value]="leyPenalidad(p.id)"
+                          (input)="onLeyPenalidadChange(p.id, $any($event.target).value)" />
+                      </mat-form-field>
+                    </td>
+                    <td>{{ p.extras?.leyLibre | number:'1.0-6' }} {{ p.extras?.unidadLey }}</td>
+                    <td>{{ p.extras?.cargo }} {{ p.extras?.unidadCargo }}</td>
+                    <td>{{ p.extras?.cada | number:'1.0-6' }}</td>
+                    <td>{{ calcularPenalidadBcl(p).importeBs }}</td>
+                  </tr>
+                  }
+                </tbody>
+              </table>
+              }
+            </div>
+
+            <div class="valorizacion-form__ley-totales">
+              <div class="valorizacion-form__ley-totales-item">
+                <span class="valorizacion-form__ley-totales-label">Total Gastos + Penalidades (Bs)</span>
+                <span class="valorizacion-form__ley-totales-valor">{{ totalGastosYPenalidadesBcl() }}</span>
+              </div>
+              <div class="valorizacion-form__ley-totales-item">
+                <span class="valorizacion-form__ley-totales-label">Valor Neto TM</span>
+                <span class="valorizacion-form__ley-totales-valor">{{ valorNetoTmBcl() }}</span>
+              </div>
+              <div class="valorizacion-form__ley-totales-item">
+                <span class="valorizacion-form__ley-totales-label">Líquido Pagable</span>
+                <span class="valorizacion-form__ley-totales-valor">{{ valorBrutoVenta() }}</span>
+              </div>
+            </div>
+
+            <div class="valorizacion-form__step-actions">
+              <button mat-stroked-button type="button" matStepperPrevious>Atrás</button>
+              <button mat-flat-button color="primary" type="button" matStepperNext>Siguiente</button>
+            </div>
+
+          </mat-step>
+          }
 
           <mat-step label="Descuentos de Ley">
 
@@ -312,7 +650,6 @@
                 <colgroup>
                   <col class="col-check">
                   <col class="col-entidad">
-                  <col class="col-base">
                   <col class="col-porcentaje">
                   <col class="col-base-calculo">
                   <col class="col-importe">
@@ -320,12 +657,15 @@
                 </colgroup>
                 <thead>
                   <tr>
-                    <th class="col-check">Aplicar</th>
+                    <th class="col-check">
+                      <mat-checkbox [checked]="todosAportesAplicados" [indeterminate]="algunosAportesAplicados"
+                        (change)="toggleTodosLosAportes($event.checked)"
+                        matTooltip="Aplicar/quitar todos los aportes"></mat-checkbox>
+                    </th>
                     <th>Entidad</th>
-                    <th>Base</th>
                     <th>% Alíc.</th>
-                    <th>Base cálc.</th>
-                    <th>Importe</th>
+                    <th>Base cálculo VBV.</th>
+                    <th>Importe (Bs)</th>
                     <th class="col-acciones">Acc.</th>
                   </tr>
                 </thead>
@@ -343,17 +683,6 @@
                         <mat-select formControlName="idEntidadAporte" (selectionChange)="recalcularAporte(i)">
                           @for (entidad of entidadesAporteActivas(); track entidad.id) {
                           <mat-option [value]="entidad.id">{{ entidad.descripcion }}</mat-option>
-                          }
-                        </mat-select>
-                      </mat-form-field>
-                    </td>
-
-                    <td>
-                      <mat-form-field appearance="outline" subscriptSizing="dynamic"
-                        class="valorizacion-form__aportes-campo valorizacion-form__aportes-campo--base">
-                        <mat-select formControlName="tipoBaseAporte" (selectionChange)="recalcularAporte(i)">
-                          @for (base of opcionesBaseAporte(i); track base) {
-                          <mat-option [value]="base">{{ base }}</mat-option>
                           }
                         </mat-select>
                       </mat-form-field>
@@ -392,10 +721,8 @@
                 </tbody>
                 <tfoot>
                   <tr class="valorizacion-form__aportes-fila-totales">
-                    <td colspan="3">Totales</td>
-                    <td>{{ totalAlicuotas() }} %</td>
-                    <td></td>
-                    <td>{{ totalImporteAportes() }} Bs</td>
+                    <td colspan="4">Totales</td>
+                    <td>{{ totalImporteAportes() | number:'1.0-0' }} Bs</td>
                     <td></td>
                   </tr>
                 </tfoot>
@@ -410,58 +737,6 @@
 
           </mat-step>
 
-          <!-- <mat-step label="Totales y guardado">
-
-            <h3 class=>Totales</h3>
-            <div >
-              <mat-form-field appearance="outline">
-                <mat-label>Líquido pagable</mat-label>
-                <input matInput type="number" [value]="liquidoPagable()" disabled />
-                <mat-hint>Peso neto seco × suma de P/KL</mat-hint>
-              </mat-form-field>
-
-              <mat-form-field appearance="outline">
-                <mat-label>Anticipo</mat-label>
-                <input matInput type="number" [value]="v.anticipo" disabled />
-              </mat-form-field>
-
-              <mat-form-field appearance="outline">
-                <mat-label>Otros anticipos</mat-label>
-                <input matInput type="number" step="0.01" min="0" formControlName="otrosAnticipo" />
-                <mat-hint>Resta al saldo a pagar</mat-hint>
-              </mat-form-field>
-
-              <mat-form-field appearance="outline">
-                <mat-label>Total aportes (descuentos de ley)</mat-label>
-                <input matInput type="number" [value]="totalImporteAportes()" disabled />
-                <mat-hint>Suma de los aportes aplicados</mat-hint>
-              </mat-form-field>
-
-              <mat-form-field appearance="outline">
-                <mat-label>Transporte</mat-label>
-                <input matInput type="number" step="0.01" formControlName="ajusteTransporte" />
-                <mat-hint>Positivo suma, negativo resta al saldo a pagar</mat-hint>
-              </mat-form-field>
-
-              <mat-form-field appearance="outline" class="valorizacion-form__saldo-pagar">
-                <mat-label>Saldo a pagar</mat-label>
-                <input matInput type="number" [value]="saldoAPagar()" disabled />
-                <mat-hint>Líquido pagable − anticipo − otros anticipos − total aportes ± transporte</mat-hint>
-              </mat-form-field>
-            </div>
-
-            <div class="form-actions">
-              <div class="valorizacion-form__step-actions valorizacion-form__step-actions--inline">
-                <button mat-stroked-button type="button" matStepperPrevious [disabled]="guardando()">Atrás</button>
-                <button mat-stroked-button type="button" (click)="volver()" [disabled]="guardando()">Volver</button>
-              </div>
-            </div>
-
-
-
-            
-          </mat-step> -->
-
 
           <mat-step label="Totales y guardado">
 
@@ -469,41 +744,42 @@
 
             <div class="valorizacion-form__totales">
 
-              <mat-form-field appearance="outline" class="valorizacion-form__campo">
-                <mat-label>Líquido pagable</mat-label>
-                <input matInput type="number" [value]="liquidoPagable()" disabled />
-                <mat-hint>Peso neto seco × suma de P/KL</mat-hint>
+              <mat-form-field appearance="outline" class="valorizacion-form__campo" subscriptSizing="dynamic">
+                <mat-label>Valor Bruto de Venta (Bs)</mat-label>
+                <input matInput type="number" [value]="valorBrutoVenta()" disabled />
+                <!-- <mat-hint>Peso neto seco × suma de P/KL</mat-hint> -->
               </mat-form-field>
 
-              <mat-form-field appearance="outline" class="valorizacion-form__campo">
+              <mat-form-field appearance="outline" class="valorizacion-form__campo" subscriptSizing="dynamic">
                 <mat-label>Anticipo</mat-label>
                 <input matInput type="number" [value]="v.anticipo" disabled />
               </mat-form-field>
 
-              <mat-form-field appearance="outline" class="valorizacion-form__campo">
+              <mat-form-field appearance="outline" class="valorizacion-form__campo" subscriptSizing="dynamic">
                 <mat-label>Otros anticipos</mat-label>
                 <input matInput type="number" step="0.01" min="0" formControlName="otrosAnticipo" />
-                <mat-hint>Resta al saldo a pagar</mat-hint>
+                <!-- <mat-hint>Resta al saldo a pagar</mat-hint> -->
               </mat-form-field>
 
-              <mat-form-field appearance="outline" class="valorizacion-form__campo">
+              <mat-form-field appearance="outline" class="valorizacion-form__campo" subscriptSizing="dynamic">
                 <mat-label>Total aportes (descuentos de ley)</mat-label>
                 <input matInput type="number" [value]="totalImporteAportes()" disabled />
-                <mat-hint>Suma de los aportes aplicados</mat-hint>
+                <!-- <mat-hint>Suma de los aportes aplicados</mat-hint> -->
               </mat-form-field>
 
-              <mat-form-field appearance="outline" class="valorizacion-form__campo">
+              <mat-form-field appearance="outline" class="valorizacion-form__campo" subscriptSizing="dynamic">
                 <mat-label>Transporte</mat-label>
-                <input matInput type="number" step="0.01" formControlName="ajusteTransporte" />
-                <mat-hint>Positivo suma, negativo resta al saldo a pagar</mat-hint>
+                <input matInput type="number" step="0.01" formControlName="ajusteTransporte"
+                  matTooltip="Positivo suma, negativo resta al VLV" />
               </mat-form-field>
 
-              <mat-form-field appearance="outline" class="valorizacion-form__campo valorizacion-form__saldo-pagar">
-                <mat-label>Saldo a pagar</mat-label>
-                <input matInput type="number" [value]="saldoAPagar()" disabled />
-                <mat-hint>
+              <mat-form-field appearance="outline"
+                class="valorizacion-form__campo valorizacion-form__saldo-pagar" subscriptSizing="dynamic">
+                <mat-label>Saldo a pagar (VLV)</mat-label>
+                <input matInput type="number" [value]="valorLiquidoVentaBs()" disabled />
+                <!-- <mat-hint>
                   Líquido pagable − anticipo − otros anticipos − total aportes ± transporte
-                </mat-hint>
+                </mat-hint> -->
               </mat-form-field>
 
             </div>

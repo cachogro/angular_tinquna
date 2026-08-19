@@ -65,7 +65,7 @@ export class ValorizacionMineralService {
    * vía el endpoint dedicado. Al pasar a VALORIZADO, el backend además marca
    * la recepción de mineral asociada como TRANZADO. El backend responde 400
    * si la valorización no está activa, la recepción ya fue tranzada, no
-   * tiene saldoPagarBolivianos > 0, o no tiene detalle de mineral registrado.
+   * tiene totalValorLiquidoVentaBolivianos > 0, o no tiene detalle de mineral registrado.
    */
   cambiarEstadoValorizacion(
     id: string,

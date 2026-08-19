@@ -63,9 +63,9 @@ export const UiComponentsRoutes: Routes = [
           {
             path: 'editar/:id',
             loadComponent: () =>
-              import(
-                './valorizacion/valorizacion-form/valorizacion-form.component'
-              ).then((m) => m.ValorizacionFormComponent),
+              import('./valorizacion/valorizacion-form/valorizacion-form.component').then(
+                (m) => m.ValorizacionFormComponent,
+              ),
           },
         ],
       },

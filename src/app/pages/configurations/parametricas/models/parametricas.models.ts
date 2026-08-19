@@ -123,6 +123,51 @@ export interface CotizacionesPaginadas {
   limit: number;
 }
 
+// ==========================================================
+// ESCALA DE PRECIO (tabla de precios por tramo de ley, usada para
+// valorizar "cargas" en vez de la cotización oficial de mercado)
+// ==========================================================
+
+export interface EscalaPrecio {
+  id: number;
+  idMineral: number;
+  ley: number;
+  precioPunto: number;
+  precioTm: number;
+  fechaVigenciaInicial: string;
+  fechaVigenciaFinal: string;
+  activo?: boolean;
+  usuarioUltimaModificacion?: string | null;
+  fechaUltimaModificacion?: string | null;
+  mineral?: MineralEnCotizacion;
+}
+
+export interface FilaEscalaPrecioRequest {
+  ley: number;
+  precioPunto: number;
+  precioTm: number;
+}
+
+/** Crea de una sola vez todos los tramos de ley de un mineral para un
+ *  mismo período de vigencia (ej. la tabla completa de Zinc de agosto). */
+export interface CrearEscalaPrecioRequest {
+  idMineral: number;
+  fechaVigenciaInicial: string;
+  fechaVigenciaFinal: string;
+  filas: FilaEscalaPrecioRequest[];
+}
+
+export interface FilaActualizarEscalaPrecio {
+  id: number;
+  precioPunto?: number;
+  precioTm?: number;
+}
+
+/** Corrige uno o varios tramos ya creados (por su id); lo que se omite no se modifica. */
+export interface ActualizarEscalaPrecioRequest {
+  filas: FilaActualizarEscalaPrecio[];
+}
+
 export interface Ingenio {
   id: string;
   nombre: string;
@@ -239,4 +284,69 @@ export interface GuardarEntidadAporteRequest {
   descripcion: string;
   detalleAporte: DetalleAporte[];
   idTipoEntidadAporte: number;
+}
+
+// ==========================================================
+// TIPO DE CÁLCULO VALORIZACIÓN (Gastos de Tratamiento y Penalidades)
+//
+// Un solo recurso en el back, particionado por `idTipoCalculo`: 1 = Gastos
+// de Tratamiento (maquila, refinación, etc.), 2 = Penalidades (elementos
+// traza como As, Sb, Bi...). Fijo, no cambia.
+// ==========================================================
+
+export const ID_TIPO_CALCULO_GASTO_TRATAMIENTO = 1;
+export const ID_TIPO_CALCULO_PENALIDAD = 2;
+
+/** `extras` de un Gasto de Tratamiento (ej. Maquila, Gastos de refinación Ag). */
+export interface ExtrasGastoTratamiento {
+  /** Cargo base por unidad (ej. 85 USD/TMS de maquila). */
+  base: number;
+  /** Unidad del cargo, tal como se muestra al liquidador (ej. "USD/TMS", "USD/oz"). */
+  unidad: string;
+  /** Factor que ajusta el cargo base cuando el valor real difiere del acordado. 0 si no aplica. */
+  escalador: number;
+}
+
+/** `extras` de una Penalidad (ej. As, Sb, Bi, Sn, Fe, SIO2). */
+export interface ExtrasPenalidad {
+  /** Incremento de ley al que se aplica `cargo` una vez superado `leyLibre` (ej. 0.001). */
+  cada: number;
+  /** Cargo monetario por cada `cada` de ley excedida sobre `leyLibre`. */
+  cargo: number;
+  /** Límite de ley libre de penalidad: por debajo no se cobra nada. */
+  leyLibre: number;
+  /** Unidad de `leyLibre` (ej. "%", "g/TM"). */
+  unidadLey: string;
+  /** Unidad de `cargo` (ej. "USD/TMS"). */
+  unidadCargo: string;
+}
+
+export interface TipoCalculoValorizacion<
+  TExtras = ExtrasGastoTratamiento | ExtrasPenalidad,
+> {
+  id: number;
+  descripcion: string;
+  idTipoCalculo: number;
+  extras: TExtras;
+  activo?: boolean;
+  usuarioUltimaModificacion?: string | null;
+  fechaUltimaModificacion?: string | null;
+  fechaRegistro?: string;
+}
+
+/** POST crea, PATCH actualiza — a diferencia del resto de catálogos, este
+ *  recurso usa verbos HTTP distintos en vez de "un solo POST"; y el PATCH
+ *  pide el body completo (hay que reenviar descripcion e idTipoCalculo). */
+export interface GuardarTipoCalculoValorizacionRequest<
+  TExtras = ExtrasGastoTratamiento | ExtrasPenalidad,
+> {
+  id?: number;
+  descripcion: string;
+  idTipoCalculo: number;
+  extras: TExtras;
+}
+
+export interface TipoCalculoValorizacionAgrupado {
+  gastos: TipoCalculoValorizacion<ExtrasGastoTratamiento>[];
+  penalidades: TipoCalculoValorizacion<ExtrasPenalidad>[];
 }

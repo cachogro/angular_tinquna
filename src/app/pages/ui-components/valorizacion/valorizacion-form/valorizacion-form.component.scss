@@ -80,6 +80,12 @@
   align-items: start;
 }
 
+.valorizacion-form__peso-bruto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .valorizacion-form__precio-calculado {
   display: flex;
   flex-direction: column;
@@ -215,6 +221,74 @@
   }
 }
 
+/* Fila BCL: 6 columnas x 2 filas.
+ * Fila 1: Mineral, Ley, Cotización vigente, Cotización ajustada (solo Plomo),
+ *         Descuento, Total (USD/TM)
+ * Fila 2: (Mineral sigue ocupando su columna), Ley Unidad, Factor de conversión,
+ *         (columna 4 vacía), % Adición (debajo de Descuento de ley)
+ * "Ley aplicada" se sigue calculando (ver recalcularFilaLeyBcl) pero no se
+ * muestra como campo aparte: es puro derivado de ley y descuento de ley,
+ * ya visibles por separado.
+ * Reutiliza los mismos nombres de clase --mineral/--ley/--ley-unidad/--cotizacion/
+ * --factor-conversion/--descuento-ley que Plomo y estándar, pero con su propia
+ * posición (por eso van con el prefijo .valorizacion-form__ley-fila-bcl, que
+ * tiene más especificidad que la regla base). */
+.valorizacion-form__ley-fila-bcl {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(140px, 1fr));
+  grid-template-rows: auto auto;
+  gap: 4px 12px;
+  align-items: start;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.valorizacion-form__ley-fila-bcl .valorizacion-form__ley-campo--mineral {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+}
+
+.valorizacion-form__ley-fila-bcl .valorizacion-form__ley-campo--ley {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.valorizacion-form__ley-fila-bcl .valorizacion-form__ley-campo--ley-unidad {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.valorizacion-form__ley-fila-bcl .valorizacion-form__ley-campo--cotizacion {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.valorizacion-form__ley-fila-bcl .valorizacion-form__ley-campo--factor-conversion {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+.valorizacion-form__ley-campo--cotizacion-ajustada {
+  grid-column: 4;
+  grid-row: 1;
+}
+
+.valorizacion-form__ley-fila-bcl .valorizacion-form__ley-campo--descuento-ley {
+  grid-column: 5;
+  grid-row: 1;
+}
+
+.valorizacion-form__ley-campo--adicion {
+  grid-column: 5;
+  grid-row: 2;
+}
+
+.valorizacion-form__ley-campo--total {
+  grid-column: 6;
+  grid-row: 1;
+}
+
 .valorizacion-form__ley-campo--mineral {
   grid-column: 1;
   grid-row: 1 / span 2;
@@ -260,6 +334,15 @@
   grid-row: 1 / span 2;
 }
 
+/* Fila BCL — Plomo (pendiente de revisar): usa la misma grilla base de 7
+ * columnas, pero no lleva "Precio" ni "Ley Pagable" (no aplican en su
+ * fórmula), así que "Descuento de ley" ocupa esa columna 5 en vez de pisar
+ * la de cotización (columna 3, ya usada por "Cotización vigente"). */
+.valorizacion-form__ley-campo--descuento-ley {
+  grid-column: 5;
+  grid-row: 1 / span 2;
+}
+
 .valorizacion-form__ley-campo--precio-kilo {
   grid-column: 7;
   grid-row: 1;
@@ -275,6 +358,87 @@
   grid-row: 1 / span 2;
   align-self: center;
   justify-self: center;
+}
+
+/* Fila RAM: mismo bloque base (.valorizacion-form__ley-fila) pero con su
+ * propia grilla, más angosta (5 columnas en vez de 7) porque no lleva los
+ * campos de cotización de mercado. */
+.valorizacion-form__ley-fila--ram {
+  grid-template-columns: repeat(5, minmax(110px, 1fr)) auto;
+}
+
+.valorizacion-form__ley-campo--ajuste-puntos {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.valorizacion-form__ley-campo--ley-ajustada {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+.valorizacion-form__ley-campo--precio-punto-escala {
+  grid-column: 4;
+  grid-row: 1 / span 2;
+}
+
+/* USD/TM (tabla) toma el lugar que ocupaba "Precio por kilo": en RAM no se
+ * muestran precio por kilo ni P/KL (siguen calculándose internamente para
+ * los totales, solo se ocultan de la fila). */
+.valorizacion-form__ley-fila--ram .valorizacion-form__ley-campo--precio-kilo {
+  grid-column: 5;
+  grid-row: 1 / span 2;
+}
+
+.valorizacion-form__ley-fila--ram .valorizacion-form__ley-eliminar {
+  grid-column: 6;
+}
+
+.valorizacion-form__ley-totales {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(115, 103, 240, 0.06);
+}
+
+.valorizacion-form__ley-totales-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  max-width: 260px;
+}
+
+.valorizacion-form__ley-totales-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.valorizacion-form__ley-totales-valor {
+  font-size: 16px;
+  font-weight: 700;
+  color: #7367f0;
+}
+
+.valorizacion-form__ley-tramo-aviso {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  color: #ea5455;
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
 }
 
 
@@ -314,6 +478,11 @@
 
 .card-body {
   padding: 16px;
+}
+
+.valorizacion-form__datos-recepcion p.small {
+  margin-bottom: 2px;
+  line-height: 0.2;
 }
 
 .valorizacion-preview__label {
@@ -405,11 +574,17 @@
   margin: 0 0 16px;
 }
 
+.valorizacion-form__titulo--con-accion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .valorizacion-form__totales {
   display: flex;
   flex-direction: column;
   max-width: 420px;
-  gap: 12px;
+  gap: 8px;
 }
 
 .valorizacion-form__campo {

@@ -40,6 +40,7 @@ export const ESTADO_VALORIZACION_VALORIZADO_ID = 3;
  */
 export type DetalleValorizacion = Record<string, unknown>;
 export type CalculoAporteValorizacion = Record<string, unknown>;
+export type CalculoValorizacion = Record<string, unknown>;
 
 export interface ValorizacionMineral {
   activo: boolean;
@@ -55,6 +56,9 @@ export interface ValorizacionMineral {
   estadoValorizacion?: EstadoValorizacion;
   pesoBrutoHumedoKilogramos: string | null;
   pesoNetoHumedoKilogramos: string | null;
+  /** Solo BCL: peso bruto húmedo − agua (peso bruto húmedo × humedad%).
+   *  No aplica en RAM/estándar. */
+  pesoBrutoSecoKilogramos?: string | null;
   pesoNetoSecoKilogramos: string | null;
   taraKilogramos: string | null;
   humedadPorcentaje: string | null;
@@ -70,12 +74,14 @@ export interface ValorizacionMineral {
   /** Otro anticipo aparte del de la recepción: siempre resta al saldo a
    *  pagar. 0 si no se ingresó nada. */
   otrosAnticipo?: string | null;
-  liquidoPagableBolivianos: string | null;
-  saldoPagarBolivianos: string;
+  totalValorLiquidoVentaBolivianos: string;
+  totalValorLiquidoVentaUsd: string | null;
   observaciones?: string | null;
   fechaValorizacion: string | null;
   detalles: DetalleValorizacion[];
   calculoAportes: CalculoAporteValorizacion[];
+  /** Solo BCL: Gastos de Tratamiento y Penalidades ya guardados. */
+  calculos?: CalculoValorizacion[];
 }
 
 /** Body para crear el borrador de valorización a partir de una recepción de mineral. */
@@ -107,6 +113,33 @@ export interface DetalleValorizacionRequest {
   cotizacionAplicada?: number;
   leyPagable?: number;
   precioKilo?: number;
+  // ---- Solo para codificación RAM: precio por tabla de Escala de Precio
+  // en vez de cotización de mercado (ver ParametricasService/EscalaPrecio).
+  // No se manda idCotizacionMineral, porcentajeCotizacion, cotizacionAplicada,
+  // leyPagable, precioKilo ni precio en estas filas. ----
+  /** Entero que se resta a la ley real para buscar el tramo en la tabla
+   *  (negativo suma). Resultado = "ley ajustada". */
+  ajustePuntosLey?: number;
+  /** ley − ajustePuntosLey, truncada al entero: la que efectivamente se usó
+   *  para encontrar el tramo de la tabla vigente. */
+  leyAjustada?: number;
+  /** id del tramo (fila) de Escala de Precio encontrado para leyAjustada;
+   *  solo se manda si la tabla vigente tenía un tramo para esa ley. */
+  idEscalaPrecio?: number;
+  /** USD/TM del tramo encontrado (ver EscalaPrecio.precioTm). Reemplaza a
+   *  precioKilo, que no aplica en RAM. */
+  precioUsdTm?: number;
+  // ---- Solo para codificación BCL (Plata + Plomo): fórmula propia del
+  // contrato de fundición (ver ValorizacionFormComponent.recalcularFilaLeyBcl).
+  // No se manda leyPagable en estas filas. ----
+  /** Puntos que se restan a la ley recalculada (no a la cotización) antes
+   *  de aplicar el precio. */
+  descuentoLey?: number;
+  /** Ley recalculada (ley ÷ factorConversion × 100) − descuentoLey. */
+  leyAplicada?: number;
+  /** % Adición que multiplica a la ley aplicada antes de la cotización.
+   *  Se guarda como porcentaje (ej. 83), no como fracción. */
+  porcentajeAdicion?: number;
 }
 
 /**
@@ -123,29 +156,73 @@ export interface AporteValorizacionRequest {
   importeBolivianos: number;
 }
 
+/**
+ * Solo BCL: una fila por cada Gasto de Tratamiento o Penalidad activa (ver
+ * catálogo `tipo-calculo-valorizacion`, grupo 1 y 2 respectivamente).
+ * `extras` es un snapshot de los valores del catálogo usados en el cálculo
+ * (más `ley` en penalidades), para que la valorización guardada no cambie
+ * si el catálogo se edita después.
+ */
+export interface CalculoValorizacionRequest {
+  idTipoCalculoValorizacion: number;
+  /** Base sobre la que se aplicó la tasa: en Penalidades, peso neto seco
+   *  en TMS; en Gastos de Tratamiento, la diferencia Actual−Base (ver
+   *  extras.diferencia; ya no usan TMS/oz). */
+  baseCalculo: number;
+  importeBolivianos: number;
+  /** Solo Gastos de Tratamiento: "Actual" tecleado por el liquidador. */
+  valorAplicado?: number;
+  extras?: {
+    /** Gastos de Tratamiento: tecleado por el liquidador al momento de liquidar. */
+    actual?: number;
+    /** Gastos de Tratamiento: valor de referencia, tecleado por el
+     *  liquidador (precargado con el del catálogo, pero editable). */
+    base?: number;
+    /** Gastos de Tratamiento: actual − base. */
+    diferencia?: number;
+    escalador?: number;
+    ley?: number;
+    leyLibre?: number;
+    cargo?: number;
+  };
+}
+
 export interface ActualizarValorizacionRequest {
   idLaboratorio?: number;
   idEstadoValorizacion?: number;
   fechaValorizacion?: string; // 'YYYY-MM-DD'
   pesoBrutoHumedoKilogramos?: number;
   pesoNetoHumedoKilogramos?: number;
+  /** Solo BCL (ver ValorizacionFormComponent.recalcularPesoNetoSecoBcl). */
+  pesoBrutoSecoKilogramos?: number;
   pesoNetoSecoKilogramos?: number;
   taraKilogramos?: number;
   humedadPorcentaje?: number;
   mermaPorcentaje?: number;
   mermaKilogramos?: number;
+  /** No aplica en RAM (ver totalValorToneladaBolivianos/totalValorToneladaUsd). */
   totalValorBrutoBolivianos?: number;
+  /** No aplica en RAM. */
   totalAportesBolivianos?: number;
+  /** Solo RAM: USD/TM Total × tipo de cambio ÷ 1000 (ver
+   *  ValorizacionFormComponent.valorToneladaBsRam). */
+  totalValorToneladaBolivianos?: number;
+  /** Solo RAM: suma de USD/TM (tabla) de todas las filas de ley (ver
+   *  ValorizacionFormComponent.totalUsdTmRam). */
+  totalValorToneladaUsd?: number;
   cotizacionDolar?: number;
   /** Positivo suma al saldo a pagar, negativo resta; 0 si no se ingresó nada. */
   ajusteTransporte?: number;
   /** 0 o mayor; siempre resta al saldo a pagar. */
   otrosAnticipo?: number;
-  liquidoPagableBolivianos?: number;
-  saldoPagarBolivianos?: number;
+  totalValorLiquidoVentaBolivianos?: number;
+  totalValorLiquidoVentaUsd?: number;
   observaciones?: string;
   detalles?: DetalleValorizacionRequest[];
   aportes?: AporteValorizacionRequest[];
+  /** Solo BCL: Gastos de Tratamiento y Penalidades (ver
+   *  ValorizacionFormComponent.construirCalculosBcl). */
+  calculos?: CalculoValorizacionRequest[];
   /** true = desactiva explícitamente todos los aportes activos, sin
    *  necesidad de mandar `aportes`. Es la única forma de comunicar "el
    *  usuario desmarcó todo": mandar `aportes: []` no hace nada en el back
@@ -156,7 +233,7 @@ export interface ActualizarValorizacionRequest {
 /**
  * Body del PATCH dedicado a cambiar de estado (.../valorizacion_mineral/:id/estado).
  * Solo acepta 2 (PRE-VALORIZADO) o 3 (VALORIZADO); ambos exigen que la
- * valorización esté activa, tenga saldoPagarBolivianos > 0 y al menos un
+ * valorización esté activa, tenga totalValorLiquidoVentaBolivianos > 0 y al menos un
  * detalle de mineral registrado. Pasar a VALORIZADO además marca la
  * recepción de mineral asociada como TRANZADO.
  */

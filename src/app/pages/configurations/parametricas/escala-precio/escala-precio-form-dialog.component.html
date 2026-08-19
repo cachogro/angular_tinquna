@@ -1,0 +1,210 @@
+<div class="blue_theme">
+  <app-parametrica-dialog-shell titulo="Escala de Precio por Ley (Cargas)">
+    <br />
+
+    <!-- ==================== FORMULARIO: NUEVA TABLA ==================== -->
+    <form [formGroup]="form" (ngSubmit)="guardar()" class="escala-precio-form">
+
+      <!-- Mineral + vigencia + ley inicial -->
+      <div class="fila-cabecera">
+        <mat-form-field appearance="outline">
+          <mat-label>Mineral</mat-label>
+          <mat-select formControlName="idMineral">
+            <mat-option *ngFor="let mineral of minerales" [value]="mineral.id">
+              {{ mineral.descripcion }} ({{ mineral.simbolo }})
+            </mat-option>
+          </mat-select>
+          <mat-error *ngIf="form.get('idMineral')?.hasError('required')">
+            Debe seleccionar un mineral
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Vigencia desde</mat-label>
+          <input matInput type="date" formControlName="fechaVigenciaInicial" [min]="fechaMinima" />
+          <mat-error *ngIf="form.get('fechaVigenciaInicial')?.hasError('required')">
+            La fecha de inicio es obligatoria
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Vigencia hasta</mat-label>
+          <input matInput type="date" formControlName="fechaVigenciaFinal" [min]="fechaMinima" />
+          <mat-error *ngIf="form.get('fechaVigenciaFinal')?.hasError('required')">
+            La fecha final es obligatoria
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Ley inicial</mat-label>
+          <input matInput type="number" step="1" min="0" formControlName="leyInicial"
+            (keydown)="bloquearNegativos($event)" placeholder="Ej: 6" />
+          <mat-error *ngIf="form.get('leyInicial')?.hasError('required')">
+            La ley inicial es obligatoria
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Ley final</mat-label>
+          <input matInput type="number" step="1" min="0" formControlName="leyFinal"
+            (keydown)="bloquearNegativos($event)" placeholder="Ej: 30" />
+          <mat-hint>La tabla se genera sola con este rango</mat-hint>
+          <mat-error *ngIf="form.get('leyFinal')?.hasError('required')">
+            La ley final es obligatoria
+          </mat-error>
+        </mat-form-field>
+      </div>
+
+      <span class="detalle-error"
+        *ngIf="form.hasError('vigenciaInvalida') && form.get('fechaVigenciaFinal')?.touched">
+        La vigencia hasta debe ser posterior a la vigencia desde
+      </span>
+
+      <span class="detalle-error"
+        *ngIf="form.hasError('rangoLeyInvalido') && form.get('leyFinal')?.touched">
+        La ley final debe ser mayor o igual a la ley inicial
+      </span>
+
+      <!-- Tabla de tramos: se genera con el rango de ley; USD/Punto lo escribe el usuario, USD/TM se calcula -->
+      <div class="filas-ley">
+        <div class="filas-header">
+          <span>Tramos por ley{{ filas.length ? ' (' + filas.length + ')' : '' }}</span>
+        </div>
+
+        <p class="hint-ley" *ngIf="filas.length === 0">
+          Ingresa la ley inicial y la ley final para generar la tabla.
+        </p>
+
+        <div class="tabla-scroll" formArrayName="filas" *ngIf="filas.length > 0">
+          <table class="tabla-edicion">
+            <thead>
+              <tr>
+                <th class="col-ley">Ley</th>
+                <th class="col-precio">USD/Punto</th>
+                <th class="col-precio">USD/TM</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let fila of filas.controls; let i = index" [formGroupName]="i">
+                <td class="col-ley">{{ leyFila(i) }}</td>
+                <td class="col-precio">
+                  <input class="input-inline" type="number" step="0.01" min="0" formControlName="precioPunto"
+                    (keydown)="bloquearNegativos($event)" />
+                </td>
+                <td class="col-precio">{{ usdTmFila(i) || '—' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <span class="detalle-error" *ngIf="filas.hasError('sinFilas') && filas.touched">
+          Debes cargar el USD/Punto de al menos un tramo
+        </span>
+      </div>
+
+      <div class="acciones-form">
+        <button mat-stroked-button type="button" (click)="cancelar()" [disabled]="guardando">
+          Limpiar
+        </button>
+        <button mat-flat-button color="primary" type="button" (click)="guardar()" [disabled]="guardando">
+          Guardar tabla
+        </button>
+      </div>
+    </form>
+
+    <!-- ==================== TABLA VIGENTE / HISTORIAL ==================== -->
+    <mat-card class="tabla-card" *ngIf="form.get('idMineral')?.value">
+      <mat-card-title>
+        {{ modoHistorico ? 'Tabla vigente el ' + formatearFecha(fechaConsultaControl.value) : 'Tabla vigente ahora' }}
+      </mat-card-title>
+
+      <mat-card-content>
+        <!-- Filtro de historial: consulta la tabla que regía en un día puntual -->
+        <div class="filtro-historial">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Ver tabla vigente en fecha</mat-label>
+            <input matInput type="date" [formControl]="fechaConsultaControl" [max]="fechaMinima" />
+          </mat-form-field>
+          <button mat-stroked-button type="button" *ngIf="modoHistorico" (click)="limpiarFechaConsulta()">
+            <mat-icon>today</mat-icon> Ver vigente ahora
+          </button>
+          <span class="badge badge--historico" *ngIf="modoHistorico">
+            <mat-icon inline="true">history</mat-icon> Histórico, solo lectura
+          </span>
+        </div>
+
+        <div class="tabla-scroll">
+          <table mat-table [dataSource]="escalaVigente" class="tabla mat-elevation-z1">
+
+            <ng-container matColumnDef="ley">
+              <th mat-header-cell *matHeaderCellDef>Ley</th>
+              <td mat-cell *matCellDef="let row">{{ row.ley }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="precioPunto">
+              <th mat-header-cell *matHeaderCellDef>USD/Punto</th>
+              <td mat-cell *matCellDef="let row">
+                <ng-container *ngIf="filaEditandoId === row.id; else soloPrecioPunto">
+                  <input class="input-inline" type="number" step="0.01" min="0"
+                    [(ngModel)]="edicion.precioPunto" [ngModelOptions]="{ standalone: true }"
+                    (keydown)="bloquearNegativos($event)" />
+                </ng-container>
+                <ng-template #soloPrecioPunto>{{ row.precioPunto }}</ng-template>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="precioTm">
+              <th mat-header-cell *matHeaderCellDef>USD/TM</th>
+              <td mat-cell *matCellDef="let row">
+                {{ filaEditandoId === row.id ? precioTmEdicion(row.ley) : row.precioTm }}
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="vigenciaInicial">
+              <th mat-header-cell *matHeaderCellDef>Vigencia desde</th>
+              <td mat-cell *matCellDef="let row">{{ formatearFecha(row.fechaVigenciaInicial) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="vigenciaFinal">
+              <th mat-header-cell *matHeaderCellDef>Vigencia hasta</th>
+              <td mat-cell *matCellDef="let row">{{ formatearFecha(row.fechaVigenciaFinal) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef>Acciones</th>
+              <td mat-cell *matCellDef="let row">
+                <ng-container *ngIf="!modoHistorico; else soloLectura">
+                  <ng-container *ngIf="filaEditandoId === row.id; else botonEditar">
+                    <button mat-icon-button color="primary" matTooltip="Guardar" (click)="guardarEdicion(row)">
+                      <mat-icon>check</mat-icon>
+                    </button>
+                    <button mat-icon-button matTooltip="Cancelar" (click)="cancelarEdicion()">
+                      <mat-icon>close</mat-icon>
+                    </button>
+                  </ng-container>
+                  <ng-template #botonEditar>
+                    <button mat-icon-button color="primary" matTooltip="Editar" (click)="editarFila(row)">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                  </ng-template>
+                </ng-container>
+                <ng-template #soloLectura>
+                  <mat-icon matTooltip="Tabla histórica: solo lectura" class="icono-solo-lectura">lock</mat-icon>
+                </ng-template>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnasVigente"></tr>
+            <tr mat-row *matRowDef="let row; columns: columnasVigente"></tr>
+          </table>
+        </div>
+
+        <p *ngIf="!cargandoVigente && escalaVigente.length === 0" class="sin-datos">
+          {{ modoHistorico
+            ? 'Este mineral no tenía una tabla de precios vigente en la fecha indicada.'
+            : 'Este mineral no tiene una tabla de escala vigente.' }}
+        </p>
+      </mat-card-content>
+    </mat-card>
+  </app-parametrica-dialog-shell>
+</div>

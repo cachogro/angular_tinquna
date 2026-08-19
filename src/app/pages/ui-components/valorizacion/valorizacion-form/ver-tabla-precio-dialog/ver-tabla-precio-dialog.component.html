@@ -1,0 +1,45 @@
+<h2 mat-dialog-title>Tabla de escala de precio vigente — {{ data.mineral }}</h2>
+
+<mat-dialog-content>
+  @if (data.leyAjustada != null) {
+  <p class="ver-tabla-precio__nota">
+    Ley ajustada usada para el cálculo: <strong>{{ data.leyAjustada }}</strong>
+    @if (data.idTramoActivo == null) {
+    <span class="ver-tabla-precio__fuera-rango"> — fuera del rango de esta tabla</span>
+    }
+  </p>
+  }
+
+  @if (data.tramos.length === 0) {
+  <p class="ver-tabla-precio__vacio">Este mineral no tiene una tabla de escala de precio vigente.</p>
+  } @else {
+  <div class="ver-tabla-precio__tabla-wrap">
+    <table class="ver-tabla-precio__tabla">
+      <thead>
+        <tr>
+          <th>Ley</th>
+          <th>USD/Punto</th>
+          <th>USD/TM</th>
+          <th>Vigencia desde</th>
+          <th>Vigencia hasta</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (tramo of data.tramos; track tramo.id) {
+        <tr [class.ver-tabla-precio__fila--activa]="tramo.id === data.idTramoActivo">
+          <td>{{ tramo.ley }}</td>
+          <td>{{ tramo.precioPunto }}</td>
+          <td>{{ tramo.precioTm }}</td>
+          <td>{{ formatearFecha(tramo.fechaVigenciaInicial) }}</td>
+          <td>{{ formatearFecha(tramo.fechaVigenciaFinal) }}</td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-flat-button color="primary" (click)="cerrar()">Cerrar</button>
+</mat-dialog-actions>

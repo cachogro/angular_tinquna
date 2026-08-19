@@ -75,8 +75,6 @@ export class RecepcionMineralComponent implements OnInit {
   private readonly dialog = inject(MatDialog);
   private readonly router = inject(Router);
 
-  /** Estados en los que el registro todavía puede editarse (datos del formulario). */
-  private readonly ESTADOS_EDITABLES = new Set([1, 6]); // EN RECEPCIÓN, REMUESTREO
   /** Estados en los que ya se puede imprimir el PDF de la recepción. */
   private readonly ESTADOS_CON_IMPRESION = new Set([2, 3, 5, 6]); // APROBADO, RECHAZADO A TOL, TRANZADO, REMUESTREO
   /** Estados desde los que una recepción puede pasar a valorización. */
@@ -84,18 +82,29 @@ export class RecepcionMineralComponent implements OnInit {
   /** Ids de recepción para los que ya se está creando el borrador de valorización (evita doble clic). */
   readonly procesandoValorizacion = signal<Set<string>>(new Set());
 
+  /** Id de estado CANCELADO: transición reservada a ADMINISTRADOR. */
+  private readonly ESTADO_CANCELADO_ID = 4;
+  /** Id de estado TRANZADO: una vez tranzada, la recepción ya no se edita
+   *  (la valorización asociada ya quedó confirmada). */
+  private readonly ESTADO_TRANZADO_ID = 5;
+
   /**
    * Transiciones de estado permitidas, según las reglas de negocio:
    * - EN RECEPCIÓN (1): recién ingresado -> se aprueba o se cancela.
-   * - APROBADO (2): puede pasar a rechazado a tol, tranzarse, ir a remuestreo o cancelarse.
+   * - APROBADO (2): puede pasar a rechazado a tol, ir a remuestreo o cancelarse.
+   *   (TRANZADO no es una transición manual: ocurre al valorizar).
    * - RECHAZADO A TOL (3): ocurre después de aprobado -> puede ir a remuestreo o cancelarse.
    * - CANCELADO (4): terminal, sin transiciones.
    * - TRANZADO (5): terminal, sin transiciones (ya se hizo la valorización).
    * - REMUESTREO (6): ocurre después de aprobado o rechazado a tol -> se vuelve a evaluar.
+   *
+   * CANCELADO, dentro de las transiciones de cada estado, solo lo puede
+   * aplicar ADMINISTRADOR (ver transicionesDisponibles); OPERADOR puede usar
+   * el resto con normalidad.
    */
   private readonly TRANSICIONES_VALIDAS: Record<number, number[]> = {
     1: [2, 4],
-    2: [3, 5, 6, 4],
+    2: [3, 6, 4],
     3: [6, 4],
     4: [],
     5: [],
@@ -269,7 +278,7 @@ export class RecepcionMineralComponent implements OnInit {
   }
 
   leyesTexto(registro: RegistroMineral): string {
-    if (!registro.detalles?.length) return 'Sin leyes registradas';
+    if (!registro.detalles?.length) return '';
     return registro.detalles
       .map(
         (d) =>
@@ -286,9 +295,14 @@ export class RecepcionMineralComponent implements OnInit {
     return registro.idEstado === ESTADO_LIQUIDADO_ID;
   }
 
-  /** EN RECEPCIÓN y REMUESTREO admiten edición libre de los datos; el resto ya no. */
+  /** Editable en cualquier estado salvo TRANZADO y CANCELADO: ambos son
+   *  terminales (ver ESTADOS_EDITABLES/transiciones más arriba), así que la
+   *  recepción no debe tocarse una vez llegada a cualquiera de los dos. */
   puedeEditar(registro: RegistroMineral): boolean {
-    return this.ESTADOS_EDITABLES.has(registro.idEstado);
+    return (
+      registro.idEstado !== this.ESTADO_TRANZADO_ID &&
+      registro.idEstado !== this.ESTADO_CANCELADO_ID
+    );
   }
 
   /** APROBADO, RECHAZADO A TOL, TRANZADO y REMUESTREO ya tienen PDF para imprimir. */
@@ -346,9 +360,14 @@ export class RecepcionMineralComponent implements OnInit {
     });
   }
 
-  /** Estados a los que se puede pasar desde el estado actual del registro. */
+  /** Estados a los que se puede pasar desde el estado actual del registro.
+   *  CANCELADO queda reservado a ADMINISTRADOR: OPERADOR ve el resto de
+   *  transiciones normalmente. */
   transicionesDisponibles(registro: RegistroMineral): typeof ESTADOS_OPERACION {
-    const idsValidos = this.TRANSICIONES_VALIDAS[registro.idEstado] ?? [];
+    let idsValidos = this.TRANSICIONES_VALIDAS[registro.idEstado] ?? [];
+    if (!this.authService.isAdmin()) {
+      idsValidos = idsValidos.filter((id) => id !== this.ESTADO_CANCELADO_ID);
+    }
     return this.estados.filter((e) => idsValidos.includes(e.id));
   }
 
@@ -407,6 +426,12 @@ export class RecepcionMineralComponent implements OnInit {
   cambiarEstado(registro: RegistroMineral, nuevoEstadoId: number): void {
     const idsValidos = this.TRANSICIONES_VALIDAS[registro.idEstado] ?? [];
     if (!this.puedeGestionar || !idsValidos.includes(nuevoEstadoId)) return;
+    if (
+      nuevoEstadoId === this.ESTADO_CANCELADO_ID &&
+      !this.authService.isAdmin()
+    ) {
+      return;
+    }
 
     this.registroMineralService
       .cambiarEstado(registro.id, nuevoEstadoId)

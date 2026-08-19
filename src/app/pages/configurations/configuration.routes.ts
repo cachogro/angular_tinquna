@@ -51,6 +51,16 @@ export const ConfiguracionesRoutes: Routes = [
             (m) => m.GestionClientesComponent,
           ),
       },
+
+      {
+        path: 'historial-accesos',
+        canActivate: [roleGuard],
+        data: { roles: [RolCodigo.ADMINISTRADOR] },
+        loadComponent: () =>
+          import('./historial-accesos/historial-accesos.component').then(
+            (m) => m.HistorialAccesosComponent,
+          ),
+      },
     ],
   },
 ];

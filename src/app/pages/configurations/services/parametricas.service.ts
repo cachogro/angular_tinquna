@@ -7,21 +7,26 @@ import {
   ActorProductivoMinero,
   ActualizarCodificacionRequest,
   ActualizarCotizacionRequest,
+  ActualizarEscalaPrecioRequest,
   Codificacion,
   Cotizacion,
   CotizacionesPaginadas,
   CrearCodificacionRequest,
   CrearCotizacionRequest,
+  CrearEscalaPrecioRequest,
   EntidadAporte,
+  EscalaPrecio,
   FiltrosActorProductivoMinero,
   FiltrosCotizacion,
   GuardarActorProductivoMineroRequest,
   GuardarEntidadAporteRequest,
   GuardarLaboratorioRequest,
   GuardarMineralRequest,
+  GuardarTipoCalculoValorizacionRequest,
   Laboratorio,
   Mineral,
   TipoActorProductivoMinero,
+  TipoCalculoValorizacionAgrupado,
 } from '../parametricas/models/parametricas.models';
 
 @Injectable({ providedIn: 'root' })
@@ -147,6 +152,70 @@ export class ParametricasService {
       },
       error: () => {
         this.cargandoCotizaciones.set(false);
+      },
+    });
+  }
+
+  // ==========================================================
+  // ESCALA DE PRECIO (tabla de precios por tramo de ley, para "cargas")
+  // ==========================================================
+
+  private readonly escalaPrecioUrl = `${this.baseUrl}/escala-precio`;
+
+  /** Tramos vigentes del mineral consultado por última vez, ordenados por ley. */
+  readonly escalaPrecioVigente = signal<EscalaPrecio[]>([]);
+  readonly cargandoEscalaPrecio = signal<boolean>(false);
+
+  crearEscalaPrecio(
+    data: CrearEscalaPrecioRequest,
+  ): Observable<EscalaPrecio[]> {
+    return this.http
+      .post<EscalaPrecio[]>(this.escalaPrecioUrl, data)
+      .pipe(tap(() => this.cargarEscalaPrecioVigente(data.idMineral)));
+  }
+
+  /** El back busca cada tramo por su `id` dentro de `filas`, por eso no
+   *  necesita idMineral en el body; se lo pasamos aparte para recargar la
+   *  tabla correcta después. */
+  actualizarEscalaPrecio(
+    data: ActualizarEscalaPrecioRequest,
+    idMineral: number,
+  ): Observable<EscalaPrecio[]> {
+    return this.http
+      .patch<EscalaPrecio[]>(this.escalaPrecioUrl, data)
+      .pipe(tap(() => this.cargarEscalaPrecioVigente(idMineral)));
+  }
+
+  /** Sin `fecha`: la tabla vigente ahora mismo. Con `fecha` ("YYYY-MM-DD"):
+   *  la tabla que regía ese día (historial). */
+  obtenerEscalaPrecioVigente(
+    idMineral: number,
+    fecha?: string,
+  ): Observable<EscalaPrecio[]> {
+    let params = new HttpParams();
+    if (fecha) params = params.set('fecha', fecha);
+    return this.http.get<EscalaPrecio[]>(
+      `${this.escalaPrecioUrl}/vigente/${idMineral}`,
+      { params },
+    );
+  }
+
+  /** Carga los tramos vigentes de un mineral (o los vigentes en `fecha`, para
+   *  consultar el historial) y actualiza el signal para que la tabla se
+   *  refresque sola. */
+  cargarEscalaPrecioVigente(idMineral: number, fecha?: string): void {
+    this.cargandoEscalaPrecio.set(true);
+    this.obtenerEscalaPrecioVigente(idMineral, fecha).subscribe({
+      next: (data) => {
+        this.escalaPrecioVigente.set(
+          [...data].sort((a, b) => a.ley - b.ley),
+        );
+        this.cargandoEscalaPrecio.set(false);
+      },
+      error: () => {
+        // 404 = no había tabla vigente (ahora, o en la fecha consultada): no es un error a mostrar.
+        this.escalaPrecioVigente.set([]);
+        this.cargandoEscalaPrecio.set(false);
       },
     });
   }
@@ -393,5 +462,74 @@ export class ParametricasService {
     return this.http
       .patch<Mineral>(`${this.mineralUrl}/cambiar_estado/${id}`, { activo })
       .pipe(tap(() => this.cargarMinerales()));
+  }
+
+  // ==========================================================
+  // TIPO DE CÁLCULO VALORIZACIÓN (Gastos de Tratamiento y Penalidades)
+  // idTipoCalculo fijo: 1 = Gastos de Tratamiento, 2 = Penalidades.
+  // ==========================================================
+
+  private readonly tipoCalculoValorizacionUrl = `${this.baseUrl}/tipo-calculo-valorizacion`;
+
+  // El back ya devuelve ambos grupos juntos en una sola respuesta, así que
+  // una sola carga (cargarTipoCalculoValorizacion) alimenta los dos signals.
+  readonly gastosTratamiento = signal<TipoCalculoValorizacionAgrupado['gastos']>([]);
+  readonly penalidadesValorizacion = signal<TipoCalculoValorizacionAgrupado['penalidades']>([]);
+  readonly cargandoTipoCalculoValorizacion = signal<boolean>(false);
+
+  crearTipoCalculoValorizacion(
+    data: GuardarTipoCalculoValorizacionRequest,
+  ): Observable<TipoCalculoValorizacionAgrupado['gastos'][number]> {
+    return this.http
+      .post<
+        TipoCalculoValorizacionAgrupado['gastos'][number]
+      >(this.tipoCalculoValorizacionUrl, data)
+      .pipe(tap(() => this.cargarTipoCalculoValorizacion()));
+  }
+
+  /** A diferencia del resto de catálogos, este recurso separa POST (crear)
+   *  de PATCH (actualizar); y el PATCH pide el body completo, no parcial:
+   *  hay que reenviar descripcion e idTipoCalculo igual que en la creación. */
+  actualizarTipoCalculoValorizacion(
+    data: GuardarTipoCalculoValorizacionRequest,
+  ): Observable<TipoCalculoValorizacionAgrupado['gastos'][number]> {
+    return this.http
+      .patch<
+        TipoCalculoValorizacionAgrupado['gastos'][number]
+      >(this.tipoCalculoValorizacionUrl, data)
+      .pipe(tap(() => this.cargarTipoCalculoValorizacion()));
+  }
+
+  obtenerTipoCalculoValorizacionAgrupado(): Observable<TipoCalculoValorizacionAgrupado> {
+    return this.http.get<TipoCalculoValorizacionAgrupado>(
+      this.tipoCalculoValorizacionUrl,
+    );
+  }
+
+  /** Carga gastos de tratamiento y penalidades juntos (una sola llamada al
+   *  back) y actualiza ambos signals para que las dos tablas se refresquen. */
+  cargarTipoCalculoValorizacion(): void {
+    this.cargandoTipoCalculoValorizacion.set(true);
+    this.obtenerTipoCalculoValorizacionAgrupado().subscribe({
+      next: (data) => {
+        this.gastosTratamiento.set(data.gastos);
+        this.penalidadesValorizacion.set(data.penalidades);
+        this.cargandoTipoCalculoValorizacion.set(false);
+      },
+      error: () => {
+        this.cargandoTipoCalculoValorizacion.set(false);
+      },
+    });
+  }
+
+  cambiarEstadoTipoCalculoValorizacion(
+    id: number,
+    activo: boolean,
+  ): Observable<TipoCalculoValorizacionAgrupado['gastos'][number]> {
+    return this.http
+      .patch<
+        TipoCalculoValorizacionAgrupado['gastos'][number]
+      >(`${this.tipoCalculoValorizacionUrl}/cambiar_estado/${id}`, { activo })
+      .pipe(tap(() => this.cargarTipoCalculoValorizacion()));
   }
 }

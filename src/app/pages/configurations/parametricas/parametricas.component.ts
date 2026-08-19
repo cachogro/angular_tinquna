@@ -10,6 +10,9 @@ import { ActorProductivoMineroFormDialogComponent } from './actor-productivo-min
 import { LaboratorioFormDialogComponent } from './laboratorio/laboratorio-form-dialog.component';
 import { EntidadAporteFormDialogComponent } from './entidad-aporte/entidad-aporte-form-dialog.component';
 import { MineralFormDialogComponent } from './mineral/mineral-form-dialog.component';
+import { EscalaPrecioFormDialogComponent } from './escala-precio/escala-precio-form-dialog.component';
+import { GastoTratamientoFormDialogComponent } from './gasto-tratamiento/gasto-tratamiento-form-dialog.component';
+import { PenalidadFormDialogComponent } from './penalidad/penalidad-form-dialog.component';
 
 // A futuro, cuando implementes Ley e Ingenio, importa aquí sus modales
 // y sus tablas, siguiendo exactamente el mismo patrón que Codificación:
@@ -76,6 +79,30 @@ export class ParametricasComponent {
 
   abrirNuevoMineral(): void {
     this.dialog.open(MineralFormDialogComponent, {
+      width: '900px',
+      maxWidth: '95vw',
+      autoFocus: false,
+    });
+  }
+
+  abrirNuevaEscalaPrecio(): void {
+    this.dialog.open(EscalaPrecioFormDialogComponent, {
+      width: '1100px',
+      maxWidth: '95vw',
+      autoFocus: false,
+    });
+  }
+
+  abrirNuevoGastoTratamiento(): void {
+    this.dialog.open(GastoTratamientoFormDialogComponent, {
+      width: '900px',
+      maxWidth: '95vw',
+      autoFocus: false,
+    });
+  }
+
+  abrirNuevaPenalidad(): void {
+    this.dialog.open(PenalidadFormDialogComponent, {
       width: '900px',
       maxWidth: '95vw',
       autoFocus: false,

@@ -47,7 +47,22 @@
                   "maximumError": "12mb"
                 }
               ],
-              "outputHashing": "all"
+              "outputHashing": "all",
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.prod.ts"
+                }
+              ]
+            },
+            "pruebas": {
+              "outputHashing": "all",
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.pruebas.ts"
+                }
+              ]
             },
             "development": {
               "optimization": false,
@@ -63,6 +78,9 @@
           "configurations": {
             "production": {
               "buildTarget": "Matdash:build:production"
+            },
+            "pruebas": {
+              "buildTarget": "Matdash:build:pruebas"
             },
             "development": {
               "buildTarget": "Matdash:build:development"

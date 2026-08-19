@@ -38,11 +38,11 @@ export const appConfig: ApplicationConfig = {
         scrollPositionRestoration: 'enabled',
         anchorScrolling: 'enabled',
       }),
-      withComponentInputBinding()
+      withComponentInputBinding(),
     ),
     provideHttpClient(
       withInterceptorsFromDi(),
-      withInterceptors([authInterceptor, errorInterceptor]) // <-- NUEVO (el orden importa: auth primero, error después)
+      withInterceptors([authInterceptor, errorInterceptor]), // <-- NUEVO (el orden importa: auth primero, error después)
     ),
     provideClientHydration(),
     provideAnimationsAsync(),

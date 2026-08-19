@@ -9,6 +9,7 @@ import {
   signal,
 } from '@angular/core';
 import {
+  AbstractControl,
   FormArray,
   FormBuilder,
   FormGroup,
@@ -30,21 +31,28 @@ import { StepperSelectionEvent } from '@angular/cdk/stepper';
 import { MatStepperModule } from '@angular/material/stepper';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { switchMap } from 'rxjs';
+import { finalize, switchMap } from 'rxjs';
 import { CotizacionFormDialogComponent } from 'src/app/pages/configurations/parametricas/cotizacion/cotizacion-form-dialog.component';
+import { EscalaPrecioFormDialogComponent } from 'src/app/pages/configurations/parametricas/escala-precio/escala-precio-form-dialog.component';
 import {
   Cotizacion,
+  EscalaPrecio,
+  ExtrasGastoTratamiento,
+  ExtrasPenalidad,
   Laboratorio,
   Mineral,
+  TipoCalculoValorizacion,
 } from 'src/app/pages/configurations/parametricas/models/parametricas.models';
 import { ParametricasService } from 'src/app/pages/configurations/services/parametricas.service';
 import {
   LeyUnidad,
   MineralResumen,
 } from '../../models/registro-mineral.models';
+import { VerRecepcionDialogComponent } from '../../recepcion-mineral/ver-recepcion-dialog/ver-recepcion-dialog.component';
 import {
   ActualizarValorizacionRequest,
   AporteValorizacionRequest,
+  CalculoValorizacionRequest,
   DetalleValorizacionRequest,
   ESTADO_VALORIZACION_BORRADOR_ID,
   ESTADO_VALORIZACION_PREVALORIZADO_ID,
@@ -60,8 +68,9 @@ import {
   VerValorizacionDialogComponent,
   VerValorizacionDialogData,
 } from './ver-valorizacion-dialog/ver-valorizacion-dialog.component';
+import { VerTablaPrecioDialogComponent } from './ver-tabla-precio-dialog/ver-tabla-precio-dialog.component';
 
-/** Unidades disponibles para expresar la ley de un mineral */
+/** Unidades disponibles para expresar la ley de un mineral. */
 const LEY_UNIDADES: LeyUnidad[] = ['%', 'g/TM'];
 const LEY_UNIDAD_POR_DEFECTO: LeyUnidad = '%';
 
@@ -77,6 +86,13 @@ const GRAMOS_POR_ONZA_TROY = 31.1035;
 const ID_CODIFICACION_RAM = '5';
 const CLAVE_CODIFICACION_RAM = 'RAM';
 
+/** BCL (Plata + Plomo) usa la fórmula del contrato de fundición (ver
+ *  recalcularFilaLeyBcl), distinta de la estándar: descuento en puntos de
+ *  ley (no de cotización) y, en Plata (ley "g/TM"), un % Adición aplicado
+ *  después de recalcular la ley con el factor de conversión. */
+const ID_CODIFICACION_BCL = '2';
+const CLAVE_CODIFICACION_BCL = 'BCL';
+
 /** Regalía minera no tiene alícuota configurada en su detalleAporte (a
  *  diferencia del resto de entidades de aporte): la suya sale de la suma de
  *  alicuotaInterna de las cotizaciones vigentes de los minerales que
@@ -90,21 +106,32 @@ const ENTIDADES_APORTE_POR_DEFECTO: Array<{
   id: number;
   tipoBaseAporte: TipoBaseAporteCatalogo;
 }> = [
-  { id: ID_REGALIA_MINERA, tipoBaseAporte: 'VNV' }, // Regalía minera
-  { id: 2, tipoBaseAporte: 'VNV' }, // Caja Nacional de Salud
-  { id: 1, tipoBaseAporte: 'VNV' }, // CORPORACION MINERA DE BOLIVIA - COMIBOL
-  { id: 9, tipoBaseAporte: 'VNV' }, // FEDECOMIN - POTOSI R.L.
-  { id: 12, tipoBaseAporte: 'VNV' }, // FENCOMIN TRADICIONAL R.L.
+  { id: ID_REGALIA_MINERA, tipoBaseAporte: 'VBV' }, // Regalía minera
+  { id: 2, tipoBaseAporte: 'VBV' }, // Caja Nacional de Salud
+  { id: 1, tipoBaseAporte: 'VBV' }, // CORPORACION MINERA DE BOLIVIA - COMIBOL
+  { id: 9, tipoBaseAporte: 'VBV' }, // FEDECOMIN - POTOSI R.L.
+  { id: 12, tipoBaseAporte: 'VBV' }, // FENCOMIN TRADICIONAL R.L.
 ];
 
 interface FilaLeyMineral {
   idMineral: number | null;
   ley: number | null;
   leyUnidad: LeyUnidad;
-  /** % de la cotización que se reconoce; si no viene guardado, se asume 100. */
+  /** Entero que se resta directo a la cotización vigente; si no viene guardado, se asume 0. */
   porcentajeCotizacion?: number;
   /** Entero tecleado por el liquidador (ver DetalleValorizacionRequest.precio). */
   precio?: number | null;
+  /** Solo RAM: entero que se resta a la ley real (negativo para sumar) para
+   *  buscar el tramo en la tabla de Escala de Precio (ver
+   *  DetalleValorizacionRequest.ajustePuntosLey). */
+  ajustePuntosLey?: number | null;
+  /** Solo BCL: puntos que se restan a la ley recalculada antes de aplicar
+   *  el precio. */
+  descuentoLey?: number | null;
+  /** Solo BCL: % Adición que multiplica a la ley aplicada antes de la
+   *  cotización. Se teclea como porcentaje (ej. 83 = 83%), no como
+   *  fracción. */
+  porcentajeAdicion?: number | null;
 }
 
 /** Estado del autoguardado del borrador (se muestra junto a los botones). */
@@ -118,6 +145,15 @@ interface CotizacionMineralEstado {
   cargando: boolean;
   sinCotizacion: boolean;
   cotizacion: Cotizacion | null;
+}
+
+/** Igual que CotizacionMineralEstado pero para la tabla de Escala de Precio
+ *  (solo RAM): reemplaza a la cotización de mercado como fuente del precio. */
+interface EscalaPrecioMineralEstado {
+  cargando: boolean;
+  sinTabla: boolean;
+  /** Tramos vigentes del mineral, ordenados por ley ascendente. */
+  filas: EscalaPrecio[];
 }
 
 @Component({
@@ -183,10 +219,16 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
    *  cotizacionesPorMineral), ya que una codificación puede traer varios. */
   readonly mineral = signal<MineralResumen | null>(null);
 
-  /** Peso bruto húmedo: viene fijo de la balanza registrada en la recepción (balanzaL). */
-  readonly pesoBrutoHumedo = computed(() =>
-    Number(this.valorizacion()?.recepcionMineral?.balanzaL ?? 0),
-  );
+  /** true = usar Balanza T de la recepción; false (por defecto) = Balanza L. */
+  readonly usarBalanzaT = signal(false);
+
+  /** Peso bruto húmedo: viene de la balanza registrada en la recepción,
+   *  Balanza L o Balanza T según lo que elija el usuario en el check. */
+  readonly pesoBrutoHumedo = computed(() => {
+    const rm = this.valorizacion()?.recepcionMineral;
+    const valor = this.usarBalanzaT() ? rm?.balanzaT : rm?.balanzaL;
+    return Number(valor ?? 0);
+  });
 
   /** Cotización vigente de cada mineral usado en las filas de ley, indexada
    *  por idMineral. Se verifica mineral por mineral (no uno global) porque
@@ -194,10 +236,29 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
    *  (RAM). */
   readonly cotizacionesPorMineral = signal<Record<number, CotizacionMineralEstado>>({});
 
-  /** Líquido pagable = peso neto seco × suma de P/KL de todas las filas de ley. */
-  readonly liquidoPagable = signal(0);
+  /** Igual que cotizacionesPorMineral pero para la tabla de Escala de
+   *  Precio: solo se usa/verifica cuando la codificación es RAM. */
+  readonly escalaPrecioPorMineral = signal<Record<number, EscalaPrecioMineralEstado>>({});
+
+  /** Líquido pagable, estándar = peso neto seco × suma de P/KL de todas las
+   *  filas de ley; RAM = peso neto seco × Valor Tonelada (Bs) × 1000. */
+  readonly valorBrutoVenta = signal(0);
   /** Saldo a pagar = líquido pagable − anticipo − total de aportes (descuentos de ley). */
-  readonly saldoAPagar = signal(0);
+  readonly valorLiquidoVentaBs = signal(0);
+  /** Saldo a pagar en USD = saldo a pagar (Bs) ÷ tipo de cambio. 0 si aún no
+   *  hay tipo de cambio cargado. */
+  readonly saldoAPagarUsd = signal(0);
+  /** Solo RAM: suma de USD/TM (tabla) de todas las filas de ley — informativo
+   *  (igual que F12 = F9+F10+F11 en la planilla de referencia). No reemplaza
+   *  a liquidoPagable, que sigue saliendo de la suma de P/KL por fila. */
+  readonly totalUsdTmRam = signal(0);
+  /** Solo RAM: Valor por Tonelada (Bs) = USD/TM Total × tipo de cambio ÷ 1000
+   *  (igual que G13 = F12×F13÷1000 en la planilla de referencia). Informativo. */
+  readonly valorToneladaBsRam = signal(0);
+  /** Solo BCL: suma del "Total (USD/TM)" de todas las filas de ley (Plata +
+   *  Plomo) — es la misma suma que ya usa recalcularTotales para el líquido
+   *  bruto de ley, expuesta acá para mostrarla. */
+  readonly totalUsdTmBcl = signal(0);
 
   readonly laboratorios = signal<Laboratorio[]>([]);
   readonly entidadesAporte = signal<EntidadAporte[]>([]);
@@ -217,6 +278,24 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
 
   readonly leyUnidades = LEY_UNIDADES;
 
+  /** Solo BCL: ley tecleada por el liquidador para cada elemento traza
+   *  (As, Sb, Bi, Sn, Fe, SiO2), indexada por id del catálogo de
+   *  Penalidades. */
+  readonly leyesPenalidad = signal<Record<number, number>>({});
+
+  /** Solo BCL: "Actual" tecleado por el liquidador para cada Gasto de
+   *  Tratamiento (ej. cargo de maquila vigente al momento de liquidar),
+   *  indexado por id del catálogo. Se compara contra "Base" (ver
+   *  basesGastoBcl) para calcular el ajuste por escalador, tal cual la
+   *  sección "GASTOS DE TRATAMIENTO" del contrato de fundición de
+   *  referencia. */
+  readonly actualesGastoBcl = signal<Record<number, number>>({});
+
+  /** Solo BCL: "Base" de cada Gasto de Tratamiento, indexada por id del
+   *  catálogo. Se precarga con `extras.base` del catálogo pero el
+   *  liquidador puede sobreescribirla por valorización (ver gastoBase). */
+  readonly basesGastoBcl = signal<Record<number, number>>({});
+
   /** Solo en la codificación RAM el mineral es de libre elección; en el resto,
    *  el mineral viene fijo por la codificación de la recepción. */
   readonly esCodificacionRam = computed(() => {
@@ -226,6 +305,18 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     return (
       String(cod.id) === ID_CODIFICACION_RAM ||
       texto.includes(CLAVE_CODIFICACION_RAM)
+    );
+  });
+
+  /** BCL (Plata + Plomo): fórmula propia del contrato de fundición (ver
+   *  recalcularFilaLeyBcl), separada de la estándar y de RAM. */
+  readonly esCodificacionBcl = computed(() => {
+    const cod = this.valorizacion()?.recepcionMineral?.codificacion;
+    if (!cod) return false;
+    const texto = `${cod.codigo ?? ''} ${cod.nombre ?? ''}`.toUpperCase();
+    return (
+      String(cod.id) === ID_CODIFICACION_BCL ||
+      texto.includes(CLAVE_CODIFICACION_BCL)
     );
   });
 
@@ -241,8 +332,8 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
   get puedeValorizar(): boolean {
     return (
       this.esEditable &&
-      !this.verificandoCotizacion &&
-      this.mineralesSinCotizacion.length === 0
+      !this.verificandoPrecioVigente &&
+      this.mineralesSinPrecioVigente.length === 0
     );
   }
 
@@ -273,6 +364,51 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
       });
   }
 
+  /** Igual que verificandoCotizacion pero consultando la tabla de Escala de
+   *  Precio (solo relevante en RAM). */
+  get verificandoEscalaPrecio(): boolean {
+    const estados = this.escalaPrecioPorMineral();
+    return this.idsMineralesEnFilas().some((id) => estados[id]?.cargando);
+  }
+
+  /** Igual que mineralesSinCotizacion pero para minerales sin tabla de
+   *  Escala de Precio vigente (solo relevante en RAM). */
+  get mineralesSinEscalaPrecio(): Array<{
+    id: number;
+    descripcion: string;
+    simbolo?: string;
+  }> {
+    const estados = this.escalaPrecioPorMineral();
+    return this.idsMineralesEnFilas()
+      .filter((id) => estados[id]?.sinTabla)
+      .map((id) => {
+        const mineral = this.buscarMineralPorId(id);
+        return {
+          id,
+          descripcion: mineral?.descripcion ?? `Mineral #${id}`,
+          simbolo: mineral?.simbolo,
+        };
+      });
+  }
+
+  /** Fuente de verdad para el gating de guardado: cotización de mercado en
+   *  el resto de codificaciones, tabla de Escala de Precio en RAM. */
+  get verificandoPrecioVigente(): boolean {
+    return this.esCodificacionRam()
+      ? this.verificandoEscalaPrecio
+      : this.verificandoCotizacion;
+  }
+
+  get mineralesSinPrecioVigente(): Array<{
+    id: number;
+    descripcion: string;
+    simbolo?: string;
+  }> {
+    return this.esCodificacionRam()
+      ? this.mineralesSinEscalaPrecio
+      : this.mineralesSinCotizacion;
+  }
+
   /** ids únicos (sin repetir) de los minerales seleccionados en las filas de ley actuales. */
   private idsMineralesEnFilas(): number[] {
     const ids = this.detallesMineralesArray.controls
@@ -292,6 +428,20 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     return deCodificacion.find((m) => Number(m.id) === id);
   }
 
+  /** true si el mineral de la fila es Plata (por nombre o símbolo del
+   *  catálogo): en BCL esto es lo que determina la fórmula/campos de la
+   *  fila (ver recalcularFilaLeyBcl), NO la unidad de ley elegida —
+   *  "leyUnidad" es solo una etiqueta que se muestra junto al número, sin
+   *  ningún efecto en el cálculo ni en qué campos se ven. */
+  esMineralPlata(idMineral: number | string | null | undefined): boolean {
+    if (idMineral == null) return false;
+    const mineral = this.buscarMineralPorId(Number(idMineral));
+    if (!mineral) return false;
+    const descripcion = (mineral.descripcion ?? '').toUpperCase();
+    const simbolo = (mineral.simbolo ?? '').toUpperCase();
+    return descripcion.includes('PLATA') || simbolo === 'AG';
+  }
+
   // ==========================================================
   // FORMULARIO
   // ==========================================================
@@ -305,15 +455,20 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
   readonly form: FormGroup = this.fb.group({
     idLaboratorio: [null as number | null, [Validators.required]],
     fechaValorizacion: [this.fechaTransaccion, [Validators.required]],
-    pesoNetoHumedoKilogramos: [
-      null as number | null,
-      [Validators.required, Validators.min(0)],
-    ],
+    // pesoNetoHumedoKilogramos: [
+    //   null as number | null,
+    //   [Validators.required, Validators.min(0)],
+    // ],
     taraKilogramos: [0, [Validators.min(0)]],
     humedadPorcentaje: [0, [Validators.min(0)]],
     mermaPorcentaje: [0, [Validators.min(0)]],
     mermaKilogramos: [0, [Validators.min(0)]],
-    /** Calculado: peso bruto húmedo − (peso bruto húmedo × humedad%). */
+    /** Solo BCL: peso bruto húmedo − agua (peso bruto húmedo × humedad%).
+     *  No aplica en RAM/estándar (ver recalcularPesoNetoSeco). */
+    pesoBrutoSecoKilogramos: [null as number | null],
+    /** Calculado: peso bruto húmedo − (peso bruto húmedo × humedad%) en
+     *  RAM/estándar; peso bruto seco − merma en BCL (ver
+     *  recalcularPesoNetoSeco/recalcularPesoNetoSecoBcl). */
     pesoNetoSecoKilogramos: [null as number | null],
     /** El liquidador lo teclea manualmente (no viene de ningún catálogo). */
     tipoCambio: [
@@ -354,8 +509,19 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     this.valorizacionId = this.route.snapshot.paramMap.get('id')!;
 
     this.form.get('pesoNetoSecoKilogramos')?.disable({ emitEvent: false });
+    this.form.get('pesoBrutoSecoKilogramos')?.disable({ emitEvent: false });
+    // Calculado a partir de mermaPorcentaje (ver recalcularPesoNetoSecoBcl);
+    // no se editaba desde ningún lado hoy (el campo estaba sin usar fuera
+    // de BCL), así que deshabilitarlo no cambia nada para RAM/estándar.
+    this.form.get('mermaKilogramos')?.disable({ emitEvent: false });
     this.form
       .get('humedadPorcentaje')!
+      .valueChanges.subscribe(() => this.recalcularPesoNetoSeco());
+    // Solo tiene efecto en BCL (ver recalcularPesoNetoSecoBcl); en
+    // RAM/estándar la merma no participa del cálculo, así que esta
+    // suscripción no cambia nada para esos casos.
+    this.form
+      .get('mermaPorcentaje')!
       .valueChanges.subscribe(() => this.recalcularPesoNetoSeco());
     this.form
       .get('tipoCambio')!
@@ -382,11 +548,24 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     this.parametricasService
       .obtenerAllEntidadesAporte()
       .subscribe((data: EntidadAporte[]) => this.entidadesAporte.set(data));
+    // Solo se usa en BCL (Gastos de Tratamiento y Penalidades), pero se
+    // carga siempre igual que el resto de catálogos: no depende de datos
+    // de la valorización, así que no hay riesgo de carrera que resolver.
+    this.parametricasService.cargarTipoCalculoValorizacion();
+
+    // El catálogo de minerales tiene que estar cargado ANTES de armar las
+    // filas de ley (ver inicializarDetallesMinerales/opcionesMineral): en
+    // RAM, el <mat-select> de cada fila arma sus opciones a partir de este
+    // catálogo, así que si se dispara en paralelo con cargarValorizacion()
+    // puede ganar la carrera y renderizar el select sin la opción del
+    // mineral ya guardado (queda en blanco al recargar la página).
     this.parametricasService
       .obtenerMinerales()
-      .subscribe((data) => this.mineralesCatalogo.set(data));
-
-    this.cargarValorizacion();
+      .pipe(finalize(() => this.cargarValorizacion()))
+      .subscribe({
+        next: (data) => this.mineralesCatalogo.set(data),
+        error: () => {},
+      });
   }
 
   ngOnDestroy(): void {
@@ -414,6 +593,14 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
 
   private inicializarConValorizacion(v: ValorizacionMineral): void {
     this.valorizacion.set(v);
+    this.usarBalanzaT.set(this.resolverUsarBalanzaTInicial(v));
+    // Antes de cualquier recalcularTotales() (que ya arranca con el
+    // patchValue de abajo): si no están cargadas todavía, los totales de
+    // gastos/penalidades BCL salen en 0 y se corrigen recién con la
+    // primera edición manual.
+    this.leyesPenalidad.set(this.resolverLeyesPenalidadInicial(v));
+    this.actualesGastoBcl.set(this.resolverActualesGastoInicial(v));
+    this.basesGastoBcl.set(this.resolverBasesGastoInicial(v));
 
     // Se usa solo para el encabezado (nombre a mostrar); la codificación
     // puede traer varios minerales (ej. BZL -> Plata + Zinc), cada uno se
@@ -422,8 +609,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     this.mineral.set(mineral);
 
     this.form.patchValue({
-      pesoNetoHumedoKilogramos:
-        Number(v.recepcionMineral?.balanzaL ?? 0) || null,
+     // pesoNetoHumedoKilogramos:Number(v.recepcionMineral?.balanzaL ?? 0) || null,
       humedadPorcentaje: this.resolverHumedadInicial(v),
       idLaboratorio: v.idLaboratorio ?? null,
       tipoCambio: v.cotizacionDolar != null ? Number(v.cotizacionDolar) : null,
@@ -432,6 +618,10 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
         v.mermaPorcentaje != null ? Number(v.mermaPorcentaje) : 0,
       mermaKilogramos:
         v.mermaKilogramos != null ? Number(v.mermaKilogramos) : 0,
+      pesoBrutoSecoKilogramos:
+        v.pesoBrutoSecoKilogramos != null
+          ? Number(v.pesoBrutoSecoKilogramos)
+          : null,
       ajusteTransporte:
         v.ajusteTransporte != null ? Number(v.ajusteTransporte) : 0,
       otrosAnticipo:
@@ -465,6 +655,20 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     return 0;
   }
 
+  /** Restaura qué balanza (L o T) se usó la última vez que se guardó esta
+   *  valorización. El back no tiene un campo dedicado para esto, así que se
+   *  infiere comparando el peso bruto húmedo ya persistido contra la
+   *  Balanza T de la recepción; si no matchea (o es un borrador nuevo, sin
+   *  nada guardado todavía), se asume Balanza L, el default de siempre. */
+  private resolverUsarBalanzaTInicial(v: ValorizacionMineral): boolean {
+    if (v.pesoBrutoHumedoKilogramos == null) return false;
+    const balanzaT = v.recepcionMineral?.balanzaT;
+    if (balanzaT == null) return false;
+    return (
+      Math.abs(Number(v.pesoBrutoHumedoKilogramos) - Number(balanzaT)) < 0.001
+    );
+  }
+
   // ==========================================================
   // LEY MINERAL (dinámico, con edición confirmada por fila)
   // ==========================================================
@@ -490,6 +694,14 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
               ? Number(d['porcentajeCotizacion'])
               : undefined,
           precio: d['precio'] != null ? Number(d['precio']) : null,
+          ajustePuntosLey:
+            d['ajustePuntosLey'] != null ? Number(d['ajustePuntosLey']) : null,
+          descuentoLey:
+            d['descuentoLey'] != null ? Number(d['descuentoLey']) : null,
+          porcentajeAdicion:
+            d['porcentajeAdicion'] != null
+              ? Number(d['porcentajeAdicion'])
+              : null,
         },
         !esRam,
       );
@@ -522,6 +734,8 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     valor: FilaLeyMineral,
     mineralBloqueado: boolean,
   ): void {
+    const esRam = this.esCodificacionRam();
+    const esBcl = this.esCodificacionBcl();
     const fila = this.fb.group({
       idMineral: [
         { value: valor.idMineral, disabled: mineralBloqueado },
@@ -529,57 +743,395 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
       ],
       ley: [valor.ley, [Validators.required, Validators.min(0)]],
       leyUnidad: [valor.leyUnidad, [Validators.required]],
-      /** % de la cotización vigente que se reconoce; 100 = se reconoce completa. */
+      /** Entero tecleado por el liquidador que se resta directo a la
+       *  cotización vigente; 0 = se reconoce la cotización vigente completa.
+       *  No se usa en RAM (ver ajustePuntosLey). En BCL también aplica
+       *  (ver recalcularFilaLeyBcl). */
       porcentajeCotizacion: [
-        valor.porcentajeCotizacion ?? 100,
+        valor.porcentajeCotizacion ?? 0,
         [Validators.required, Validators.min(0)],
       ],
-      /** Calculado: cotización vigente × (% cotización / 100). */
+      /** Calculado: cotización vigente − descuento cotización. No aplica en RAM. */
       cotizacionAplicada: [{ value: 0, disabled: true }],
       /** Entero tecleado por el liquidador; se antepone "0.0000" para formar
        *  el factor que usa Ley Pagable (ej. 45 → 0.000045). Se persiste en el
-       *  detalle guardado para poder retomar el borrador sin perderlo. */
+       *  detalle guardado para poder retomar el borrador sin perderlo.
+       *  No se usa en RAM ni en BCL (por eso no es requerido en esos casos). */
       precio: [
         valor.precio ?? (null as number | null),
-        [Validators.required, Validators.min(1)],
+        esRam || esBcl ? [] : [Validators.required, Validators.min(1)],
       ],
-      /** Calculado: cotización vigente / factorConversion del mineral × ley × factor de "precio". */
+      /** Calculado: cotización vigente / factorConversion del mineral × ley × factor de "precio". No aplica en RAM ni en BCL. */
       leyPagable: [{ value: 0, disabled: true }],
-      /** Calculado: ley pagable × 1000 × tipo de cambio. */
+      /** Solo BCL: puntos que se restan a la ley recalculada antes de
+       *  aplicar el precio. */
+      descuentoLey: [valor.descuentoLey ?? 0],
+      /** Solo BCL: ley recalculada − descuento de ley (ver
+       *  recalcularFilaLeyBcl). No se muestra como campo aparte (es
+       *  derivado de ley y descuento de ley, ya visibles). */
+      leyAplicada: [{ value: 0, disabled: true }],
+      /** Solo BCL: % Adición que multiplica a la ley aplicada; se teclea
+       *  como porcentaje (ej. 83), 100 = se reconoce el 100%. */
+      porcentajeAdicion: [valor.porcentajeAdicion ?? 100],
+      /** Solo BCL, Plomo: cotización vigente × factorConversion × 1000.
+       *  Informativo por ahora, todavía no alimenta el Total (ver
+       *  recalcularFilaLeyBcl — pendiente de definir el cálculo siguiente). */
+      cotizacionAjustada: [{ value: 0, disabled: true }],
+      /** Solo BCL: USD/TM antes de convertir a precio por kilo (ver
+       *  recalcularFilaLeyBcl). */
+      totalUsdTm: [{ value: 0, disabled: true }],
+      /** Solo RAM: entero que el liquidador resta a la ley real para buscar
+       *  el tramo en la tabla de Escala de Precio (negativo para sumar). */
+      ajustePuntosLey: [valor.ajustePuntosLey ?? 0],
+      /** Solo RAM, calculado: ley + ajustePuntosLey. */
+      leyAjustada: [{ value: 0, disabled: true }],
+      /** Solo RAM, calculado: USD/Punto del tramo de la tabla que le corresponde a leyAjustada. */
+      precioPuntoEscala: [{ value: 0, disabled: true }],
+      /** Solo RAM, calculado: USD/TM del tramo (ley del tramo × su USD/Punto). */
+      precioTmEscala: [{ value: 0, disabled: true }],
+      /** Calculado: ley pagable × 1000 × tipo de cambio (estándar) o
+       *  (precioTmEscala / 1000) × tipo de cambio (RAM). */
       precioPorKilo: [{ value: 0, disabled: true }],
       /** Calculado: precio por kilo redondeado. */
       pKl: [{ value: 0, disabled: true }],
     });
     this.detallesMineralesArray.push(fila);
-    this.verificarCotizacionMineral(valor.idMineral);
+    if (esRam) {
+      this.verificarEscalaPrecioMineral(valor.idMineral);
+    } else {
+      this.verificarCotizacionMineral(valor.idMineral);
+    }
     this.recalcularFilaLey(this.detallesMineralesArray.length - 1);
   }
 
-  /** cotización aplicada = cotización vigente del mineral × (% cotización / 100)
+  /** cotización aplicada = cotización vigente del mineral − descuento cotización (entero)
    *  factor de precio = "0.0000" + entero tecleado en "precio" (ej. 45 → 0.000045)
-   *  ley pagable = cotización vigente / factorConversion del mineral × ley × factor de precio
+   *  ley pagable = cotización aplicada / factorConversion del mineral × ley × factor de precio
    *  precio por kilo = ley pagable × 1000 × tipo de cambio
-   *  P/KL = precio por kilo redondeado hacia abajo (truncado) */
+   *  P/KL = precio por kilo redondeado hacia abajo (truncado)
+   *
+   *  En RAM la fórmula es otra (ver recalcularFilaLeyRam): no hay cotización
+   *  de mercado, el precio sale de la tabla de Escala de Precio del mineral. */
   recalcularFilaLey(i: number): void {
     const fila = this.detallesMineralesArray.at(i);
     if (!fila) return;
 
+    if (this.esCodificacionRam()) {
+      this.recalcularFilaLeyRam(fila);
+    } else if (this.esCodificacionBcl()) {
+      this.recalcularFilaLeyBcl(fila);
+    } else {
+      this.recalcularFilaLeyEstandar(fila);
+    }
+
+    this.recalcularTotales();
+  }
+
+  /** Fórmula propia de BCL (Plata + Plomo), tal cual el contrato de
+   *  fundición de referencia — distinta de la estándar. Campos comunes a
+   *  ambos minerales:
+   *  ley recalculada = ley ÷ factorConversion × 100
+   *  ley aplicada = ley recalculada − descuentoLey (solo se usa en el
+   *  Total de Plata; en Plomo es informativa)
+   *  cotización vigente = la de mercado tal cual (sin descuento)
+   *  cotización ajustada (solo Plomo) = cotización vigente × factorConversion × 1000
+   *
+   *  Total (USD/TM):
+   *   - Plata: ley aplicada × (% Adición ÷ 100) × cotización vigente. "%
+   *     Adición" se teclea como porcentaje (ej. 83 = 83%), no como fracción.
+   *   - Plomo: (ley − descuentoLey) × cotización ajustada ÷ 100.
+   *
+   *  El Total se calcula encadenando los valores SIN redondear los
+   *  intermedios (leyAplicada, cotización ajustada) — igual que el
+   *  contrato de fundición de referencia, que solo redondea el resultado
+   *  final. Los campos leyAplicada/cotizacionAjustada que se guardan y
+   *  muestran en pantalla sí van redondeados (son solo para mostrar), pero
+   *  el Total usa las versiones exactas para no perder precisión.
+   *
+   *  BCL no calcula "Precio por kilo" ni "P/KL" (no aplican en esta
+   *  codificación): el líquido pagable sale directo de sumar el USD/TM de
+   *  todas las filas × peso neto seco (TMS) × tipo de cambio, ver
+   *  recalcularTotales. */
+  private recalcularFilaLeyBcl(fila: AbstractControl): void {
+    const idMineral = fila.get('idMineral')?.value;
+    const ley = Number(fila.get('ley')?.value ?? 0);
+    const descuentoLey = Number(fila.get('descuentoLey')?.value ?? 0);
+    // Se teclea como porcentaje (ej. 83 = 83%), no como fracción — por eso
+    // se divide entre 100 antes de multiplicar.
+    const porcentajeAdicion = Number(
+      fila.get('porcentajeAdicion')?.value ?? 100,
+    );
+
+    const factorConversion = this.factorConversionMineral(idMineral);
+    const leyRecalculadaExacta = (ley / factorConversion) * 100;
+    const leyAplicadaExacta = leyRecalculadaExacta - descuentoLey;
+    // Redondeados solo para mostrar en pantalla/guardar (ver comentario de
+    // arriba: el Total usa las versiones exactas de arriba, no estas).
+    const leyAplicada = this.redondear(leyAplicadaExacta, 3);
+
+    // Se muestra tal cual, con todos sus decimales (sin redondear).
+    const cotizacionAplicada = this.cotizacionUSDMineral(idMineral);
+
+    const esPlata = this.esMineralPlata(idMineral);
+
+    const cotizacionAjustadaExacta = esPlata
+      ? 0
+      : cotizacionAplicada * factorConversion * 1000;
+    // Solo Plomo. A diferencia de cotizacionAplicada, esta sí se redondea
+    // a entero para mostrar (el Total sigue usando la versión exacta).
+    const cotizacionAjustada = esPlata
+      ? 0
+      : this.redondear(cotizacionAjustadaExacta, 0);
+
+    const precioTm = esPlata
+      ? this.redondear(
+          leyAplicadaExacta * (porcentajeAdicion / 100) * cotizacionAplicada,
+          4,
+        )
+      : this.redondear(
+          ((ley - descuentoLey) * cotizacionAjustadaExacta) / 100,
+          4,
+        );
+
+    fila.patchValue(
+      { leyAplicada, cotizacionAplicada, cotizacionAjustada, totalUsdTm: precioTm },
+      { emitEvent: false },
+    );
+  }
+
+  // ==========================================================
+  // GASTOS DE TRATAMIENTO Y PENALIDADES (solo BCL)
+  // ==========================================================
+
+  /** Gastos de tratamiento activos del catálogo (Maquila, Ajuste de
+   *  maquila, Gastos de refinación Ag...). El liquidador teclea el
+   *  "Actual" de cada uno (ver gastoActual); Base y Escalador salen del
+   *  catálogo. */
+  get gastosActivosBcl(): TipoCalculoValorizacion<ExtrasGastoTratamiento>[] {
+    return this.parametricasService.gastosTratamiento().filter((g) => g.activo);
+  }
+
+  /** Penalidades activas del catálogo (As, Sb, Bi, Sn, Fe, SiO2). La única
+   *  entrada del liquidador es la ley de cada una (ver leyPenalidad). */
+  get penalidadesActivasBcl(): TipoCalculoValorizacion<ExtrasPenalidad>[] {
+    return this.parametricasService.penalidadesValorizacion().filter((p) => p.activo);
+  }
+
+  leyPenalidad(id: number): number {
+    return this.leyesPenalidad()[id] ?? 0;
+  }
+
+  onLeyPenalidadChange(id: number, valor: string): void {
+    const ley = Number(valor) || 0;
+    this.leyesPenalidad.update((actual) => ({ ...actual, [id]: ley }));
+    this.recalcularTotales();
+    if (!this.cargandoInicial) this.programarAutoguardado();
+  }
+
+  gastoActual(id: number): number {
+    return this.actualesGastoBcl()[id] ?? 0;
+  }
+
+  onGastoActualChange(id: number, valor: string): void {
+    const actual = Number(valor) || 0;
+    this.actualesGastoBcl.update((actuales) => ({ ...actuales, [id]: actual }));
+    this.recalcularTotales();
+    if (!this.cargandoInicial) this.programarAutoguardado();
+  }
+
+  /** Base de un Gasto de Tratamiento: se precarga con la del catálogo
+   *  (`extras.base`) pero el liquidador puede sobreescribirla por
+   *  valorización (ver onGastoBaseChange) — a diferencia de Escalador, que
+   *  siempre viene fijo del catálogo. */
+  gastoBase(gasto: TipoCalculoValorizacion<ExtrasGastoTratamiento>): number {
+    const sobrescrita = this.basesGastoBcl()[gasto.id];
+    return sobrescrita ?? Number(gasto.extras?.base ?? 0);
+  }
+
+  onGastoBaseChange(id: number, valor: string): void {
+    const base = Number(valor) || 0;
+    this.basesGastoBcl.update((bases) => ({ ...bases, [id]: base }));
+    this.recalcularTotales();
+    if (!this.cargandoInicial) this.programarAutoguardado();
+  }
+
+  /** Peso neto seco en toneladas métricas secas (TMS): base de cálculo de
+   *  Penalidades. */
+  private pesoNetoSecoTms(): number {
+    return Number(this.form.get('pesoNetoSecoKilogramos')?.value ?? 0) / 1000;
+  }
+
+  /** Gasto de tratamiento, tal cual la sección "GASTOS DE TRATAMIENTO" del
+   *  contrato de fundición de referencia:
+   *  diferencia = Actual − Base (ambos tecleados por el liquidador)
+   *  Importe (Bs) = Escalador (catálogo) × diferencia — directo, sin tipo
+   *  de cambio ni ninguna cantidad (TMS/oz) de por medio. */
+  calcularGastoBcl(gasto: TipoCalculoValorizacion<ExtrasGastoTratamiento>): {
+    actual: number;
+    base: number;
+    diferencia: number;
+    escalador: number;
+    importeBs: number;
+  } {
+    const actual = this.gastoActual(gasto.id);
+    const base = this.gastoBase(gasto);
+    const escalador = Number(gasto.extras?.escalador ?? 0);
+    const diferencia = this.redondear(actual - base, 4);
+    const importeBs = this.redondear(escalador * diferencia, 2);
+    return { actual, base, diferencia, escalador, importeBs };
+  }
+
+  /** Penalidad, tal cual la sección "PENALIDADES" del contrato de fundición
+   *  de referencia:
+   *  Importe (Bs) = SI(ley > leyLibre, ((ley − leyLibre) × cargo) ÷ cada, 0)
+   *  — directo, sin multiplicar por peso neto seco ni tipo de cambio (igual
+   *  que Gastos de Tratamiento, ver calcularGastoBcl). "cada" se guarda tal
+   *  cual se ve en el catálogo (ej. 0.10 para "0.10%"), no como fracción
+   *  (0.001). Redondeado a 2 decimales (ley general de redondeo: ≥5 sube). */
+  calcularPenalidadBcl(penalidad: TipoCalculoValorizacion<ExtrasPenalidad>): {
+    ley: number;
+    importeBs: number;
+  } {
+    const ley = this.leyPenalidad(penalidad.id);
+    const leyLibre = Number(penalidad.extras?.leyLibre ?? 0);
+    const cada = Number(penalidad.extras?.cada ?? 0) || 1;
+    const cargo = Number(penalidad.extras?.cargo ?? 0);
+    const importeBs =
+      ley > leyLibre
+        ? this.redondear(((ley - leyLibre) * cargo) / cada, 2)
+        : 0;
+    return { ley, importeBs };
+  }
+
+  /** Suma en Bs de todos los gastos de tratamiento + penalidades activos:
+   *  se resta del líquido pagable bruto de ley (ver recalcularTotales).
+   *  Público: también lo usa el template para mostrar el total. */
+  totalGastosYPenalidadesBcl(): number {
+    const gastos = this.gastosActivosBcl.reduce(
+      (acc, g) => acc + this.calcularGastoBcl(g).importeBs,
+      0,
+    );
+    const penalidades = this.penalidadesActivasBcl.reduce(
+      (acc, p) => acc + this.calcularPenalidadBcl(p).importeBs,
+      0,
+    );
+    return this.redondear(gastos + penalidades, 2);
+  }
+
+  /** Valor Neto TM = Total (USD/TM) − Total Gastos + Penalidades (Bs), tal
+   *  cual "VALOR NETO TM" del contrato de fundición de referencia.
+   *  Público: lo usa el template para mostrar el total. */
+  valorNetoTmBcl(): number {
+    return this.redondear(
+      this.totalUsdTmBcl() - this.totalGastosYPenalidadesBcl(),
+      2,
+    );
+  }
+
+  /** Arma las filas de `calculos` para el PATCH: snapshot de lo que se usó
+   *  en el cálculo (no solo el resultado), para que la valorización
+   *  guardada no cambie si el catálogo se edita después. */
+  private construirCalculosBcl(): CalculoValorizacionRequest[] {
+    const gastos: CalculoValorizacionRequest[] = this.gastosActivosBcl.map(
+      (g) => {
+        const { actual, base, diferencia, escalador, importeBs } =
+          this.calcularGastoBcl(g);
+        return {
+          idTipoCalculoValorizacion: g.id,
+          // "Base sobre la que se aplicó la tasa" (escalador) es la
+          // diferencia Actual−Base; los gastos de tratamiento ya no usan
+          // TMS/oz (ver calcularGastoBcl).
+          baseCalculo: diferencia,
+          importeBolivianos: importeBs,
+          valorAplicado: actual,
+          extras: { actual, base, diferencia, escalador },
+        };
+      },
+    );
+    const penalidades: CalculoValorizacionRequest[] =
+      this.penalidadesActivasBcl.map((p) => {
+        const { ley, importeBs } = this.calcularPenalidadBcl(p);
+        return {
+          idTipoCalculoValorizacion: p.id,
+          baseCalculo: this.redondear(this.pesoNetoSecoTms(), 4),
+          importeBolivianos: importeBs,
+          extras: { ley, leyLibre: p.extras?.leyLibre, cargo: p.extras?.cargo },
+        };
+      });
+    return [...gastos, ...penalidades];
+  }
+
+  /** Restaura las leyes de penalidad ya guardadas (extras.ley de cada fila
+   *  de `calculos`), indexadas por id del catálogo. */
+  private resolverLeyesPenalidadInicial(
+    v: ValorizacionMineral,
+  ): Record<number, number> {
+    const leyes: Record<number, number> = {};
+    (v.calculos ?? []).forEach((c) => {
+      const id = Number(c['idTipoCalculoValorizacion']);
+      const extras = c['extras'] as { ley?: number } | undefined;
+      if (!Number.isNaN(id) && extras?.ley != null) {
+        leyes[id] = Number(extras.ley);
+      }
+    });
+    return leyes;
+  }
+
+  /** Restaura los "Actual" de gastos de tratamiento ya guardados
+   *  (extras.actual de cada fila de `calculos`), indexados por id del
+   *  catálogo. */
+  private resolverActualesGastoInicial(
+    v: ValorizacionMineral,
+  ): Record<number, number> {
+    const actuales: Record<number, number> = {};
+    (v.calculos ?? []).forEach((c) => {
+      const id = Number(c['idTipoCalculoValorizacion']);
+      const extras = c['extras'] as { actual?: number } | undefined;
+      if (!Number.isNaN(id) && extras?.actual != null) {
+        actuales[id] = Number(extras.actual);
+      }
+    });
+    return actuales;
+  }
+
+  /** Restaura las "Base" de gastos de tratamiento ya guardadas/sobrescritas
+   *  (extras.base de cada fila de `calculos`), indexadas por id del
+   *  catálogo. Si la valorización todavía no tiene nada guardado,
+   *  gastoBase() cae de todos modos al `extras.base` del catálogo. */
+  private resolverBasesGastoInicial(
+    v: ValorizacionMineral,
+  ): Record<number, number> {
+    const bases: Record<number, number> = {};
+    (v.calculos ?? []).forEach((c) => {
+      const id = Number(c['idTipoCalculoValorizacion']);
+      const extras = c['extras'] as { actual?: number; base?: number } | undefined;
+      // extras.actual solo existe en gastos de tratamiento, no en
+      // penalidades (ver resolverLeyesPenalidadInicial): sirve para no
+      // confundir ambos tipos de fila de `calculos`.
+      if (!Number.isNaN(id) && extras?.actual != null && extras?.base != null) {
+        bases[id] = Number(extras.base);
+      }
+    });
+    return bases;
+  }
+
+  private recalcularFilaLeyEstandar(fila: AbstractControl): void {
     const idMineral = fila.get('idMineral')?.value;
     const cotizacion = this.cotizacionUSDMineral(idMineral);
     const factorConversion = this.factorConversionMineral(idMineral);
     const ley = Number(fila.get('ley')?.value ?? 0);
-    const porcentajeCotizacion = Number(
+    const descuentoCotizacion = Number(
       fila.get('porcentajeCotizacion')?.value ?? 0,
     );
     const tipoCambio = Number(this.form.get('tipoCambio')?.value ?? 0);
     const factorPrecio = this.factorPrecio(fila.get('precio')?.value);
 
     const cotizacionAplicada = this.redondear(
-      cotizacion * (porcentajeCotizacion / 100),
+      cotizacion - descuentoCotizacion,
       4,
     );
     const leyPagable = this.redondear(
-      (cotizacion / factorConversion) * ley * factorPrecio,
+      (cotizacionAplicada / factorConversion) * ley * factorPrecio,
       8,
     );
     const precioPorKilo = this.redondear(leyPagable * 1000 * tipoCambio, 2);
@@ -589,8 +1141,86 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
       { cotizacionAplicada, leyPagable, precioPorKilo, pKl },
       { emitEvent: false },
     );
+  }
 
-    this.recalcularTotales();
+  /** ley ajustada = ley − ajuste de puntos (el entero tecleado siempre se
+   *  resta; para sumar puntos el liquidador teclea un valor negativo)
+   *  tramo = fila de la tabla de Escala de Precio vigente del mineral cuyo
+   *  bracket contiene a la ley ajustada, es decir la de mayor ley tabulada
+   *  que no la supere (ver buscarTramoEscalaPrecio)
+   *  USD/TM = ley ajustada (recortada al rango de la tabla) × USD/Punto del
+   *  tramo encontrado — no el USD/TM tabulado tal cual, porque ese valor
+   *  solo es exacto cuando la ley cae justo en un tramo entero; con
+   *  decimales hay que recalcular con la ley real.
+   *  precio por kilo = (USD/TM recalculado ÷ 1000) × tipo de cambio
+   *  P/KL = precio por kilo redondeado hacia abajo (truncado) */
+  private recalcularFilaLeyRam(fila: AbstractControl): void {
+    const idMineral = fila.get('idMineral')?.value;
+    const ley = Number(fila.get('ley')?.value ?? 0);
+    const ajustePuntos = Number(fila.get('ajustePuntosLey')?.value ?? 0);
+    const tipoCambio = Number(this.form.get('tipoCambio')?.value ?? 0);
+
+    const leyAjustada = this.redondear(ley - ajustePuntos, 3);
+    const tramo = this.buscarTramoEscalaPrecio(idMineral, leyAjustada);
+    const leyParaPrecio = this.clamparLeyARangoDeTabla(idMineral, leyAjustada);
+
+    const precioPuntoEscala = tramo?.precioPunto ?? 0;
+    const precioTmEscala = tramo
+      ? this.redondear(leyParaPrecio * precioPuntoEscala, 4)
+      : 0;
+    const precioPorKilo = this.redondear((precioTmEscala / 1000) * tipoCambio, 2);
+    const pKl = Math.floor(precioPorKilo);
+
+    fila.patchValue(
+      { leyAjustada, precioPuntoEscala, precioTmEscala, precioPorKilo, pKl },
+      { emitEvent: false },
+    );
+  }
+
+  /** Recorta `leyAjustada` al rango [ley mínima, ley máxima] de los tramos
+   *  vigentes del mineral, para no extrapolar el precio más allá de la
+   *  tabla (ej. tabla hasta ley 22 y el liquidador puso 50: se reconoce
+   *  como si fuera 22, la cotización más alta disponible). Si el mineral no
+   *  tiene tabla cargada, devuelve la ley tal cual. */
+  private clamparLeyARangoDeTabla(
+    idMineral: number | string | null | undefined,
+    leyAjustada: number,
+  ): number {
+    if (idMineral == null) return leyAjustada;
+    const filas = this.escalaPrecioPorMineral()[Number(idMineral)]?.filas ?? [];
+    if (filas.length === 0) return leyAjustada;
+    const leyMinima = filas[0].ley;
+    const leyMaxima = filas[filas.length - 1].ley;
+    return Math.min(Math.max(leyAjustada, leyMinima), leyMaxima);
+  }
+
+  /** Tramo de la tabla de Escala de Precio vigente del mineral que le
+   *  corresponde a `leyAjustada`: lookup por "bracket", el tramo tabulado
+   *  con la mayor ley que no supere la ley ajustada (ya recortada al rango
+   *  de la tabla). Ej. tramos 2 y 3: una ley de 2.2, 2.5 o 2.9 toma el
+   *  tramo 2 (no redondea al más cercano); recién con ley 3 pasa al tramo
+   *  3. `filas` viene ordenada ascendente por ley (ver
+   *  verificarEscalaPrecioMineral), así que alcanza con recorrerla una vez.
+   *  Se usa para obtener su USD/Punto (ver recalcularFilaLeyRam, que
+   *  recalcula el USD/TM real con la ley exacta) y para resaltar el tramo
+   *  activo en la vista previa. null solo si el mineral no tiene ningún
+   *  tramo cargado. */
+  private buscarTramoEscalaPrecio(
+    idMineral: number | string | null | undefined,
+    leyAjustada: number,
+  ): EscalaPrecio | null {
+    if (idMineral == null) return null;
+    const filas = this.escalaPrecioPorMineral()[Number(idMineral)]?.filas ?? [];
+    if (filas.length === 0) return null;
+
+    const leyClamped = this.clamparLeyARangoDeTabla(idMineral, leyAjustada);
+
+    let tramo = filas[0];
+    for (const f of filas) {
+      if (f.ley > leyClamped) break;
+      tramo = f;
+    }
+    return tramo;
   }
 
   /** El liquidador teclea un entero (ej. 45) y se le antepone "0.0000" para
@@ -601,19 +1231,53 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     return Number(`0.0000${Math.trunc(entero)}`);
   }
 
-  /** líquido pagable = peso neto seco × suma de P/KL de todas las filas.
-   *  El saldo a pagar se recalcula después, dentro de
-   *  recalcularTotalesAportes() (depende también del total de aportes). */
+  /** líquido pagable, estándar = peso neto seco × suma de P/KL de todas las
+   *  filas; RAM = peso neto seco × Valor Tonelada (Bs) × 1000 (ver
+   *  totalUsdTmRam/valorToneladaBsRam). El saldo a pagar se recalcula
+   *  después, dentro de recalcularTotalesAportes() (depende también del
+   *  total de aportes). */
   private recalcularTotales(): void {
     const pesoNetoSeco = Number(
       this.form.get('pesoNetoSecoKilogramos')?.value ?? 0,
     );
-    const sumaPKl = this.detallesMineralesArray.controls.reduce(
-      (acc, c) => acc + Number(c.get('pKl')?.value ?? 0),
+    const tipoCambio = Number(this.form.get('tipoCambio')?.value ?? 0);
+
+    const sumaUsdTm = this.detallesMineralesArray.controls.reduce(
+      (acc, c) => acc + Number(c.get('precioTmEscala')?.value ?? 0),
       0,
     );
-    const liquido = this.redondear(pesoNetoSeco * sumaPKl, 2);
-    this.liquidoPagable.set(liquido);
+    this.totalUsdTmRam.set(this.redondear(sumaUsdTm, 4));
+
+    // Sin redondeo: se muestra tal cual sale el cálculo (a diferencia del
+    // resto de totales, que sí se redondean).
+    const valorToneladaBs = (sumaUsdTm * tipoCambio) / 1000;
+    this.valorToneladaBsRam.set(valorToneladaBs);
+
+    let liquido: number;
+    if (this.esCodificacionRam()) {
+      liquido = this.redondear(pesoNetoSeco * valorToneladaBs * 1000, 2);
+    } else if (this.esCodificacionBcl()) {
+      // BCL no usa "Precio por kilo"/"P/KL": Valor Neto TM (Total USD/TM −
+      // Gastos de Tratamiento y Penalidades, ver valorNetoTmBcl) × peso
+      // neto seco (TMS), tal cual "VALORACIÓN DEL LOTE" del contrato de
+      // fundición de referencia.
+      const sumaUsdTmBcl = this.detallesMineralesArray.controls.reduce(
+        (acc, c) => acc + Number(c.get('totalUsdTm')?.value ?? 0),
+        0,
+      );
+      this.totalUsdTmBcl.set(this.redondear(sumaUsdTmBcl, 4));
+      liquido = this.redondear(
+        this.valorNetoTmBcl() * (pesoNetoSeco / 1000),
+        2,
+      );
+    } else {
+      const sumaPKl = this.detallesMineralesArray.controls.reduce(
+        (acc, c) => acc + Number(c.get('pKl')?.value ?? 0),
+        0,
+      );
+      liquido = this.redondear(pesoNetoSeco * sumaPKl, 2);
+    }
+    this.valorBrutoVenta.set(liquido);
 
     this.recalcularTodosLosAportes();
   }
@@ -644,6 +1308,13 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     return base.filter((m) => !usados.has(String(m.id)));
   }
 
+  /** compareWith del <mat-select> de mineral: el id puede llegar como string
+   *  desde el backend en algunos endpoints y como number en otros, así que
+   *  se normaliza antes de comparar (si no, el value del FormControl nunca
+   *  matchea con ninguna <mat-option> y el select queda vacío). */
+  compararIds = (a: unknown, b: unknown): boolean =>
+    a != null && b != null && Number(a) === Number(b);
+
   /** Solo disponible en RAM: agrega una fila en blanco con el mineral editable. */
   agregarMineralLey(): void {
     this.agregarFilaLey(
@@ -659,12 +1330,16 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
   }
 
   /** Solo aplica a filas con mineral editable (RAM): al elegir/cambiar el
-   *  mineral de una fila hay que verificar SU cotización vigente y
-   *  recalcular con su propia cotización/factorConversion. */
+   *  mineral de una fila hay que verificar SU tabla/cotización vigente y
+   *  recalcular con sus propios datos. */
   onMineralFilaChange(i: number): void {
     const idMineral = this.detallesMineralesArray.at(i)?.get('idMineral')
       ?.value;
-    this.verificarCotizacionMineral(idMineral);
+    if (this.esCodificacionRam()) {
+      this.verificarEscalaPrecioMineral(idMineral);
+    } else {
+      this.verificarCotizacionMineral(idMineral);
+    }
     this.recalcularFilaLey(i);
   }
 
@@ -729,6 +1404,101 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     }));
   }
 
+  /** Igual que verificarCotizacionMineral pero consulta la tabla de Escala
+   *  de Precio vigente (GET .../escala-precio/vigente/:idMineral). 404
+   *  significa "este mineral no tiene tabla vigente ahora". Solo se usa en
+   *  RAM: ver onMineralFilaChange y agregarFilaLey. */
+  private verificarEscalaPrecioMineral(
+    idMineral: number | string | null | undefined,
+  ): void {
+    if (idMineral == null) return;
+    const id = Number(idMineral);
+    if (Number.isNaN(id)) return;
+
+    if (this.escalaPrecioPorMineral()[id]?.cargando) return;
+
+    this.actualizarEstadoEscalaPrecio(id, {
+      cargando: true,
+      sinTabla: false,
+      filas: this.escalaPrecioPorMineral()[id]?.filas ?? [],
+    });
+
+    this.parametricasService.obtenerEscalaPrecioVigente(id).subscribe({
+      next: (filas) => {
+        this.actualizarEstadoEscalaPrecio(id, {
+          cargando: false,
+          sinTabla: false,
+          filas: [...filas].sort((a, b) => a.ley - b.ley),
+        });
+        this.recalcularFilasDelMineral(id);
+      },
+      error: (err) => {
+        const esSinTabla = err?.status === 404;
+        this.actualizarEstadoEscalaPrecio(id, {
+          cargando: false,
+          sinTabla: esSinTabla,
+          filas: [],
+        });
+        if (!esSinTabla) {
+          this.snackBar.open(
+            'No se pudo verificar la tabla de escala de precio del mineral',
+            'Cerrar',
+            { duration: 4000 },
+          );
+        }
+        this.recalcularFilasDelMineral(id);
+      },
+    });
+  }
+
+  private actualizarEstadoEscalaPrecio(
+    id: number,
+    estado: EscalaPrecioMineralEstado,
+  ): void {
+    this.escalaPrecioPorMineral.update((actual) => ({
+      ...actual,
+      [id]: estado,
+    }));
+  }
+
+  /** true si el mineral ya elegido en la fila `i` (RAM) no tiene tabla de
+   *  Escala de Precio vigente: se usa para ofrecer ahí mismo el botón de
+   *  registrarla (ver abrirRegistrarPrecioVigente), sin tener que buscar el
+   *  aviso general de arriba. */
+  filaSinTablaPrecioVigente(i: number): boolean {
+    const idMineral = this.detallesMineralesArray.at(i)?.get('idMineral')?.value;
+    if (idMineral == null) return false;
+    return this.escalaPrecioPorMineral()[Number(idMineral)]?.sinTabla === true;
+  }
+
+  /** Abre el visualizador de solo lectura con la tabla de escala de precio
+   *  vigente del mineral de la fila `i`, resaltando el tramo que se está
+   *  usando ahora mismo para el cálculo (según la ley ajustada actual). */
+  verTablaPrecioVigente(i: number): void {
+    const fila = this.detallesMineralesArray.at(i);
+    const idMineral = fila?.get('idMineral')?.value;
+    if (idMineral == null) return;
+
+    const mineral = this.buscarMineralPorId(idMineral);
+    const tieneLey = fila?.get('ley')?.value != null;
+    const leyAjustada = Number(fila?.get('leyAjustada')?.value ?? 0);
+    const tramo = tieneLey
+      ? this.buscarTramoEscalaPrecio(idMineral, leyAjustada)
+      : null;
+
+    this.dialog.open(VerTablaPrecioDialogComponent, {
+      width: '640px',
+      maxWidth: '95vw',
+      autoFocus: false,
+      data: {
+        mineral: mineral?.descripcion ?? `Mineral #${idMineral}`,
+        leyAjustada: tieneLey ? leyAjustada : null,
+        idTramoActivo: tramo?.id ?? null,
+        tramos: this.escalaPrecioPorMineral()[Number(idMineral)]?.filas ?? [],
+      },
+    });
+  }
+
   private recalcularFilasDelMineral(id: number): void {
     this.detallesMineralesArray.controls.forEach((c, i) => {
       if (Number(c.get('idMineral')?.value) === id) this.recalcularFilaLey(i);
@@ -768,6 +1538,48 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
       })
       .afterClosed()
       .subscribe(() => this.verificarCotizacionMineral(idMineral));
+  }
+
+  /** Abre el diálogo para registrar el precio vigente que le falta al
+   *  mineral: tabla de Escala de Precio en RAM, cotización de mercado en el
+   *  resto. Usado desde el aviso "minerales sin precio vigente". */
+  abrirRegistrarPrecioVigente(idMineral: number): void {
+    if (this.esCodificacionRam()) {
+      this.dialog
+        .open(EscalaPrecioFormDialogComponent, {
+          width: '1100px',
+          maxWidth: '95vw',
+          autoFocus: false,
+          data: { idMineralPreseleccionado: idMineral },
+        })
+        .afterClosed()
+        .subscribe(() => this.verificarEscalaPrecioMineral(idMineral));
+    } else {
+      this.abrirRegistrarCotizacion(idMineral);
+    }
+  }
+
+  /** Estados de la recepción con PDF de impresión disponible (mismo criterio
+   *  que recepcion-mineral.component.ts): APROBADO, RECHAZADO A TOL, TRANZADO y REMUESTREO. */
+  private readonly ESTADOS_RECEPCION_CON_IMPRESION = new Set([2, 3, 5, 6]);
+
+  /** Abre la vista previa (solo lectura) de la recepción de mineral asociada
+   *  a esta valorización, con el mismo diálogo que usa la bandeja de recepciones. */
+  abrirVistaPreviaRecepcion(): void {
+    const registro = this.valorizacion()?.recepcionMineral;
+    if (!registro) return;
+
+    this.dialog.open(VerRecepcionDialogComponent, {
+      width: '640px',
+      maxWidth: '95vw',
+      data: {
+        registro,
+        puedeImprimir: this.ESTADOS_RECEPCION_CON_IMPRESION.has(
+          registro.idEstado,
+        ),
+        autoImprimir: false,
+      },
+    });
   }
 
   /** Abre la vista previa de la valorización (formato de ticket, ver
@@ -823,11 +1635,11 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
       pesoBruto: this.pesoBrutoHumedo(),
       pesoNeto: Number(this.form.get('pesoNetoSecoKilogramos')?.value ?? 0),
       leyesYPrecios,
-      liquidoPagable: this.liquidoPagable(),
+      totalValorBrutoBolivianos: this.valorBrutoVenta(),
       anticipo: Number(v.anticipo ?? 0),
       otrosAnticipo: Number(this.form.get('otrosAnticipo')?.value ?? 0),
       transporte: Number(this.form.get('ajusteTransporte')?.value ?? 0),
-      saldoAPagar: this.saldoAPagar(),
+      totalValorLiquidoVentaBolivianos: this.valorLiquidoVentaBs(),
       descuentos,
       descuentoTotal: this.totalImporteAportes(),
       telefonoCliente: v.recepcionMineral?.persona?.celular,
@@ -897,33 +1709,32 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
    *  previamente (relevante sobre todo para Regalía Minera, cuyo % es
    *  editable a mano); `aplicar` restaura si el checkbox estaba tildado o
    *  no (por defecto true). Sin preset, la fila queda en blanco para que el
-   *  usuario elija (botón "Agregar aporte"). */
+   *  usuario elija (botón "Agregar aporte"); la base de aporte ya no es
+   *  editable desde la UI, así que siempre queda en VBV (ver
+   *  ENTIDADES_APORTE_POR_DEFECTO). */
   agregarAporte(preset?: {
     id: number;
     tipoBaseAporte: TipoBaseAporteCatalogo;
     porcentajeGuardado?: number;
     aplicar?: boolean;
   }): void {
-    const esRegaliaMinera = preset?.id === ID_REGALIA_MINERA;
     const fila = this.fb.group({
       idEntidadAporte: [preset?.id ?? (null as number | null), [Validators.required]],
       tipoBaseAporte: [
-        preset?.tipoBaseAporte ?? (null as TipoBaseAporteCatalogo | null),
+        preset?.tipoBaseAporte ?? ('VBV' as TipoBaseAporteCatalogo),
         [Validators.required],
       ],
       /** Si está destildado, el aporte no se aplica: no cuenta en los
        *  totales ni se manda al guardar. */
       aplicar: [preset?.aplicar ?? true],
-      /** Calculado para el resto de entidades (de su detalleAporte).
-       *  Para Regalía Minera es una SUGERENCIA editable (suma de
-       *  alicuotaInterna de los minerales vigentes): por eso queda habilitado
-       *  solo en ese caso, y deja de autoactualizarse en cuanto el usuario
-       *  lo toca (ver recalcularAporte). */
-      porcentajeAporte: [
-        { value: 0, disabled: !esRegaliaMinera },
-      ],
+      /** Se precarga con la alícuota calculada (detalleAporte de la entidad,
+       *  o suma de alicuotaInterna de los minerales vigentes en Regalía
+       *  Minera) pero siempre queda editable: en cuanto el usuario la toca
+       *  deja de autoactualizarse (ver recalcularAporte) y esa es la que se
+       *  usa en los cálculos y se guarda. */
+      porcentajeAporte: [0],
       /** Calculado: siempre es el líquido pagable vigente. */
-      baseCalculo: [{ value: this.liquidoPagable(), disabled: true }],
+      baseCalculo: [{ value: this.valorBrutoVenta(), disabled: true }],
       /** Calculado: base de cálculo × (alícuota / 100), 0 si no se aplica. */
       importeBolivianos: [{ value: 0, disabled: true }],
     });
@@ -945,6 +1756,33 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     this.recalcularTotalesAportes();
   }
 
+  /** true = todas las filas de aportes tienen el check "Aplicar" tildado;
+   *  estado del check maestro del encabezado de la columna. */
+  get todosAportesAplicados(): boolean {
+    return (
+      this.aportesArray.length > 0 &&
+      this.aportesArray.controls.every((c) => c.get('aplicar')?.value !== false)
+    );
+  }
+
+  /** true = solo algunas filas están tildadas (ni todas ni ninguna): estado
+   *  "indeterminate" del check maestro. */
+  get algunosAportesAplicados(): boolean {
+    const aplicadas = this.aportesArray.controls.filter(
+      (c) => c.get('aplicar')?.value !== false,
+    ).length;
+    return aplicadas > 0 && aplicadas < this.aportesArray.length;
+  }
+
+  /** Check maestro del encabezado "Aplicar": tilda o destilda todas las
+   *  filas de aportes de una sola vez. */
+  toggleTodosLosAportes(aplicar: boolean): void {
+    this.aportesArray.controls.forEach((c) =>
+      c.get('aplicar')?.setValue(aplicar),
+    );
+    this.recalcularTodosLosAportes();
+  }
+
   /** Opciones de "Base" para una fila de aporte: solo las bases (VBV/VNV) que la
    *  entidad elegida tiene configuradas en su detalleAporte; si aún no eligió
    *  entidad, o esta no restringe (caso Regalía Minera), se muestran ambas. */
@@ -958,9 +1796,11 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     return basesUnicas.length > 0 ? basesUnicas : this.basesAporte;
   }
 
-  /** alícuota = la del detalleAporte de la entidad (VBV/VNV elegida); en
-   *  Regalía Minera es la suma de alicuotaInterna de los minerales vigentes,
-   *  sugerida solo mientras el usuario no la haya editado a mano.
+  /** alícuota sugerida = la del detalleAporte de la entidad (VBV/VNV
+   *  elegida), o en Regalía Minera la suma de alicuotaInterna de los
+   *  minerales vigentes; se autoactualiza mientras el usuario no la haya
+   *  editado a mano (control "pristine"). En cuanto la toca, esa es la que
+   *  se usa en los cálculos y la que queda, sin volver a pisarla.
    *  base de cálculo = líquido pagable vigente
    *  importe = aplicar ? base de cálculo × (alícuota / 100) : 0 */
   recalcularAporte(i: number): void {
@@ -972,20 +1812,18 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     const controlPorcentaje = fila.get('porcentajeAporte')!;
 
     let alicuota: number;
-    if (idEntidad === ID_REGALIA_MINERA) {
-      if (controlPorcentaje.pristine) {
-        alicuota = this.sumaAlicuotaInternaMinerales();
-        controlPorcentaje.setValue(alicuota, { emitEvent: false });
-      } else {
-        alicuota = Number(controlPorcentaje.value ?? 0);
-      }
-    } else {
-      alicuota = this.buscarAlicuotaAporte(idEntidad, base);
+    if (controlPorcentaje.pristine) {
+      alicuota =
+        idEntidad === ID_REGALIA_MINERA
+          ? this.sumaAlicuotaInternaMinerales()
+          : this.buscarAlicuotaAporte(idEntidad, base);
       controlPorcentaje.setValue(alicuota, { emitEvent: false });
+    } else {
+      alicuota = Number(controlPorcentaje.value ?? 0);
     }
 
     const aplicar = fila.get('aplicar')?.value !== false;
-    const baseCalculo = this.liquidoPagable();
+    const baseCalculo = this.valorBrutoVenta();
     const importe = aplicar
       ? this.redondear(baseCalculo * (alicuota / 100), 2)
       : 0;
@@ -1045,22 +1883,27 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
       0,
     );
     this.totalAlicuotas.set(this.redondear(totalAlicuota, 2));
-    this.totalImporteAportes.set(this.redondear(totalImporte, 2));
+    this.totalImporteAportes.set(this.redondear(totalImporte, 0));
 
     const anticipo = Number(this.valorizacion()?.anticipo ?? 0);
     const otrosAnticipo = Number(this.form.get('otrosAnticipo')?.value ?? 0);
     const ajusteTransporte = Number(
       this.form.get('ajusteTransporte')?.value ?? 0,
     );
-    this.saldoAPagar.set(
+    this.valorLiquidoVentaBs.set(
       this.redondear(
-        this.liquidoPagable() -
+        this.valorBrutoVenta() -
           anticipo -
           otrosAnticipo -
           this.totalImporteAportes() +
           ajusteTransporte,
         2,
       ),
+    );
+
+    const tipoCambio = Number(this.form.get('tipoCambio')?.value ?? 0);
+    this.saldoAPagarUsd.set(
+      tipoCambio > 0 ? this.redondear(this.valorLiquidoVentaBs() / tipoCambio, 2) : 0,
     );
   }
 
@@ -1075,7 +1918,9 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
    *  cotizacionAplicada, leyPagable, precioKilo) solo se incluyen si ya se
    *  resolvió la cotización vigente de ese mineral. */
   private construirDetallesActuales(): DetalleValorizacionRequest[] {
-    const estados = this.cotizacionesPorMineral();
+    const estadosCotizacion = this.cotizacionesPorMineral();
+    const esRam = this.esCodificacionRam();
+    const esBcl = this.esCodificacionBcl();
     return this.detallesMineralesArray.controls
       .map((c) => c.getRawValue())
       .filter((d) => d.idMineral != null && d.ley != null)
@@ -1086,15 +1931,35 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
           ley: d.ley,
           leyUnidad: d.leyUnidad,
         };
-        if (d.precio != null) detalle.precio = Number(d.precio);
 
-        const cotizacion = estados[idMineral]?.cotizacion;
-        if (cotizacion) {
-          detalle.idCotizacionMineral = Number(cotizacion.id);
-          detalle.porcentajeCotizacion = d.porcentajeCotizacion;
-          detalle.cotizacionAplicada = d.cotizacionAplicada;
-          detalle.leyPagable = d.leyPagable;
-          detalle.precioKilo = d.precioPorKilo;
+        if (esRam) {
+          detalle.ajustePuntosLey = Number(d.ajustePuntosLey ?? 0);
+          const tramo = this.buscarTramoEscalaPrecio(idMineral, Number(d.leyAjustada ?? d.ley));
+          if (tramo) {
+            detalle.idEscalaPrecio = tramo.id;
+            detalle.leyAjustada = d.leyAjustada;
+            detalle.precioUsdTm = d.precioTmEscala;
+          }
+        } else if (esBcl) {
+          detalle.descuentoLey = Number(d.descuentoLey ?? 0);
+          detalle.porcentajeAdicion = Number(d.porcentajeAdicion ?? 100);
+          detalle.leyAplicada = Number(d.leyAplicada ?? 0);
+          const cotizacion = estadosCotizacion[idMineral]?.cotizacion;
+          if (cotizacion) detalle.idCotizacionMineral = Number(cotizacion.id);
+          // BCL no descuenta la cotización ni calcula "Precio por kilo"
+          // (ver recalcularFilaLeyBcl): se manda el USD/TM tal cual,
+          // igual que RAM.
+          detalle.precioUsdTm = d.totalUsdTm;
+        } else {
+          if (d.precio != null) detalle.precio = Number(d.precio);
+          const cotizacion = estadosCotizacion[idMineral]?.cotizacion;
+          if (cotizacion) {
+            detalle.idCotizacionMineral = Number(cotizacion.id);
+            detalle.porcentajeCotizacion = d.porcentajeCotizacion;
+            detalle.cotizacionAplicada = d.cotizacionAplicada;
+            detalle.leyPagable = d.leyPagable;
+            detalle.precioKilo = d.precioPorKilo;
+          }
         }
         return detalle;
       });
@@ -1136,7 +2001,8 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     const payload: ActualizarValorizacionRequest = {
       fechaValorizacion: this.formatFecha(v.fechaValorizacion),
       pesoBrutoHumedoKilogramos: this.pesoBrutoHumedo(),
-      pesoNetoHumedoKilogramos: v.pesoNetoHumedoKilogramos ?? undefined,
+     // pesoNetoHumedoKilogramos: v.pesoNetoHumedoKilogramos ?? undefined,
+      pesoBrutoSecoKilogramos: v.pesoBrutoSecoKilogramos ?? undefined,
       pesoNetoSecoKilogramos: v.pesoNetoSecoKilogramos ?? undefined,
       taraKilogramos: v.taraKilogramos ?? undefined,
       humedadPorcentaje: v.humedadPorcentaje ?? undefined,
@@ -1145,14 +2011,26 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
       cotizacionDolar: v.tipoCambio ?? undefined,
       ajusteTransporte: v.ajusteTransporte ?? 0,
       otrosAnticipo: v.otrosAnticipo ?? 0,
+      totalValorLiquidoVentaBolivianos: this.valorLiquidoVentaBs(),
+      totalValorLiquidoVentaUsd: this.saldoAPagarUsd(),
+    };
+
+    if (this.esCodificacionRam()) {
+      payload.totalValorToneladaUsd = this.totalUsdTmRam();
+      payload.totalValorToneladaBolivianos = this.valorToneladaBsRam();
+      payload.totalValorBrutoBolivianos = this.valorBrutoVenta();
+      payload.totalAportesBolivianos = this.totalImporteAportes();
+    } else {
       // TODO: cuando se implementen los descuentos de ley (fase 2), separar
       // totalValorBrutoBolivianos (antes de descuentos) de
-      // liquidoPagableBolivianos (después). Por ahora son el mismo valor.
-      totalValorBrutoBolivianos: this.liquidoPagable(),
-      totalAportesBolivianos: this.totalImporteAportes(),
-      liquidoPagableBolivianos: this.liquidoPagable(),
-      saldoPagarBolivianos: this.saldoAPagar(),
-    };
+      // totalValorLiquidoVentaBolivianos (después). Por ahora son el mismo valor.
+      payload.totalValorBrutoBolivianos = this.valorBrutoVenta();
+      payload.totalAportesBolivianos = this.totalImporteAportes();
+    }
+
+    if (this.esCodificacionBcl()) {
+      payload.calculos = this.construirCalculosBcl();
+    }
 
     if (v.idLaboratorio != null) payload.idLaboratorio = v.idLaboratorio;
 
@@ -1303,7 +2181,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     }
 
     // El cambio de estado usa el endpoint dedicado (PATCH .../estado), que
-    // valida contra lo YA guardado en el back (saldoPagarBolivianos > 0,
+    // valida contra lo YA guardado en el back (totalValorLiquidoVentaBolivianos > 0,
     // detalle de mineral registrado). Por eso primero se persiste el estado
     // actual del form con el PATCH normal (sin idEstadoValorizacion, para no
     // pisar el endpoint de estado) y recién después se dispara el cambio de
@@ -1350,8 +2228,23 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
       });
   }
 
-  /** peso neto seco = peso bruto húmedo − (peso bruto húmedo × humedad%) */
+  /** Cambia la balanza usada para el peso bruto húmedo (L/T) y recalcula
+   *  en cascada el peso neto seco y los totales. */
+  onCambioBalanza(usarT: boolean): void {
+    this.usarBalanzaT.set(usarT);
+    this.recalcularPesoNetoSeco();
+    if (!this.cargandoInicial) this.programarAutoguardado();
+  }
+
+  /** peso neto seco = peso bruto húmedo − (peso bruto húmedo × humedad%).
+   *  RAM/estándar no aplican merma (por eso no hay peso bruto seco acá): la
+   *  cadena con merma es propia de BCL (ver recalcularPesoNetoSecoBcl), para
+   *  no tocar este cálculo ya probado en el resto de codificaciones. */
   private recalcularPesoNetoSeco(): void {
+    if (this.esCodificacionBcl()) {
+      this.recalcularPesoNetoSecoBcl();
+      return;
+    }
     const bruto = this.pesoBrutoHumedo();
     const humedad = Number(this.form.get('humedadPorcentaje')?.value ?? 0);
     const neto = bruto - (bruto * humedad) / 100;
@@ -1361,9 +2254,47 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     this.recalcularTotales();
   }
 
+  /** Solo BCL, tal cual la sección "PESOS" del contrato de fundición:
+   *  agua = peso bruto húmedo × humedad%
+   *  peso bruto seco (PSB) = peso bruto húmedo − agua
+   *  merma (kg) = peso bruto seco × merma%
+   *  peso neto seco (PNS) = peso bruto seco − merma */
+  private recalcularPesoNetoSecoBcl(): void {
+    const bruto = this.pesoBrutoHumedo();
+    const humedad = Number(this.form.get('humedadPorcentaje')?.value ?? 0);
+    const mermaPorcentaje = Number(
+      this.form.get('mermaPorcentaje')?.value ?? 0,
+    );
+
+    const pesoBrutoSeco = this.redondear(bruto - (bruto * humedad) / 100);
+    const mermaKilogramos = this.redondear(
+      (pesoBrutoSeco * mermaPorcentaje) / 100,
+    );
+    const pesoNetoSeco = this.redondear(pesoBrutoSeco - mermaKilogramos);
+
+    this.form.patchValue(
+      {
+        pesoBrutoSecoKilogramos: pesoBrutoSeco,
+        mermaKilogramos,
+        pesoNetoSecoKilogramos: pesoNetoSeco,
+      },
+      { emitEvent: false },
+    );
+    this.recalcularTotales();
+  }
+
   private redondear(valor: number, decimales = 3): number {
     const factor = Math.pow(10, decimales);
     return Math.round((valor + Number.EPSILON) * factor) / factor;
+  }
+
+  /** Trunca (no redondea) a `decimales` posiciones. Solo se usa para
+   *  mostrar Valor Tonelada (Bs): el cálculo se guarda sin redondeo, pero en
+   *  pantalla se limita a 4 decimales cortando el resto, sin ajustar el
+   *  último dígito hacia arriba. */
+  truncarDecimales(valor: number, decimales = 4): number {
+    const factor = Math.pow(10, decimales);
+    return Math.trunc(valor * factor) / factor;
   }
 
   private formatFecha(fecha: Date | string): string {

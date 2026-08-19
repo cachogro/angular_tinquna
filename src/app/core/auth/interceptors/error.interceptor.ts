@@ -13,7 +13,10 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
-      const isAuthEndpoint = req.url.includes('/auth/login') || req.url.includes('/auth/refresh');
+      const isAuthEndpoint =
+        req.url.includes('/auth/login') ||
+        req.url.includes('/auth/refresh') ||
+        req.url.includes('/auth/logout');
 
       if (error.status !== 401 || isAuthEndpoint) {
         return throwError(() => error);

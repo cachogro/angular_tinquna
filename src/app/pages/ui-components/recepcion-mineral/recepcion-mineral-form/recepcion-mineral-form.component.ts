@@ -1,6 +1,6 @@
 // src/app/pages/ui-components/recepcion-mineral/recepcion-mineral-form/recepcion-mineral-form.component.ts
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import {
   AbstractControl,
   FormControl,
@@ -77,7 +77,7 @@ const LEY_UNIDAD_POR_DEFECTO: LeyUnidad = '%';
   templateUrl: './recepcion-mineral-form.component.html',
   styleUrl: './recepcion-mineral-form.component.scss',
 })
-export class RecepcionMineralFormComponent implements OnInit {
+export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly registroMineralService = inject(RegistroMineralService);
@@ -96,6 +96,12 @@ export class RecepcionMineralFormComponent implements OnInit {
   readonly cargandoCatalogos = signal(true);
   readonly cargandoRegistro = signal(false);
   readonly guardando = signal(false);
+
+  /** true mientras la fecha/hora de recepción se actualiza sola cada segundo
+   *  (solo aplica a registros nuevos). Se detiene si el usuario la edita a mano
+   *  o mientras se está guardando, y se puede reanudar con el botón del campo. */
+  readonly horaAutomatica = signal(true);
+  private tickHoraInterval?: ReturnType<typeof setInterval>;
 
   /** Filas dinámicas de ley por mineral, generadas a partir de la codificación elegida */
   // readonly detalleControls = signal<DetalleFormRow[]>([]);
@@ -130,6 +136,7 @@ export class RecepcionMineralFormComponent implements OnInit {
     humedad: new FormControl<number | null>(null, [
       Validators.required,
       Validators.min(0),
+      Validators.max(100),
     ]),
     fechaHoraRecepcion: new FormControl<string | null>(
       this.formatDatetimeLocal(new Date()),
@@ -171,6 +178,23 @@ export class RecepcionMineralFormComponent implements OnInit {
 
   ngOnInit(): void {
     this.registroId = this.route.snapshot.paramMap.get('id');
+
+    // En registros nuevos, la fecha/hora de recepción avanza sola cada segundo
+    // hasta que el usuario la edite a mano o se registre la recepción.
+    if (!this.esEdicion) {
+      this.tickHoraInterval = setInterval(() => {
+        if (this.horaAutomatica() && !this.guardando()) {
+          this.form.controls.fechaHoraRecepcion.setValue(
+            this.formatDatetimeLocal(new Date()),
+            { emitEvent: false },
+          );
+        }
+      }, 1000);
+
+      this.form.controls.fechaHoraRecepcion.valueChanges.subscribe(() => {
+        this.horaAutomatica.set(false);
+      });
+    }
 
     // Recalcula la lista de proveedores mostrada en el autocomplete cada vez que
     // cambia el texto escrito O el actor elegido (para acotar por actor).
@@ -480,6 +504,27 @@ export class RecepcionMineralFormComponent implements OnInit {
     }
   }
 
+  /** Igual que bloquearNegativos, pero además impide el punto decimal: para
+   *  campos numéricos que solo aceptan enteros (ej. N° de sacos). */
+  bloquearDecimales(event: KeyboardEvent): void {
+    if (['-', '+', 'e', 'E', '.'].includes(event.key)) {
+      event.preventDefault();
+    }
+  }
+
+  /** Refuerza el bloqueo de letras/símbolos en campos numéricos ante lo que el
+   *  bloqueo por teclado no alcanza a cubrir: pegar texto, autocompletado o
+   *  teclados de algunos dispositivos móviles. Cuando el navegador marca el
+   *  contenido tecleado como no numérico (badInput), su valor real ya queda
+   *  vacío, pero el texto puede seguir mostrándose en pantalla; esto fuerza a
+   *  limpiar también lo que se ve. */
+  limpiarEntradaInvalida(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.validity.badInput) {
+      input.value = '';
+    }
+  }
+
   /** Validadores de la ley según su unidad: en "%" no puede superar 100,
    *  en "g/TM" no tiene tope superior. Ambas permiten decimales y nunca negativos. */
   private validadoresLey(unidad: LeyUnidad): ValidatorFn[] {
@@ -507,6 +552,20 @@ export class RecepcionMineralFormComponent implements OnInit {
       : [Validators.required, Validators.min(1)];
     control.setValidators(validadores);
     control.updateValueAndValidity({ emitEvent: false });
+  }
+
+  ngOnDestroy(): void {
+    if (this.tickHoraInterval) clearInterval(this.tickHoraInterval);
+  }
+
+  /** Reanuda el avance automático de la fecha/hora de recepción, tras haberla
+   *  editado a mano, y la lleva de inmediato al momento actual. */
+  reanudarHoraAutomatica(): void {
+    this.form.controls.fechaHoraRecepcion.setValue(
+      this.formatDatetimeLocal(new Date()),
+      { emitEvent: false },
+    );
+    this.horaAutomatica.set(true);
   }
 
   cancelar(): void {

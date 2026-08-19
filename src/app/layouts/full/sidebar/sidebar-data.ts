@@ -80,6 +80,13 @@ export const navItems: NavItem[] = [
         iconName: 'solar:user-plus-rounded-line-duotone',
         route: '/configuraciones/gestion-clientes',
       },
+      {
+        displayName: 'Historial de Accesos',
+        subItemIcon: true,
+        iconName: 'solar:shield-user-line-duotone',
+        route: '/configuraciones/historial-accesos',
+        roles: [RolCodigo.ADMINISTRADOR],
+      },
     ],
   },
 ];
