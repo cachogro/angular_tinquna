@@ -18,7 +18,7 @@ import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterModule } from '@angular/router';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
-import { formatNumeroSinCeros } from 'src/app/shared/utils/numero.util';
+import { formatNumeroConMiles } from 'src/app/shared/utils/numero.util';
 import { RolCodigo } from 'src/app/core/auth/models/auth.models';
 import { AuthService } from 'src/app/core/auth/services/auth.service';
 import { Mineral } from 'src/app/pages/configurations/parametricas/models/parametricas.models';
@@ -113,7 +113,7 @@ export class ValorizacionComponent implements OnInit {
   readonly fechaHastaControl = new FormControl<Date | null>(null);
 
   readonly opcionesOrden: OpcionOrden[] = [
-    { value: 'id', label: 'ID' },
+    // { value: 'id', label: 'ID' }, // se deja de exponer el id: se muestra numeración correlativa
     { value: 'codigoOperacion', label: 'Código de operación' },
     { value: 'fechaValorizacion', label: 'Fecha de valorización' },
     { value: 'numeroDocumento', label: 'N° de documento' },
@@ -246,6 +246,18 @@ export class ValorizacionComponent implements OnInit {
     this.reiniciarYcargar();
   }
 
+  /** Numeración correlativa (no el id real, que queda con huecos por bajas):
+   *  el más antiguo es 1 y el más nuevo es `total()`, sin importar en qué
+   *  posición de la página caiga. Se invierte según el sentido del orden
+   *  actual para que ese número no cambie con la fila, sino que se mantenga
+   *  ligado al mismo registro al togglear ascendente/descendente. */
+  numeroFila(i: number): number {
+    const offset = this.pageIndex * this.pageSize + i;
+    return this.orderDirectionControl.value === 'ASC'
+      ? offset + 1
+      : this.total() - offset;
+  }
+
   nombreProveedor(v: ValorizacionMineral): string {
     const p = v.recepcionMineral?.persona;
     if (!p) return '—';
@@ -255,7 +267,7 @@ export class ValorizacionComponent implements OnInit {
   detalleTexto(v: ValorizacionMineral): string {
     const r = v.recepcionMineral;
     if (!r) return '—';
-    return `${r.codificacion?.codigo ?? '—'} · ${r.numeroSacos ?? 0} sacos · ${formatNumeroSinCeros(r.balanzaL)} kg`;
+    return `${r.codificacion?.codigo ?? '—'} · ${formatNumeroConMiles(r.numeroSacos ?? 0)} sacos · ${formatNumeroConMiles(r.balanzaL)} kg`;
   }
 
   /** En BORRADOR y PRE-VALORIZADO se puede seguir editando; VALORIZADO queda cerrado. */

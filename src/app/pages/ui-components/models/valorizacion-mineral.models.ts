@@ -117,8 +117,11 @@ export interface DetalleValorizacionRequest {
   // en vez de cotización de mercado (ver ParametricasService/EscalaPrecio).
   // No se manda idCotizacionMineral, porcentajeCotizacion, cotizacionAplicada,
   // leyPagable, precioKilo ni precio en estas filas. ----
-  /** Entero que se resta a la ley real para buscar el tramo en la tabla
-   *  (negativo suma). Resultado = "ley ajustada". */
+  /** Entero que se resta a la ley (negativo suma). En RAM sirve para buscar
+   *  el tramo en la tabla de Escala de Precio (resultado = "ley ajustada");
+   *  en BCL/BZL es el mismo concepto pero se resta antes de aplicar el
+   *  factor (%) (ver recalcularFilaLeyBcl). Mismo campo para ambas
+   *  codificaciones ("Ajuste Puntos" en la UI). */
   ajustePuntosLey?: number;
   /** ley − ajustePuntosLey, truncada al entero: la que efectivamente se usó
    *  para encontrar el tramo de la tabla vigente. */
@@ -126,20 +129,18 @@ export interface DetalleValorizacionRequest {
   /** id del tramo (fila) de Escala de Precio encontrado para leyAjustada;
    *  solo se manda si la tabla vigente tenía un tramo para esa ley. */
   idEscalaPrecio?: number;
-  /** USD/TM del tramo encontrado (ver EscalaPrecio.precioTm). Reemplaza a
-   *  precioKilo, que no aplica en RAM. */
+  /** USD/TM: en RAM, del tramo encontrado (ver EscalaPrecio.precioTm); en
+   *  BCL/BZL, el total de la fila (ver recalcularFilaLeyBcl). Reemplaza a
+   *  precioKilo, que no aplica en ninguna de las dos. */
   precioUsdTm?: number;
-  // ---- Solo para codificación BCL (Plata + Plomo): fórmula propia del
-  // contrato de fundición (ver ValorizacionFormComponent.recalcularFilaLeyBcl).
-  // No se manda leyPagable en estas filas. ----
-  /** Puntos que se restan a la ley recalculada (no a la cotización) antes
-   *  de aplicar el precio. */
-  descuentoLey?: number;
-  /** Ley recalculada (ley ÷ factorConversion × 100) − descuentoLey. */
-  leyAplicada?: number;
-  /** % Adición que multiplica a la ley aplicada antes de la cotización.
+  // ---- Solo para codificación BCL/BZL (Plata + Plomo o Plata + Zinc):
+  // fórmula propia del contrato de fundición (ver
+  // ValorizacionFormComponent.recalcularFilaLeyBcl). No se manda leyPagable
+  // en estas filas. ----
+  /** Factor (%): en Plata multiplica directo a la ley aplicada; en
+   *  Plomo/Zinc topea el máximo pagable (MIN(ley−ajuste, ley×factor)).
    *  Se guarda como porcentaje (ej. 83), no como fracción. */
-  porcentajeAdicion?: number;
+  factorPorsentaje?: number;
 }
 
 /**
@@ -181,9 +182,16 @@ export interface CalculoValorizacionRequest {
     /** Gastos de Tratamiento: actual − base. */
     diferencia?: number;
     escalador?: number;
+    /** Importe (Bs) tecleado directo por el liquidador, pisando la fórmula:
+     *  en Gastos de Tratamiento, solo para gastos "simples" sin escalador
+     *  en el catálogo (ej. Maquila), sin Actual/Base/Escalador (ver
+     *  ValorizacionFormComponent.esGastoSimple); en Penalidades, cualquier
+     *  fila (ver penalidadImporteManual). */
+    importeManual?: number;
     ley?: number;
     leyLibre?: number;
     cargo?: number;
+    cada?: number;
   };
 }
 
@@ -220,8 +228,10 @@ export interface ActualizarValorizacionRequest {
   observaciones?: string;
   detalles?: DetalleValorizacionRequest[];
   aportes?: AporteValorizacionRequest[];
-  /** Solo BCL: Gastos de Tratamiento y Penalidades (ver
-   *  ValorizacionFormComponent.construirCalculosBcl). */
+  /** Solo BCL: Gastos de Tratamiento, Penalidades y Otros (AL, ROLLBACK —
+   *  ver ValorizacionFormComponent.construirCalculosBcl). Ya no se mandan
+   *  alPorcentaje/rollback como columnas propias: viven acá, en las filas
+   *  con idTipoCalculoValorizacion del grupo "Otros". */
   calculos?: CalculoValorizacionRequest[];
   /** true = desactiva explícitamente todos los aportes activos, sin
    *  necesidad de mandar `aportes`. Es la única forma de comunicar "el

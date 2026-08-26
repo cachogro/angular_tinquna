@@ -234,8 +234,10 @@ export class CotizacionFormDialogComponent implements OnInit {
   private filtrarMinerales(texto: string): Mineral[] {
     const filtro = texto.trim().toLowerCase();
     if (!filtro) return this.minerales;
-    return this.minerales.filter((m) =>
-      m.descripcion.toLowerCase().includes(filtro),
+    return this.minerales.filter(
+      (m) =>
+        m.descripcion.toLowerCase().includes(filtro) ||
+        (m.simbolo ?? '').toLowerCase().includes(filtro),
     );
   }
 
@@ -282,10 +284,17 @@ export class CotizacionFormDialogComponent implements OnInit {
     }
   }
 
-  /** Evita el signo "-" (y notación "e") en los campos numéricos: no deben
-   *  aceptar negativos, ni siquiera tecleados a mano. */
-  bloquearNegativos(event: KeyboardEvent): void {
-    if (['-', '+', 'e', 'E'].includes(event.key)) {
+  /** El campo de cotización solo admite dígitos y un único punto decimal:
+   *  bloquea signos, letras y notación "e", incluso tecleados a mano. */
+  soloNumeroDecimal(event: KeyboardEvent): void {
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    if (event.key.length > 1) return; // teclas de control: Backspace, Tab, ArrowLeft, etc.
+    if (event.key === '.') {
+      const valorActual = (event.target as HTMLInputElement).value ?? '';
+      if (valorActual.includes('.')) event.preventDefault();
+      return;
+    }
+    if (!/^[0-9]$/.test(event.key)) {
       event.preventDefault();
     }
   }

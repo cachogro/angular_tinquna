@@ -29,6 +29,28 @@ import { ParametricaDialogShellComponent } from '../shared/parametrica-dialog-sh
 import { Mineral } from '../models/parametricas.models';
 import { ParametricasService } from '../../services/parametricas.service';
 
+/** Mayúsculas, letras (con acentos/ñ), números, espacio y los caracteres
+ *  especiales de negocio: # / ° ' " . - _ , */
+const CHARSET_DESCRIPCION = /^[A-ZÁÉÍÓÚÑÜ0-9#/°'".,_\- ]*$/;
+const CARACTERES_INVALIDOS_DESCRIPCION = /[^A-ZÁÉÍÓÚÑÜ0-9#/°'".,_\- ]/g;
+
+/** Solo letras (con acentos/ñ), sin forzar mayúsculas (ej. símbolo "Ag") */
+const CHARSET_SIMBOLO = /^[a-zA-ZÁÉÍÓÚÑÜáéíóúñü]*$/;
+const CARACTERES_INVALIDOS_SIMBOLO = /[^a-zA-ZÁÉÍÓÚÑÜáéíóúñü]/g;
+
+/** Letras y punto, sin forzar mayúsculas (ej. "Oz.Tr.") */
+const CHARSET_UNIDAD = /^[a-zA-ZÁÉÍÓÚÑÜáéíóúñü.]*$/;
+const CARACTERES_INVALIDOS_UNIDAD = /[^a-zA-ZÁÉÍÓÚÑÜáéíóúñü.]/g;
+
+/** Letras, números, espacio, paréntesis y los especiales de negocio: no se
+ *  fuerza mayúsculas (ej. "Recursos Evaporiticos(Otros Subprod y Deriv)") */
+const CHARSET_DETALLE = /^[a-zA-ZÁÉÍÓÚÑÜáéíóúñü0-9#/°'".,_()\- ]*$/;
+const CARACTERES_INVALIDOS_DETALLE = /[^a-zA-ZÁÉÍÓÚÑÜáéíóúñü0-9#/°'".,_()\- ]/g;
+
+/** Mayúsculas, letras y espacio (ej. "METALICO") */
+const CHARSET_TIPO = /^[A-ZÁÉÍÓÚÑÜ ]*$/;
+const CARACTERES_INVALIDOS_TIPO = /[^A-ZÁÉÍÓÚÑÜ ]/g;
+
 @Component({
   selector: 'app-mineral-form-dialog',
   standalone: true,
@@ -83,12 +105,28 @@ export class MineralFormDialogComponent implements OnInit {
   // Límites de longitud tomados de los ejemplos de negocio más largos:
   // descripción -> 'Manufactura de Aleaciones de Oro' (32), detalle -> 'Recursos Evaporiticos(Otros Subprod y Deriv)' (44).
   form: FormGroup = this.fb.group({
-    descripcion: ['', [Validators.required, Validators.maxLength(32)]],
-    simbolo: ['', [Validators.maxLength(10)]],
-    unidadCotizacion: ['', [Validators.maxLength(4)]],
-    detalleMineral: ['', [Validators.maxLength(44)]],
+    descripcion: [
+      '',
+      [
+        Validators.required,
+        Validators.maxLength(32),
+        Validators.pattern(CHARSET_DESCRIPCION),
+      ],
+    ],
+    simbolo: [
+      '',
+      [Validators.maxLength(10), Validators.pattern(CHARSET_SIMBOLO)],
+    ],
+    unidadCotizacion: [
+      '',
+      [Validators.maxLength(4), Validators.pattern(CHARSET_UNIDAD)],
+    ],
+    detalleMineral: [
+      '',
+      [Validators.maxLength(44), Validators.pattern(CHARSET_DETALLE)],
+    ],
     factorConversion: [null, [MineralFormDialogComponent.numeroPositivo()]],
-    tipo: ['', [Validators.maxLength(50)]],
+    tipo: ['', [Validators.maxLength(50), Validators.pattern(CHARSET_TIPO)]],
     // No obligatorias: algunos minerales no tienen alícuota configurada.
     alicuotaExterna: [
       null as number | null,
@@ -122,15 +160,50 @@ export class MineralFormDialogComponent implements OnInit {
   ngOnInit(): void {
     this.recargarTabla();
 
-    // La descripción siempre se guarda en mayúsculas.
-    this.form.get('descripcion')?.valueChanges.subscribe((valor: string) => {
-      const mayusculas = (valor ?? '').toUpperCase();
-      if (valor !== mayusculas) {
-        this.form
-          .get('descripcion')
-          ?.setValue(mayusculas, { emitEvent: false });
+    this.registrarSaneador(this.form.get('descripcion')!, (v) =>
+      v.toUpperCase().replace(CARACTERES_INVALIDOS_DESCRIPCION, ''),
+    );
+    this.registrarSaneador(this.form.get('simbolo')!, (v) =>
+      v.replace(CARACTERES_INVALIDOS_SIMBOLO, ''),
+    );
+    this.registrarSaneador(this.form.get('unidadCotizacion')!, (v) =>
+      v.replace(CARACTERES_INVALIDOS_UNIDAD, ''),
+    );
+    this.registrarSaneador(this.form.get('detalleMineral')!, (v) =>
+      v.replace(CARACTERES_INVALIDOS_DETALLE, ''),
+    );
+    this.registrarSaneador(this.form.get('tipo')!, (v) =>
+      v.toUpperCase().replace(CARACTERES_INVALIDOS_TIPO, ''),
+    );
+  }
+
+  /** Suscribe un control para reescribir su valor en vivo según la función de saneo dada */
+  private registrarSaneador(
+    control: AbstractControl,
+    sanea: (valor: string) => string,
+  ): void {
+    control.valueChanges.subscribe((valor) => {
+      if (typeof valor !== 'string') return;
+      const limpio = sanea(valor);
+      if (limpio !== valor) {
+        control.setValue(limpio, { emitEvent: false });
       }
     });
+  }
+
+  /** Los campos numéricos decimales solo admiten dígitos y un único punto:
+   *  bloquea signos, letras y notación "e", incluso tecleados a mano. */
+  soloNumeroDecimal(event: KeyboardEvent): void {
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    if (event.key.length > 1) return; // teclas de control: Backspace, Tab, ArrowLeft, etc.
+    if (event.key === '.') {
+      const valorActual = (event.target as HTMLInputElement).value ?? '';
+      if (valorActual.includes('.')) event.preventDefault();
+      return;
+    }
+    if (!/^[0-9]$/.test(event.key)) {
+      event.preventDefault();
+    }
   }
 
   private recargarTabla(): void {

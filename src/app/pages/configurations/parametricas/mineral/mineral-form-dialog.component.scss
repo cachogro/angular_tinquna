@@ -64,12 +64,12 @@ TABLA
 
 .tabla-scroll {
     overflow: auto;
-    max-height: 420px;
+    max-height: 360px;
 }
 
 .tabla {
     width: 100%;
-    min-width: 700px;
+    min-width: 920px;
 }
 
 /*==========================
@@ -84,13 +84,17 @@ ENCABEZADO
     position: sticky;
     top: 0;
     z-index: 10;
+    height: 36px;
 }
 
 .mat-mdc-header-cell {
     background: var(--mat-sys-primary);
     color: var(--mat-sys-on-primary);
     font-weight: 600;
+    font-size: 12px;
     letter-spacing: .3px;
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
 }
 
 .mat-mdc-row:hover {
@@ -103,13 +107,13 @@ FILAS COMPACTAS
 ===========================*/
 
 .mat-mdc-row {
-    height: 42px;
+    height: 34px;
 }
 
 .mat-mdc-cell {
-    padding-top: 6px !important;
-    padding-bottom: 6px !important;
-    font-size: 13px;
+    padding-top: 3px !important;
+    padding-bottom: 3px !important;
+    font-size: 12px;
 }
 
 /*==========================
@@ -175,6 +179,6 @@ RESPONSIVE
     }
 
     .tabla {
-        min-width: 700px;
+        min-width: 920px;
     }
 }

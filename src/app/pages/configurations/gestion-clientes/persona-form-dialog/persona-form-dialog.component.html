@@ -94,7 +94,15 @@
         <input matInput formControlName="actorProductivoMinero" [matAutocomplete]="autoActor"
           #actorTrigger="matAutocompleteTrigger" (focus)="actorTrigger.openPanel()"
           placeholder="Ingenio, cooperativa o empresa minera" />
+        @if (actorSinResultados()) {
+        <button mat-icon-button matSuffix type="button" color="primary"
+          matTooltip="No está en la lista: registrar nuevo actor productivo minero"
+          (click)="abrirRegistrarActor()">
+          <mat-icon>add_circle_outline</mat-icon>
+        </button>
+        } @else {
         <mat-icon matSuffix>expand_more</mat-icon>
+        }
         <mat-autocomplete #autoActor="matAutocomplete" [displayWith]="displayActor">
           @for (actor of (actoresFiltrados$ | async); track actor.id) {
           <mat-option [value]="actor">

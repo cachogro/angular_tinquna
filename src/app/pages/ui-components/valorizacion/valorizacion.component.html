@@ -10,9 +10,9 @@
     <div class="recepcion-page">
 
       <div class="recepcion-toolbar">
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-form-field appearance="outline" class="recepcion-toolbar__codigo" subscriptSizing="dynamic">
           <mat-icon matPrefix>numbers</mat-icon>
-          <input matInput placeholder="Código / N° de operación" [formControl]="codigoControl" />
+          <input matInput placeholder="Código / Lote" [formControl]="codigoControl" />
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="recepcion-toolbar__search" subscriptSizing="dynamic">
@@ -20,11 +20,11 @@
           <input matInput placeholder="Buscar por proveedor" [formControl]="searchControl" />
         </mat-form-field>
 
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <!-- <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <input matInput placeholder="N° de carnet" [formControl]="documentoControl" />
-        </mat-form-field>
+        </mat-form-field> -->
 
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-form-field appearance="outline" class="recepcion-toolbar__estado" subscriptSizing="dynamic">
           <mat-select [formControl]="estadoControl" placeholder="Estado">
             <mat-option [value]="null">Todos los estados</mat-option>
             @for (estado of estados; track estado.id) {
@@ -33,21 +33,17 @@
           </mat-select>
         </mat-form-field>
 
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label>Desde</mat-label>
-          <input matInput [matDatepicker]="pickerDesde" [max]="hoy" [formControl]="fechaDesdeControl" />
-          <mat-datepicker-toggle matSuffix [for]="pickerDesde"></mat-datepicker-toggle>
-          <mat-datepicker #pickerDesde></mat-datepicker>
+        <mat-form-field appearance="outline" class="recepcion-toolbar__fechas" subscriptSizing="dynamic">
+          <mat-label>Rango de fechas</mat-label>
+          <mat-date-range-input [rangePicker]="pickerRango" [max]="hoy">
+            <input matStartDate placeholder="Desde" [formControl]="fechaDesdeControl" />
+            <input matEndDate placeholder="Hasta" [formControl]="fechaHastaControl" />
+          </mat-date-range-input>
+          <mat-datepicker-toggle matSuffix [for]="pickerRango"></mat-datepicker-toggle>
+          <mat-date-range-picker #pickerRango></mat-date-range-picker>
         </mat-form-field>
 
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label>Hasta</mat-label>
-          <input matInput [matDatepicker]="pickerHasta" [max]="hoy" [formControl]="fechaHastaControl" />
-          <mat-datepicker-toggle matSuffix [for]="pickerHasta"></mat-datepicker-toggle>
-          <mat-datepicker #pickerHasta></mat-datepicker>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-form-field appearance="outline" class="recepcion-toolbar__orden" subscriptSizing="dynamic">
           <mat-select [formControl]="orderByControl" placeholder="Ordenar por">
             @for (opcion of opcionesOrden; track opcion.value) {
             <mat-option [value]="opcion.value">{{ opcion.label }}</mat-option>
@@ -80,9 +76,9 @@
         } @else {
         <table mat-table [dataSource]="registros()" class="recepcion-table">
           <ng-container matColumnDef="id">
-            <th mat-header-cell *matHeaderCellDef>ID</th>
-            <td mat-cell *matCellDef="let v">
-              <div class="operacion-cell__id">{{ v.id }}</div>
+            <th mat-header-cell *matHeaderCellDef>N°</th>
+            <td mat-cell *matCellDef="let v; let i = index">
+              <div class="operacion-cell__id">{{ numeroFila(i) }}</div>
             </td>
           </ng-container>
 

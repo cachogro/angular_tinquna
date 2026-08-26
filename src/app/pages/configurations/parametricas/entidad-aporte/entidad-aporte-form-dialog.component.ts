@@ -1,13 +1,10 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import {
-  AbstractControl,
   FormArray,
   FormBuilder,
   FormGroup,
   ReactiveFormsModule,
-  ValidationErrors,
-  ValidatorFn,
   Validators,
 } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -34,6 +31,11 @@ import {
   TipoEntidadAporte,
 } from '../models/parametricas.models';
 import { ParametricasService } from '../../services/parametricas.service';
+
+/** Mayúsculas, letras (con acentos/ñ), números, espacio y los caracteres
+ *  especiales de negocio: # / ° ' " . - _ , */
+const CHARSET_DESCRIPCION = /^[A-ZÁÉÍÓÚÑÜ0-9#/°'".,_\- ]*$/;
+const CARACTERES_INVALIDOS_DESCRIPCION = /[^A-ZÁÉÍÓÚÑÜ0-9#/°'".,_\- ]/g;
 
 @Component({
   selector: 'app-entidad-aporte-form-dialog',
@@ -75,13 +77,13 @@ export class EntidadAporteFormDialogComponent implements OnInit {
     'acciones',
   ];
 
-  // Bases fijas: la entidad siempre reporta alícuota para ambas, en este orden.
-  readonly tiposBaseAporte: TipoBaseAporte[] = ['VBV', 'VNV'];
-
-  readonly etiquetasBaseAporte: Record<TipoBaseAporte, string> = {
-    VBV: 'VBV - Valor Bruto de Venta',
-    VNV: 'VNV - Valor Neto de Venta',
-  };
+  // Base fija: por ahora solo VBV. VNV (Valor Neto de Venta) se deshabilitó
+  // a pedido del usuario 2026-08-19; el tipo TipoBaseAporte sigue incluyendo
+  // 'VNV' porque valorización todavía lo usa como fallback de datos viejos.
+  readonly tiposBaseAporte: TipoBaseAporte[] = [
+    'VBV',
+    // 'VNV',
+  ];
 
   // Catálogo fijo (codificado por negocio): el back no expone servicio para esto.
   readonly tiposEntidadAporte: TipoEntidadAporte[] = [
@@ -101,16 +103,29 @@ export class EntidadAporteFormDialogComponent implements OnInit {
   }
 
   form: FormGroup = this.fb.group({
-    descripcion: ['', [Validators.required, Validators.maxLength(150)]],
+    descripcion: [
+      '',
+      [
+        Validators.required,
+        Validators.maxLength(150),
+        Validators.pattern(CHARSET_DESCRIPCION),
+      ],
+    ],
     idTipoEntidadAporte: [null, Validators.required],
     detalleAporte: this.fb.array(
       this.tiposBaseAporte.map((tipo) => this.crearFilaDetalle(tipo)),
-      EntidadAporteFormDialogComponent.alMenosUnaAlicuota(),
     ),
   });
 
   get detalleAporte(): FormArray {
     return this.form.get('detalleAporte') as FormArray;
+  }
+
+  /** El único elemento de detalleAporte hoy es la fila VBV (índice 0);
+   *  se expone directo para poder bindear su mat-form-field con
+   *  [formGroup] sin depender de formArrayName/formGroupName anidados. */
+  get filaVbv(): FormGroup {
+    return this.detalleAporte.at(0) as FormGroup;
   }
 
   private crearFilaDetalle(
@@ -119,32 +134,26 @@ export class EntidadAporteFormDialogComponent implements OnInit {
   ): FormGroup {
     return this.fb.group({
       tipoBaseAporte: [{ value: tipoBaseAporte, disabled: true }],
-      alicuota: [alicuota ?? null, [Validators.min(0), Validators.max(100)]],
+      alicuota: [
+        alicuota ?? null,
+        [Validators.required, Validators.min(0), Validators.max(100)],
+      ],
     });
-  }
-
-  /** No es obligatorio llenar VBV y VNV, pero al menos una de las dos alícuotas sí */
-  private static alMenosUnaAlicuota(): ValidatorFn {
-    return (control: AbstractControl): ValidationErrors | null => {
-      const filas = (control as FormArray).controls;
-      const tieneAlgunaAlicuota = filas.some((fila) => {
-        const alicuota = fila.get('alicuota')?.value;
-        return alicuota !== null && alicuota !== undefined && alicuota !== '';
-      });
-      return tieneAlgunaAlicuota ? null : { alMenosUnaAlicuota: true };
-    };
   }
 
   ngOnInit(): void {
     this.recargarTabla();
 
-    // La descripción siempre se guarda en mayúsculas.
+    // Mayúsculas + solo caracteres permitidos, en vivo.
     this.form.get('descripcion')?.valueChanges.subscribe((valor: string) => {
-      const mayusculas = (valor ?? '').toUpperCase();
-      if (valor !== mayusculas) {
+      if (typeof valor !== 'string') return;
+      const limpio = valor
+        .toUpperCase()
+        .replace(CARACTERES_INVALIDOS_DESCRIPCION, '');
+      if (limpio !== valor) {
         this.form
           .get('descripcion')
-          ?.setValue(mayusculas, { emitEvent: false });
+          ?.setValue(limpio, { emitEvent: false });
       }
     });
   }

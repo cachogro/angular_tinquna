@@ -45,6 +45,11 @@ const ID_TIPO_PERSONA_MUESTRERO = 6;
  *  (para esa codificación el N° de sacos no es obligatorio) */
 const CLAVE_CODIFICACION_CARGAS = 'CARGA';
 
+/** La codificación "RAM" (id '5' en el catálogo, ver también valorizacion-form.component.ts)
+ *  tampoco exige N° de sacos: se identifica igual que ahí, por id o por nombre. */
+const ID_CODIFICACION_RAM = '5';
+const CLAVE_CODIFICACION_RAM = 'RAM';
+
 /** Unidades disponibles para expresar la ley de un mineral */
 export const LEY_UNIDADES: LeyUnidad[] = ['%', 'g/TM'];
 const LEY_UNIDAD_POR_DEFECTO: LeyUnidad = '%';
@@ -532,16 +537,20 @@ export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
     return unidad === '%' ? [...base, Validators.max(100)] : base;
   }
 
-  /** true si la codificación (por código o nombre) corresponde al tipo "cargas",
-   *  para la cual el N° de sacos no es obligatorio */
+  /** true si la codificación (por id, código o nombre) corresponde al tipo "cargas"
+   *  o a RAM, para las cuales el N° de sacos no es obligatorio */
   private codificacionEsCargas(idCodificacion: string | null): boolean {
     if (!idCodificacion) return false;
+    if (String(idCodificacion) === ID_CODIFICACION_RAM) return true;
     const codificacion = this.codificaciones().find(
       (c) => String(c.id) === String(idCodificacion),
     );
     if (!codificacion) return false;
     const texto = `${codificacion.codigo} ${codificacion.nombre}`.toUpperCase();
-    return texto.includes(CLAVE_CODIFICACION_CARGAS);
+    return (
+      texto.includes(CLAVE_CODIFICACION_CARGAS) ||
+      texto.includes(CLAVE_CODIFICACION_RAM)
+    );
   }
 
   /** Ajusta si el control de N° de sacos es obligatorio según la codificación elegida */

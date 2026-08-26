@@ -13,21 +13,34 @@
           <mat-error *ngIf="form.get('descripcion')?.hasError('required')">
             La descripción es obligatoria
           </mat-error>
+          <mat-error *ngIf="form.get('descripcion')?.hasError('pattern')">
+            Solo letras, números, espacios y # / ° ' " . - _ ,
+          </mat-error>
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="campo-simbolo">
           <mat-label>Símbolo</mat-label>
           <input matInput formControlName="simbolo" maxlength="10" placeholder="Ag" />
+          <mat-error *ngIf="form.get('simbolo')?.hasError('pattern')">
+            Solo letras
+          </mat-error>
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="campo-unidad">
           <mat-label>Unidad de cotización</mat-label>
           <input matInput formControlName="unidadCotizacion" maxlength="4" placeholder="Oz.Tr." />
+          <mat-error *ngIf="form.get('unidadCotizacion')?.hasError('pattern')">
+            Solo letras y puntos
+          </mat-error>
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="campo-tipo">
           <mat-label>Tipo</mat-label>
-          <input matInput formControlName="tipo" maxlength="50" placeholder="Ej: METALICO" />
+          <input matInput formControlName="tipo" maxlength="50" placeholder="Ej: METALICO"
+            class="input-mayusculas" />
+          <mat-error *ngIf="form.get('tipo')?.hasError('pattern')">
+            Solo letras y espacios
+          </mat-error>
         </mat-form-field>
       </div>
 
@@ -36,7 +49,7 @@
         <mat-form-field appearance="outline" class="campo-factor">
           <mat-label>Factor de conversión</mat-label>
           <input matInput type="number" step="0.0001" min="0" formControlName="factorConversion"
-            placeholder="Ej: 31.1035" />
+            placeholder="Ej: 31.1035" (keydown)="soloNumeroDecimal($event)" />
           <mat-error *ngIf="form.get('factorConversion')?.hasError('numeroPositivo')">
             Debe ser un número positivo
           </mat-error>
@@ -45,6 +58,9 @@
         <mat-form-field appearance="outline" class="campo-detalle">
           <mat-label>Detalle</mat-label>
           <input matInput formControlName="detalleMineral" maxlength="44" placeholder="Ej: Mineral de plata" />
+          <mat-error *ngIf="form.get('detalleMineral')?.hasError('pattern')">
+            Solo letras, números, espacios, paréntesis y # / ° ' " . - _ ,
+          </mat-error>
         </mat-form-field>
       </div>
 
@@ -52,7 +68,8 @@
       <div class="fila-tres">
         <mat-form-field appearance="outline" class="campo-alicuota">
           <mat-label>Alícuota interna</mat-label>
-          <input matInput type="number" step="0.00001" min="0" formControlName="alicuotaInterna" />
+          <input matInput type="number" step="0.00001" min="0" formControlName="alicuotaInterna"
+            (keydown)="soloNumeroDecimal($event)" />
           <mat-error *ngIf="form.get('alicuotaInterna')?.hasError('min')">
             Debe ser mayor o igual a 0
           </mat-error>
@@ -63,7 +80,8 @@
 
         <mat-form-field appearance="outline" class="campo-alicuota">
           <mat-label>Alícuota externa</mat-label>
-          <input matInput type="number" step="0.00001" min="0" formControlName="alicuotaExterna" />
+          <input matInput type="number" step="0.00001" min="0" formControlName="alicuotaExterna"
+            (keydown)="soloNumeroDecimal($event)" />
           <mat-error *ngIf="form.get('alicuotaExterna')?.hasError('min')">
             Debe ser mayor o igual a 0
           </mat-error>

@@ -35,7 +35,7 @@
       <mat-form-field appearance="outline">
         <mat-label>Cotización (USD)</mat-label>
         <input matInput type="number" step="0.00001" min="0" formControlName="cotizacionMineralDolares"
-          (keydown)="bloquearNegativos($event)" />
+          (keydown)="soloNumeroDecimal($event)" />
         <mat-error *ngIf="form.get('cotizacionMineralDolares')?.hasError('required')">
           La cotización es obligatoria
         </mat-error>
@@ -59,19 +59,17 @@
         </mat-error>
       </mat-form-field>
 
-      <!-- ---- Fila 2: botones ---- -->
-
-      <!-- Botones: limpiar/cancelar + guardar/actualizar -->
-      <div class="acciones-form">
-        <button mat-stroked-button type="button" (click)="cancelar()" [disabled]="guardando">
-          {{ modoEdicion ? 'Cancelar edición' : 'Limpiar' }}
-        </button>
-        <button mat-flat-button color="primary" type="button" (click)="guardar()" [disabled]="guardando">
-          {{ modoEdicion ? 'Actualizar' : 'Guardar' }}
-        </button>
-      </div>
-
     </form>
+
+    <!-- ==================== BOTONES ==================== -->
+    <div class="acciones">
+      <button mat-stroked-button type="button" (click)="cancelar()" [disabled]="guardando">
+        {{ modoEdicion ? 'Cancelar edición' : 'Limpiar' }}
+      </button>
+      <button mat-flat-button color="primary" type="button" (click)="guardar()" [disabled]="guardando">
+        {{ modoEdicion ? 'Actualizar' : 'Guardar' }}
+      </button>
+    </div>
 
     <!-- ==================== TABLA ==================== -->
     <mat-card class="tabla-card">
@@ -81,7 +79,7 @@
 
         <!-- Búsqueda y filtro -->
         <div class="filtros">
-          <mat-form-field appearance="outline" class="buscador">
+          <mat-form-field appearance="outline" class="buscador" subscriptSizing="dynamic">
             <mat-label>Buscar por mineral</mat-label>
             <input matInput [formControl]="searchControl" placeholder="Ej: zinc" />
             <mat-icon matSuffix>search</mat-icon>

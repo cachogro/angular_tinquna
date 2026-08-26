@@ -17,50 +17,11 @@ FORMULARIO
     text-transform: uppercase;
 }
 
-.fila-doble {
+/* Descripción, tipo de entidad y alícuota (VBV), en una sola fila */
+.fila-uno {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 2fr 1.2fr 1fr;
     gap: 18px;
-}
-
-/*==========================
-DETALLE DE APORTE
-===========================*/
-
-.detalle-aporte {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.detalle-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-weight: 600;
-}
-
-.detalle-filas {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 18px;
-}
-
-.detalle-fila {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.detalle-base-label {
-    font-weight: 500;
-}
-
-.detalle-error {
-    display: block;
-    color: var(--mat-sys-error, #d32f2f);
-    font-size: 12px;
-    margin-top: 4px;
 }
 
 /*==========================
@@ -89,12 +50,12 @@ TABLA
 
 .tabla-scroll {
     overflow: auto;
-    max-height: 420px;
+    max-height: 360px;
 }
 
 .tabla {
     width: 100%;
-    min-width: 600px;
+    min-width: 620px;
 }
 
 /*==========================
@@ -109,13 +70,17 @@ ENCABEZADO
     position: sticky;
     top: 0;
     z-index: 10;
+    height: 36px;
 }
 
 .mat-mdc-header-cell {
     background: var(--mat-sys-primary);
     color: var(--mat-sys-on-primary);
     font-weight: 600;
+    font-size: 12px;
     letter-spacing: .3px;
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
 }
 
 .mat-mdc-row:hover {
@@ -128,13 +93,13 @@ FILAS COMPACTAS
 ===========================*/
 
 .mat-mdc-row {
-    height: 42px;
+    height: 34px;
 }
 
 .mat-mdc-cell {
-    padding-top: 6px !important;
-    padding-bottom: 6px !important;
-    font-size: 13px;
+    padding-top: 3px !important;
+    padding-bottom: 3px !important;
+    font-size: 12px;
 }
 
 /*==========================
@@ -184,6 +149,12 @@ BADGE DE ESTADO (activo / inactivo)
 RESPONSIVE
 ===========================*/
 
+@media (max-width: 1000px) {
+    .fila-uno {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
 @media (max-width: 700px) {
     .acciones {
         flex-direction: column;
@@ -193,11 +164,7 @@ RESPONSIVE
         width: 100%;
     }
 
-    .fila-doble {
-        grid-template-columns: 1fr;
-    }
-
-    .detalle-filas {
+    .fila-uno {
         grid-template-columns: 1fr;
     }
 
@@ -207,6 +174,6 @@ RESPONSIVE
     }
 
     .tabla {
-        min-width: 600px;
+        min-width: 620px;
     }
 }

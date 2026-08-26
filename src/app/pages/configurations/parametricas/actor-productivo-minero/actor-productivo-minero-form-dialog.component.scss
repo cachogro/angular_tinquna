@@ -3,14 +3,100 @@ FORMULARIO
 ===========================*/
 
 .actor-form {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(220px, 1fr));
-    gap: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
     margin-bottom: 18px;
 }
 
 .actor-form mat-form-field {
     width: 100%;
+}
+
+.input-mayusculas {
+    text-transform: uppercase;
+}
+
+/* Fila 1: nombre, tipo (más angosto), dirección, teléfono */
+.fila-uno {
+    display: grid;
+    grid-template-columns: 1.6fr 0.8fr 1.6fr 1fr;
+    gap: 18px;
+}
+
+.campo-tipo ::ng-deep .mat-mdc-select-value {
+    font-size: 13px;
+}
+
+/* Fila 2: municipio (más ancho, texto largo), NIM, código — letra un poco
+ * más chica para que el municipio (departamento/provincia/municipio/código)
+ * entre legible en su columna. */
+.fila-dos {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 18px;
+    font-size: 13px;
+}
+
+.fila-dos input,
+.fila-dos ::ng-deep .mat-mdc-select-value {
+    font-size: 13px;
+}
+
+.fila-dos ::ng-deep .mat-mdc-form-field-subscript-wrapper,
+.fila-dos ::ng-deep mat-label {
+    font-size: 12px;
+}
+
+.actor-form__secciones {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.actor-form__secciones-titulo {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(0, 0, 0, 0.6);
+}
+
+.actor-form__secciones-agregar {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.actor-form__secciones-agregar mat-form-field {
+    flex: 1;
+}
+
+.actor-form__secciones-lista {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.actor-form__seccion-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px 4px 2px 12px;
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--mat-sys-primary) 10%, transparent);
+    font-size: 13px;
+}
+
+.actor-form__seccion-chip button {
+    width: 24px;
+    height: 24px;
+    line-height: 24px;
+}
+
+.actor-form__seccion-chip mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    line-height: 16px;
 }
 
 /*==========================
@@ -37,20 +123,25 @@ FILTROS (búsqueda + tipo)
     display: flex;
     align-items: center;
     /* Alineación vertical centralizada */
-    gap: 18px;
-    flex-wrap: wrap;
+    gap: 10px;
+    flex-wrap: nowrap;
     margin-bottom: 12px;
     width: 100%;
 }
 
 .buscador {
-    flex: 1;
-    min-width: 240px;
+    flex: 1 1 auto;
+    min-width: 120px;
 }
 
 .filtro-tipo {
-    flex: 0 0 220px;
-    min-width: 180px;
+    flex: 0 1 150px;
+    min-width: 110px;
+}
+
+.filtro-orden {
+    flex: 0 1 130px;
+    min-width: 100px;
 }
 
 /* Ajuste específico para que el botón tenga la misma altura visual que el mat-form-field */
@@ -58,6 +149,8 @@ FILTROS (búsqueda + tipo)
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    flex: 0 0 auto;
+    white-space: nowrap;
 }
 
 
@@ -71,12 +164,12 @@ TABLA
 
 .tabla-scroll {
     overflow: auto;
-    max-height: 420px;
+    max-height: 360px;
 }
 
 .tabla {
     width: 100%;
-    min-width: 880px;
+    min-width: 620px;
 }
 
 /*==========================
@@ -91,13 +184,17 @@ ENCABEZADO
     position: sticky;
     top: 0;
     z-index: 10;
+    height: 36px;
 }
 
 .mat-mdc-header-cell {
     background: var(--mat-sys-primary);
     color: var(--mat-sys-on-primary);
     font-weight: 600;
+    font-size: 12px;
     letter-spacing: .3px;
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
 }
 
 .mat-mdc-row:hover {
@@ -110,13 +207,13 @@ FILAS COMPACTAS
 ===========================*/
 
 .mat-mdc-row {
-    height: 42px;
+    height: 34px;
 }
 
 .mat-mdc-cell {
-    padding-top: 6px !important;
-    padding-bottom: 6px !important;
-    font-size: 13px;
+    padding-top: 3px !important;
+    padding-bottom: 3px !important;
+    font-size: 12px;
 }
 
 /*==========================
@@ -146,13 +243,15 @@ RESPONSIVE
 ===========================*/
 
 @media (max-width: 1000px) {
-    .actor-form {
+    .fila-uno,
+    .fila-dos {
         grid-template-columns: repeat(2, 1fr);
     }
 }
 
 @media (max-width: 700px) {
-    .actor-form {
+    .fila-uno,
+    .fila-dos {
         grid-template-columns: 1fr;
     }
 
@@ -179,6 +278,6 @@ RESPONSIVE
     }
 
     .tabla {
-        min-width: 880px;
+        min-width: 620px;
     }
 }

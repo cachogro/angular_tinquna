@@ -7,7 +7,7 @@ import {
   MatDialogRef,
 } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
-import { formatNumeroSinCeros } from 'src/app/shared/utils/numero.util';
+import { formatNumeroConMiles } from 'src/app/shared/utils/numero.util';
 
 export interface LeyPrecioVisualizacion {
   simbolo: string;
@@ -65,6 +65,6 @@ export class VerValorizacionDialogComponent {
   }
 
   formatNumero(valor: number | string | null | undefined): string {
-    return formatNumeroSinCeros(valor) || '0';
+    return formatNumeroConMiles(valor) || '0';
   }
 }

@@ -87,7 +87,7 @@ export class GestionClientesComponent implements OnInit {
   readonly estadoControl = new FormControl<string | null>(null); // 'true' | 'false' | null
 
   readonly opcionesOrden: OpcionOrden[] = [
-    { value: 'id', label: 'ID' },
+    // { value: 'id', label: 'ID' }, // se sigue ordenando por id por defecto (ver orderByControl), pero no se ofrece como filtro manual porque el id real ya no se muestra en la tabla (ver columna "N°")
     { value: 'nombres', label: 'Nombres' },
     { value: 'numeroDocumento', label: 'N° de documento' },
   ];
@@ -177,6 +177,18 @@ export class GestionClientesComponent implements OnInit {
     this.orderByControl.setValue('id', { emitEvent: false });
     this.orderDirectionControl.setValue('DESC', { emitEvent: false });
     this.reiniciarYcargar();
+  }
+
+  /** Numeración correlativa (no el id real, que queda con huecos por bajas):
+   *  el más antiguo es 1 y el más nuevo es `total()`, sin importar en qué
+   *  posición de la página caiga. Se invierte según el sentido del orden
+   *  actual para que ese número no cambie con la fila, sino que se mantenga
+   *  ligado al mismo registro al togglear ascendente/descendente. */
+  numeroFila(i: number): number {
+    const offset = this.pageIndex * this.pageSize + i;
+    return this.orderDirectionControl.value === 'ASC'
+      ? offset + 1
+      : this.total() - offset;
   }
 
   nombreCompleto(persona: PersonaCI): string {

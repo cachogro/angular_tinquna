@@ -7,22 +7,33 @@
       <!-- Nombre -->
       <mat-form-field appearance="outline">
         <mat-label>Nombre</mat-label>
-        <input matInput formControlName="nombre" maxlength="150" placeholder="Ej: Laboratorio Químico Potosí" />
+        <input matInput formControlName="nombre" maxlength="150" placeholder="Ej: Laboratorio Químico Potosí"
+          class="input-mayusculas" />
         <mat-error *ngIf="form.get('nombre')?.hasError('required')">
           El nombre es obligatorio
+        </mat-error>
+        <mat-error *ngIf="form.get('nombre')?.hasError('pattern')">
+          Solo letras, espacios y puntos
         </mat-error>
       </mat-form-field>
 
       <!-- Dirección (opcional) -->
       <mat-form-field appearance="outline">
         <mat-label>Dirección</mat-label>
-        <input matInput formControlName="direccion" maxlength="200" placeholder="Ej: Av. Universitaria N° 123" />
+        <input matInput formControlName="direccion" maxlength="200" placeholder="Ej: Av. Universitaria N° 123"
+          class="input-mayusculas" />
+        <mat-error *ngIf="form.get('direccion')?.hasError('pattern')">
+          Solo letras, números, espacios y . : # / ,
+        </mat-error>
       </mat-form-field>
 
       <!-- Teléfono (opcional) -->
       <mat-form-field appearance="outline">
         <mat-label>Teléfono</mat-label>
         <input matInput formControlName="telefono" maxlength="20" placeholder="Ej: 62451234" />
+        <mat-error *ngIf="form.get('telefono')?.hasError('pattern')">
+          Solo números y "+"
+        </mat-error>
       </mat-form-field>
 
     </form>

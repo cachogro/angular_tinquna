@@ -4,14 +4,17 @@
     <!-- ==================== FORMULARIO ==================== -->
     <form [formGroup]="form" (ngSubmit)="guardar()" class="entidad-aporte-form">
 
-      <!-- Descripción + Tipo de entidad -->
-      <div class="fila-doble">
+      <!-- Descripción, tipo de entidad y alícuota (sobre VBV), todo en una fila -->
+      <div class="fila-uno">
         <mat-form-field appearance="outline">
           <mat-label>Descripción</mat-label>
           <input matInput formControlName="descripcion" maxlength="150" placeholder="Ej: FERRECO-3"
             class="input-mayusculas" />
           <mat-error *ngIf="form.get('descripcion')?.hasError('required')">
             La descripción es obligatoria
+          </mat-error>
+          <mat-error *ngIf="form.get('descripcion')?.hasError('pattern')">
+            Solo letras, números, espacios y # / ° ' " . - _ ,
           </mat-error>
         </mat-form-field>
 
@@ -26,28 +29,17 @@
             El tipo de entidad es obligatorio
           </mat-error>
         </mat-form-field>
-      </div>
 
-      <!-- Detalle de aporte (bases fijas VBV / VNV + alícuota) -->
-      <div class="detalle-aporte" formArrayName="detalleAporte">
-        <div class="detalle-header">
-          <span>Detalle de aporte</span>
-        </div>
-
-        <div class="detalle-filas">
-          <div class="detalle-fila" *ngFor="let fila of detalleAporte.controls; let i = index" [formGroupName]="i">
-            <span class="detalle-base-label">{{ etiquetasBaseAporte[tiposBaseAporte[i]] }}</span>
-
-            <mat-form-field appearance="outline">
-              <mat-label>Alícuota (%)</mat-label>
-              <input matInput type="number" step="0.01" min="0" max="100" formControlName="alicuota" />
-            </mat-form-field>
-          </div>
-        </div>
-
-        <span class="detalle-error" *ngIf="detalleAporte.hasError('alMenosUnaAlicuota') && detalleAporte.touched">
-          Debes registrar al menos una alícuota (VBV o VNV)
-        </span>
+        <mat-form-field appearance="outline" [formGroup]="filaVbv">
+          <mat-label>Alícuota sobre el VBV (%)</mat-label>
+          <input matInput type="number" step="0.01" min="0" max="100" formControlName="alicuota" />
+          <mat-error *ngIf="filaVbv.get('alicuota')?.hasError('required')">
+            La alícuota es obligatoria
+          </mat-error>
+          <mat-error *ngIf="filaVbv.get('alicuota')?.hasError('min') || filaVbv.get('alicuota')?.hasError('max')">
+            Debe estar entre 0 y 100
+          </mat-error>
+        </mat-form-field>
       </div>
 
     </form>

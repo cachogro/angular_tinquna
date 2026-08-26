@@ -26,11 +26,11 @@
           <input matInput placeholder="Buscar por nombre o apellido" [formControl]="searchControl" />
         </mat-form-field>
 
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-form-field appearance="outline" class="clientes-toolbar__documento" subscriptSizing="dynamic">
           <input matInput placeholder="N° de documento" [formControl]="documentoControl" />
         </mat-form-field>
 
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-form-field appearance="outline" class="clientes-toolbar__tipo" subscriptSizing="dynamic">
           <mat-select [formControl]="tipoControl" placeholder="Tipo de persona">
             <mat-option [value]="null">Todos los tipos</mat-option>
             @for (tipo of tiposPersona(); track tipo.id) {
@@ -39,7 +39,7 @@
           </mat-select>
         </mat-form-field>
 
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-form-field appearance="outline" class="clientes-toolbar__estado" subscriptSizing="dynamic">
           <mat-select [formControl]="estadoControl" placeholder="Estado">
             <mat-option [value]="null">Todos</mat-option>
             <mat-option value="true">Activos</mat-option>
@@ -47,13 +47,13 @@
           </mat-select>
         </mat-form-field>
 
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <!-- <mat-form-field appearance="outline" class="clientes-toolbar__orden" subscriptSizing="dynamic">
           <mat-select [formControl]="orderByControl" placeholder="Ordenar por">
             @for (opcion of opcionesOrden; track opcion.value) {
             <mat-option [value]="opcion.value">{{ opcion.label }}</mat-option>
             }
           </mat-select>
-        </mat-form-field>
+        </mat-form-field> -->
 
         <button mat-icon-button (click)="toggleOrden()"
           [matTooltip]="orderDirectionControl.value === 'ASC' ? 'Ascendente' : 'Descendente'">
@@ -81,10 +81,9 @@
         <table mat-table [dataSource]="personas()" class="clientes-table">
 
           <ng-container matColumnDef="id">
-            <th mat-header-cell *matHeaderCellDef>ID</th>
-            <td mat-cell *matCellDef="let persona">
-              <div class="persona-cell__nombre">{{ persona.id }}</div>
-
+            <th mat-header-cell *matHeaderCellDef>N°</th>
+            <td mat-cell *matCellDef="let persona; let i = index">
+              <div class="persona-cell__nombre">{{ numeroFila(i) }}</div>
             </td>
           </ng-container>
 

@@ -38,17 +38,26 @@ export interface Codificacion {
   fechaRegistro?: string;
 }
 
+/** Mineral tal como va anidado en el request de codificación: además del id
+ *  se manda descripción y símbolo para que el backend los persista junto a
+ *  la codificación (antes solo se guardaba el id, y el símbolo se perdía). */
+export interface CodificacionMineralRequest {
+  id: number;
+  descripcion: string;
+  simbolo?: string;
+}
+
 export interface CrearCodificacionRequest {
   codigo: string;
   nombre: string;
-  minerales: number[];
+  minerales: CodificacionMineralRequest[];
 }
 
 export interface ActualizarCodificacionRequest {
   id: string;
   codigo: string;
   nombre: string;
-  minerales: number[];
+  minerales: CodificacionMineralRequest[];
 }
 
 // ==========================================================
@@ -191,6 +200,14 @@ export interface TipoActorProductivoMinero {
   fechaUltimaModificacion?: string | null;
 }
 
+/** Una sección de mina de un actor productivo minero. El `id` es un
+ *  correlativo que maneja el frontend (no lo genera la base de datos):
+ *  se usa solo para poder editar/quitar filas antes de guardar. */
+export interface SeccionMina {
+  id: number;
+  descripcion: string;
+}
+
 export interface ActorProductivoMinero {
   id: string;
   nombre: string;
@@ -198,6 +215,11 @@ export interface ActorProductivoMinero {
   telefono: string;
   idTipoActorProductivoMinero: number | string;
   tipoActorProductivoMinero?: TipoActorProductivoMinero;
+  idMunicipio?: number | null;
+  municipio?: Municipio;
+  nim?: string;
+  codigo?: string;
+  seccionesMina?: SeccionMina[];
   activo?: boolean;
   usuarioUltimaModificacion?: string | null;
   fechaUltimaModificacion?: string | null;
@@ -210,6 +232,25 @@ export interface GuardarActorProductivoMineroRequest {
   direccion: string;
   telefono: string;
   idTipoActorProductivoMinero: number | string;
+  /** idMunicipio, nim, codigo y seccionesMina son opcionales: se omiten si
+   *  no aplican. seccionesMina se reemplaza completo en cada request. */
+  idMunicipio?: number;
+  nim?: string;
+  codigo?: string;
+  seccionesMina?: SeccionMina[];
+}
+
+// ==========================================================
+// MUNICIPIO
+// ==========================================================
+
+export interface Municipio {
+  id: number;
+  codigo: string;
+  municipio: string;
+  provincia: string;
+  departamento: string;
+  activo?: boolean;
 }
 
 export interface FiltrosActorProductivoMinero {
@@ -291,11 +332,14 @@ export interface GuardarEntidadAporteRequest {
 //
 // Un solo recurso en el back, particionado por `idTipoCalculo`: 1 = Gastos
 // de Tratamiento (maquila, refinación, etc.), 2 = Penalidades (elementos
-// traza como As, Sb, Bi...). Fijo, no cambia.
+// traza como As, Sb, Bi...), 3 = Otros (AL, ROLLBACK — mismo mecanismo de
+// `calculos` que gastos/penalidades, pero sin `extras` propio). Fijo, no
+// cambia.
 // ==========================================================
 
 export const ID_TIPO_CALCULO_GASTO_TRATAMIENTO = 1;
 export const ID_TIPO_CALCULO_PENALIDAD = 2;
+export const ID_TIPO_CALCULO_OTROS = 3;
 
 /** `extras` de un Gasto de Tratamiento (ej. Maquila, Gastos de refinación Ag). */
 export interface ExtrasGastoTratamiento {
@@ -321,8 +365,14 @@ export interface ExtrasPenalidad {
   unidadCargo: string;
 }
 
+/** `extras` de "Otros" (AL, ROLLBACK): vacío, confirmado por el usuario
+ *  2026-08-21 — a diferencia de gastos/penalidades, estos no traen
+ *  configuración propia en el catálogo, son solo un id + descripción para
+ *  poder guardar su resultado en `calculos`. */
+export type ExtrasOtros = Record<string, never>;
+
 export interface TipoCalculoValorizacion<
-  TExtras = ExtrasGastoTratamiento | ExtrasPenalidad,
+  TExtras = ExtrasGastoTratamiento | ExtrasPenalidad | ExtrasOtros,
 > {
   id: number;
   descripcion: string;
@@ -349,4 +399,5 @@ export interface GuardarTipoCalculoValorizacionRequest<
 export interface TipoCalculoValorizacionAgrupado {
   gastos: TipoCalculoValorizacion<ExtrasGastoTratamiento>[];
   penalidades: TipoCalculoValorizacion<ExtrasPenalidad>[];
+  otros: TipoCalculoValorizacion<ExtrasOtros>[];
 }

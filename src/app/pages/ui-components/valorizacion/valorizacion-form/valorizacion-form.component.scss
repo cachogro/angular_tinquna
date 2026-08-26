@@ -3,6 +3,19 @@
   align-items: center;
 }
 
+/* Todos los inputs numéricos del formulario (editables y deshabilitados/
+ * bloqueados) alineados a la derecha, sin importar en qué sección estén.
+ * La restricción de caracteres (solo dígitos y ".") se maneja en TS, ver
+ * ValorizacionFormComponent.restringirEntradaNumerica.
+ * input[type="text"][disabled] también entra: son los totales de solo
+ * lectura (USD/TM, VBV, aportes, saldo...) que se muestran como texto
+ * formateado (comas de miles, decimales fijos) en vez de bindearse directo
+ * al FormControl. */
+.valorizacion-form input[type="number"],
+.valorizacion-form input[type="text"][disabled] {
+  text-align: right;
+}
+
 .header-left {
   display: flex;
   align-items: center;
@@ -84,6 +97,22 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+/* BCL/BZL: las 6 columnas del cálculo de peso neto en una sola fila.
+ * Humedad (%) y Merma (%) reciben rangos chicos (0-100 y 0-9), así que
+ * sus columnas son más angostas que el resto. */
+.form-grid--peso-neto-bcl {
+  grid-template-columns:
+    minmax(130px, 1fr) minmax(75px, 0.60fr) minmax(130px, 0.91fr) minmax(64px, 0.54fr) minmax(130px, 0.91fr) minmax(130px, 0.91fr);
+}
+
+.valorizacion-form__campo-porcentaje {
+  max-width: 110px;
+}
+
+.valorizacion-form__campo-porcentaje--merma {
+  max-width: 90px;
 }
 
 .valorizacion-form__precio-calculado {
@@ -195,12 +224,22 @@
   font-weight: 700;
 }
 
+.valorizacion-form__aportes-vacio {
+  text-align: center;
+  color: rgba(0, 0, 0, 0.35);
+}
+
+.valorizacion-form__aportes-importe {
+  text-align: right;
+}
+
 .valorizacion-form__aportes-fila-totales td {
   padding: 8px;
   color: #7367f0;
 }
 
-.valorizacion-form__aportes-fila-totales .col-importe-total {
+.valorizacion-form__aportes-fila-totales .col-importe-total,
+.valorizacion-form__aportes-fila-totales .col-alicuota-total {
   text-align: right;
 }
 
@@ -229,21 +268,21 @@
   }
 }
 
-/* Fila BCL: 6 columnas x 2 filas.
- * Fila 1: Mineral, Ley, Cotización vigente, Cotización ajustada (solo Plomo),
- *         Descuento, Total (USD/TM)
+/* Fila BCL/BZL: 5 columnas x 2 filas.
+ * Fila 1: Mineral, Ley, Cotización vigente, Descuento, Total (USD/TM)
  * Fila 2: (Mineral sigue ocupando su columna), Ley Unidad, Factor de conversión,
- *         (columna 4 vacía), % Adición (debajo de Descuento de ley)
+ *         % Pagable (debajo de Descuento de ley)
  * "Ley aplicada" se sigue calculando (ver recalcularFilaLeyBcl) pero no se
  * muestra como campo aparte: es puro derivado de ley y descuento de ley,
- * ya visibles por separado.
+ * ya visibles por separado. "Cotización ajustada" existió como campo pero
+ * se quitó 2026-08-20 (no se usaba en ningún cálculo final).
  * Reutiliza los mismos nombres de clase --mineral/--ley/--ley-unidad/--cotizacion/
  * --factor-conversion/--descuento-ley que Plomo y estándar, pero con su propia
  * posición (por eso van con el prefijo .valorizacion-form__ley-fila-bcl, que
  * tiene más especificidad que la regla base). */
 .valorizacion-form__ley-fila-bcl {
   display: grid;
-  grid-template-columns: repeat(6, minmax(140px, 1fr));
+  grid-template-columns: repeat(5, minmax(140px, 1fr));
   grid-template-rows: auto auto;
   gap: 4px 12px;
   align-items: start;
@@ -277,23 +316,18 @@
   grid-row: 2;
 }
 
-.valorizacion-form__ley-campo--cotizacion-ajustada {
+.valorizacion-form__ley-fila-bcl .valorizacion-form__ley-campo--descuento-ley {
   grid-column: 4;
   grid-row: 1;
 }
 
-.valorizacion-form__ley-fila-bcl .valorizacion-form__ley-campo--descuento-ley {
-  grid-column: 5;
-  grid-row: 1;
-}
-
 .valorizacion-form__ley-campo--adicion {
-  grid-column: 5;
+  grid-column: 4;
   grid-row: 2;
 }
 
 .valorizacion-form__ley-campo--total {
-  grid-column: 6;
+  grid-column: 5;
   grid-row: 1;
 }
 
@@ -431,6 +465,51 @@
   font-size: 16px;
   font-weight: 700;
   color: #7367f0;
+}
+
+/* Totales de "Gastos de Tratamiento y Penalidades": tabla sin bordes
+ * visibles (así las columnas quedan alineadas entre filas aunque el alto
+ * varíe, ej. las filas AL/ROLLBACK que llevan un mat-form-field). 1ra
+ * columna: título AL/ROLLBACK (vacía en el resto de filas, colspan=2 en
+ * esas). 2da columna: el input (vacía en el resto). 3ra columna: el valor,
+ * siempre a la derecha — mismos colores que el resto de totales de la app
+ * (valorizacion-form__ley-totales-label/valor). */
+
+//  .valorizacion-form__gastos-totales1 {
+//     background: rgba(115, 103, 240, 0.06);
+//   font-weight: 700;
+// }
+
+
+.valorizacion-form__gastos-totales {
+  width: 100%;
+  border-collapse: collapse;
+  border-radius: 8px;
+  //background: rgba(115, 103, 240, 0.06);
+  overflow: hidden;
+}
+
+.valorizacion-form__gastos-totales td {
+  border: none;
+  padding: 6px 12px;
+  vertical-align: middle;
+}
+
+.valorizacion-form__gastos-totales td:last-child {
+  text-align: right;
+  width: 1%;
+  white-space: nowrap;
+}
+
+.valorizacion-form__gastos-totales-titulo {
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  width: 1%;
+}
+
+.valorizacion-form__gastos-totales .valorizacion-form__campo {
+  width: 100px;
 }
 
 .valorizacion-form__ley-tramo-aviso {
@@ -574,8 +653,6 @@
   color: #28c76f;
 }
 
-
-
 ////---------------scss de totales-----------------////
 
 .valorizacion-form__titulo {
@@ -603,10 +680,6 @@
 .valorizacion-form__campo input {
   text-align: right;
 }
-
-
-
-
 
 .valorizacion-form__saldo-pagar {
   ::ng-deep .mat-mdc-input-element {

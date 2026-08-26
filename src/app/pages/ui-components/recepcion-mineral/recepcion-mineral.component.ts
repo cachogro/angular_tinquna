@@ -33,7 +33,7 @@ import {
 import { RegistroMineralService } from '../services/registro-mineral.service';
 import { VerRecepcionDialogComponent } from './ver-recepcion-dialog/ver-recepcion-dialog.component';
 import { ValorizacionMineralService } from '../services/valorizacion-mineral.service';
-import { formatNumeroSinCeros } from 'src/app/shared/utils/numero.util';interface OpcionOrden {
+import { formatNumeroConMiles } from 'src/app/shared/utils/numero.util';interface OpcionOrden {
   value: string;
   label: string;
 }
@@ -140,7 +140,7 @@ export class RecepcionMineralComponent implements OnInit {
   readonly fechaHastaControl = new FormControl<Date | null>(null);
 
   readonly opcionesOrden: OpcionOrden[] = [
-    { value: 'id', label: 'ID' },
+    // { value: 'id', label: 'ID' }, // se deja de exponer el id: se muestra numeración correlativa
     { value: 'codigoOperacion', label: 'Código de operación' },
     { value: 'fechaRecepcion', label: 'Fecha de recepción' },
     { value: 'numeroDocumento', label: 'N° de documento' },
@@ -271,6 +271,18 @@ export class RecepcionMineralComponent implements OnInit {
     this.reiniciarYcargar();
   }
 
+  /** Numeración correlativa (no el id real, que queda con huecos por bajas):
+   *  el más antiguo es 1 y el más nuevo es `total()`, sin importar en qué
+   *  posición de la página caiga. Se invierte según el sentido del orden
+   *  actual para que ese número no cambie con la fila, sino que se mantenga
+   *  ligado al mismo registro al togglear ascendente/descendente. */
+  numeroFila(i: number): number {
+    const offset = this.pageIndex * this.pageSize + i;
+    return this.orderDirectionControl.value === 'ASC'
+      ? offset + 1
+      : this.total() - offset;
+  }
+
   nombreProveedor(registro: RegistroMineral): string {
     const p = registro.persona;
     if (!p) return '—';
@@ -282,13 +294,13 @@ export class RecepcionMineralComponent implements OnInit {
     return registro.detalles
       .map(
         (d) =>
-          `${d.mineral?.simbolo ?? 'Mineral ' + d.idMineral} ${formatNumeroSinCeros(d.ley)}%`,
+          `${d.mineral?.simbolo ?? 'Mineral ' + d.idMineral} ${formatNumeroConMiles(d.ley)}%`,
       )
       .join(' · ');
   }
 
   formatNumero(valor: number | string | null | undefined): string {
-    return formatNumeroSinCeros(valor);
+    return formatNumeroConMiles(valor);
   }
 
   estaLiquidado(registro: RegistroMineral): boolean {

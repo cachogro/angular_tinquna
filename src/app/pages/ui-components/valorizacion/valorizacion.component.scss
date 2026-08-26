@@ -7,13 +7,49 @@
 .recepcion-toolbar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
+  gap: 8px;
+  flex-wrap: nowrap;
+  font-size: 13px;
+
+  .mat-mdc-form-field {
+    flex: 0 1 auto;
+    font-size: 13px;
+  }
+
+  .mat-mdc-text-field-wrapper {
+    padding: 0 8px;
+  }
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
 }
 
 .recepcion-toolbar__search {
-  flex: 1 1 220px;
-  min-width: 200px;
+  flex: 1 1 120px;
+  min-width: 90px;
+}
+
+.recepcion-toolbar__codigo {
+  flex: 0 1 90px;
+  min-width: 70px;
+}
+
+.recepcion-toolbar__estado {
+  flex: 0 1 110px;
+  min-width: 90px;
+}
+
+.recepcion-toolbar__orden {
+  flex: 0 1 110px;
+  min-width: 90px;
+}
+
+.recepcion-toolbar__fechas {
+  flex: 0 1 160px;
+  min-width: 130px;
 }
 
 .recepcion-toolbar__clear {

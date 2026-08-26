@@ -4,45 +4,118 @@
     <!-- ==================== FORMULARIO ==================== -->
     <form [formGroup]="form" (ngSubmit)="guardar()" class="actor-form">
 
-      <!-- Nombre -->
-      <mat-form-field appearance="outline">
-        <mat-label>Nombre</mat-label>
-        <input matInput formControlName="nombre" maxlength="150" placeholder="Ej: Ingenio San Cristóbal" />
-        <mat-error *ngIf="form.get('nombre')?.hasError('required')">
-          El nombre es obligatorio
-        </mat-error>
-      </mat-form-field>
+      <!-- Fila 1: nombre, tipo, dirección, teléfono -->
+      <div class="fila-uno">
+        <mat-form-field appearance="outline">
+          <mat-label>Nombre</mat-label>
+          <input matInput formControlName="nombre" maxlength="55" placeholder="Ej: Ingenio San Cristóbal"
+            class="input-mayusculas" />
+          <mat-error *ngIf="form.get('nombre')?.hasError('required')">
+            El nombre es obligatorio
+          </mat-error>
+          <mat-error *ngIf="form.get('nombre')?.hasError('pattern')">
+            Solo letras, números, espacios y # / ° ' " . - _ ,
+          </mat-error>
+        </mat-form-field>
 
-      <!-- Tipo -->
-      <mat-form-field appearance="outline">
-        <mat-label>Tipo</mat-label>
-        <mat-select formControlName="idTipoActorProductivoMinero">
-          <mat-option *ngFor="let tipo of tipos" [value]="tipo.id">
-            {{ tipo.descripcion }}
-          </mat-option>
-        </mat-select>
-        <mat-error *ngIf="form.get('idTipoActorProductivoMinero')?.hasError('required')">
-          Debe seleccionar un tipo
-        </mat-error>
-      </mat-form-field>
+        <mat-form-field appearance="outline" class="campo-tipo">
+          <mat-label>Tipo</mat-label>
+          <mat-select formControlName="idTipoActorProductivoMinero">
+            <mat-option *ngFor="let tipo of tipos" [value]="tipo.id">
+              {{ tipo.descripcion }}
+            </mat-option>
+          </mat-select>
+          <mat-error *ngIf="form.get('idTipoActorProductivoMinero')?.hasError('required')">
+            Debe seleccionar un tipo
+          </mat-error>
+        </mat-form-field>
 
-      <!-- Dirección -->
-      <mat-form-field appearance="outline">
-        <mat-label>Dirección</mat-label>
-        <input matInput formControlName="direccion" maxlength="200" placeholder="Ej: Av. Industrial N° 123, Uyuni" />
-        <mat-error *ngIf="form.get('direccion')?.hasError('required')">
-          La dirección es obligatoria
-        </mat-error>
-      </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Dirección</mat-label>
+          <input matInput formControlName="direccion" maxlength="55" placeholder="Ej: Av. Industrial N° 123, Uyuni"
+            class="input-mayusculas" />
+          <mat-error *ngIf="form.get('direccion')?.hasError('required')">
+            La dirección es obligatoria
+          </mat-error>
+          <mat-error *ngIf="form.get('direccion')?.hasError('pattern')">
+            Solo letras, números, espacios y # / ° ' " . - _ ,
+          </mat-error>
+        </mat-form-field>
 
-      <!-- Teléfono -->
-      <mat-form-field appearance="outline">
-        <mat-label>Teléfono</mat-label>
-        <input matInput formControlName="telefono" maxlength="20" placeholder="Ej: 72450000" />
-        <mat-error *ngIf="form.get('telefono')?.hasError('required')">
-          El teléfono es obligatorio
-        </mat-error>
-      </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Teléfono</mat-label>
+          <input matInput formControlName="telefono" maxlength="10" placeholder="Ej: 72450000" />
+          <mat-error *ngIf="form.get('telefono')?.hasError('required')">
+            El teléfono es obligatorio
+          </mat-error>
+          <mat-error *ngIf="form.get('telefono')?.hasError('pattern')">
+            Solo números y "+"
+          </mat-error>
+        </mat-form-field>
+      </div>
+
+      <!-- Fila 2: municipio (departamento/provincia/municipio-ETIOC/código), NIM y código -->
+      <div class="fila-dos">
+        <mat-form-field appearance="outline">
+          <mat-label>Departamento/provincia/municipio-ETIOC/código</mat-label>
+          <input matInput type="text" [formControl]="municipioCtrl" [matAutocomplete]="autoMunicipio"
+            (blur)="onMunicipioBlur()" placeholder="Escribe para buscar..." />
+          <mat-icon matSuffix>search</mat-icon>
+          <mat-autocomplete #autoMunicipio="matAutocomplete" [displayWith]="mostrarMunicipio"
+            (optionSelected)="onMunicipioSeleccionado($event)">
+            <mat-option *ngFor="let municipio of municipiosFiltrados" [value]="municipio">
+              {{ municipio.departamento }} - {{ municipio.provincia }} - {{ municipio.municipio }} -
+              {{ municipio.codigo }}
+            </mat-option>
+          </mat-autocomplete>
+          <mat-hint>Opcional</mat-hint>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>NIM</mat-label>
+          <input matInput formControlName="nim" maxlength="30" placeholder="Ej: 05-0486-04" />
+          <mat-error *ngIf="form.get('nim')?.hasError('pattern')">
+            Solo números, máximo 2 guiones
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Código</mat-label>
+          <input matInput formControlName="codigo" maxlength="30" placeholder="Ej: 20745" />
+          <mat-error *ngIf="form.get('codigo')?.hasError('pattern')">
+            Solo números
+          </mat-error>
+        </mat-form-field>
+      </div>
+
+      <!-- Secciones de mina: lista simple, se agrega/quita antes de guardar -->
+      <div class="actor-form__secciones">
+        <span class="actor-form__secciones-titulo">Secciones de mina (opcional)</span>
+        <div class="actor-form__secciones-agregar">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Nueva sección</mat-label>
+            <input matInput [formControl]="nuevaSeccionControl" maxlength="60" placeholder="Ej: SOCAVON 1"
+              (keydown.enter)="$event.preventDefault(); agregarSeccion()" />
+          </mat-form-field>
+          <button mat-stroked-button type="button" color="primary" [disabled]="!nuevaSeccionControl.value?.trim()"
+            (click)="agregarSeccion()">
+            <mat-icon>add</mat-icon>
+            Agregar
+          </button>
+        </div>
+        @if (seccionesMina.length > 0) {
+        <div class="actor-form__secciones-lista">
+          @for (seccion of seccionesMina; track seccion.id) {
+          <span class="actor-form__seccion-chip">
+            {{ seccion.descripcion }}
+            <button mat-icon-button type="button" matTooltip="Quitar sección" (click)="quitarSeccion(seccion.id)">
+              <mat-icon>close</mat-icon>
+            </button>
+          </span>
+          }
+        </div>
+        }
+      </div>
 
     </form>
 
@@ -80,7 +153,7 @@
             </mat-select>
           </mat-form-field>
 
-          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-form-field appearance="outline" class="filtro-orden" subscriptSizing="dynamic">
             <mat-select [formControl]="orderByControl" placeholder="Ordenar por">
               <mat-option *ngFor="let opcion of opcionesOrden" [value]="opcion.value">{{ opcion.label }}</mat-option>
             </mat-select>
@@ -102,8 +175,8 @@
           <table mat-table [dataSource]="actores" class="tabla mat-elevation-z1">
 
             <ng-container matColumnDef="id">
-              <th mat-header-cell *matHeaderCellDef>ID</th>
-              <td mat-cell *matCellDef="let row">{{ row.id }}</td>
+              <th mat-header-cell *matHeaderCellDef>N°</th>
+              <td mat-cell *matCellDef="let row; let i = index">{{ numeroFila(i) }}</td>
             </ng-container>
 
             <ng-container matColumnDef="nombre">
@@ -119,11 +192,6 @@
             <ng-container matColumnDef="direccion">
               <th mat-header-cell *matHeaderCellDef>Dirección</th>
               <td mat-cell *matCellDef="let row">{{ row.direccion }}</td>
-            </ng-container>
-
-            <ng-container matColumnDef="telefono">
-              <th mat-header-cell *matHeaderCellDef>Teléfono</th>
-              <td mat-cell *matCellDef="let row">{{ row.telefono }}</td>
             </ng-container>
 
             <ng-container matColumnDef="estado">

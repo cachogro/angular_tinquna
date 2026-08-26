@@ -25,6 +25,7 @@ import {
   GuardarTipoCalculoValorizacionRequest,
   Laboratorio,
   Mineral,
+  Municipio,
   TipoActorProductivoMinero,
   TipoCalculoValorizacionAgrupado,
 } from '../parametricas/models/parametricas.models';
@@ -207,9 +208,7 @@ export class ParametricasService {
     this.cargandoEscalaPrecio.set(true);
     this.obtenerEscalaPrecioVigente(idMineral, fecha).subscribe({
       next: (data) => {
-        this.escalaPrecioVigente.set(
-          [...data].sort((a, b) => a.ley - b.ley),
-        );
+        this.escalaPrecioVigente.set([...data].sort((a, b) => a.ley - b.ley));
         this.cargandoEscalaPrecio.set(false);
       },
       error: () => {
@@ -324,6 +323,22 @@ export class ParametricasService {
           ),
         ),
       );
+  }
+
+  // ==========================================================
+  // MUNICIPIO
+  // ==========================================================
+
+  private municipios$?: Observable<Municipio[]>;
+
+  /** Catálogo cacheado — no se vuelve a pedir tras la primera carga */
+  obtenerMunicipios(): Observable<Municipio[]> {
+    if (!this.municipios$) {
+      this.municipios$ = this.http
+        .get<Municipio[]>(`${this.baseUrl}/municipio`)
+        .pipe(shareReplay(1));
+    }
+    return this.municipios$;
   }
 
   // ==========================================================
@@ -465,16 +480,24 @@ export class ParametricasService {
   }
 
   // ==========================================================
-  // TIPO DE CÁLCULO VALORIZACIÓN (Gastos de Tratamiento y Penalidades)
-  // idTipoCalculo fijo: 1 = Gastos de Tratamiento, 2 = Penalidades.
+  // TIPO DE CÁLCULO VALORIZACIÓN (Gastos de Tratamiento, Penalidades y Otros)
+  // idTipoCalculo fijo: 1 = Gastos de Tratamiento, 2 = Penalidades, 3 = Otros
+  // (AL, ROLLBACK).
   // ==========================================================
 
   private readonly tipoCalculoValorizacionUrl = `${this.baseUrl}/tipo-calculo-valorizacion`;
 
-  // El back ya devuelve ambos grupos juntos en una sola respuesta, así que
-  // una sola carga (cargarTipoCalculoValorizacion) alimenta los dos signals.
-  readonly gastosTratamiento = signal<TipoCalculoValorizacionAgrupado['gastos']>([]);
-  readonly penalidadesValorizacion = signal<TipoCalculoValorizacionAgrupado['penalidades']>([]);
+  // El back ya devuelve los tres grupos juntos en una sola respuesta, así
+  // que una sola carga (cargarTipoCalculoValorizacion) alimenta los tres signals.
+  readonly gastosTratamiento = signal<
+    TipoCalculoValorizacionAgrupado['gastos']
+  >([]);
+  readonly penalidadesValorizacion = signal<
+    TipoCalculoValorizacionAgrupado['penalidades']
+  >([]);
+  readonly otrosCalculoValorizacion = signal<
+    TipoCalculoValorizacionAgrupado['otros']
+  >([]);
   readonly cargandoTipoCalculoValorizacion = signal<boolean>(false);
 
   crearTipoCalculoValorizacion(
@@ -506,14 +529,16 @@ export class ParametricasService {
     );
   }
 
-  /** Carga gastos de tratamiento y penalidades juntos (una sola llamada al
-   *  back) y actualiza ambos signals para que las dos tablas se refresquen. */
+  /** Carga gastos de tratamiento, penalidades y otros juntos (una sola
+   *  llamada al back) y actualiza los tres signals para que las tablas se
+   *  refresquen. */
   cargarTipoCalculoValorizacion(): void {
     this.cargandoTipoCalculoValorizacion.set(true);
     this.obtenerTipoCalculoValorizacionAgrupado().subscribe({
       next: (data) => {
         this.gastosTratamiento.set(data.gastos);
         this.penalidadesValorizacion.set(data.penalidades);
+        this.otrosCalculoValorizacion.set(data.otros);
         this.cargandoTipoCalculoValorizacion.set(false);
       },
       error: () => {

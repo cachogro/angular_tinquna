@@ -14,19 +14,19 @@ FORMULARIO
 }
 
 /*==========================
-BOTONES (viven como celda del grid, junto a las alícuotas)
+BOTONES
 ===========================*/
 
-.acciones-form {
+.acciones {
     display: flex;
-    align-items: center;
+    justify-content: flex-end;
     gap: 12px;
+    margin-bottom: 18px;
     flex-wrap: wrap;
 }
 
-.acciones-form button {
-    flex: 1;
-    min-width: 120px;
+.acciones button {
+    min-width: 170px;
 }
 
 /*==========================
@@ -153,11 +153,11 @@ RESPONSIVE
         grid-template-columns: 1fr;
     }
 
-    .acciones-form {
+    .acciones {
         flex-direction: column;
     }
 
-    .acciones-form button {
+    .acciones button {
         width: 100%;
     }
 

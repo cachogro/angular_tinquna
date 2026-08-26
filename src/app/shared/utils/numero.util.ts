@@ -13,3 +13,22 @@ export function formatNumeroSinCeros(
   if (Number.isInteger(num)) return String(num);
   return String(parseFloat(num.toFixed(4)));
 }
+
+/**
+ * Igual que formatNumeroSinCeros, pero agrega separador de miles (coma)
+ * manteniendo el punto como separador decimal.
+ * Ej: '12345' -> '12,345', '12345.25' -> '12,345.25'.
+ */
+export function formatNumeroConMiles(
+  valor: number | string | null | undefined,
+): string {
+  const sinCeros = formatNumeroSinCeros(valor);
+  if (sinCeros === '') return '';
+  const num = parseFloat(sinCeros);
+  if (Number.isNaN(num)) return sinCeros;
+  const decimales = sinCeros.includes('.') ? sinCeros.split('.')[1].length : 0;
+  return num.toLocaleString('en-US', {
+    minimumFractionDigits: decimales,
+    maximumFractionDigits: decimales,
+  });
+}

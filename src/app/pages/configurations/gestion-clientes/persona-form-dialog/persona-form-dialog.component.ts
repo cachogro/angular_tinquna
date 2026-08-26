@@ -1,7 +1,7 @@
 // src/app/pages/configurations/gestion-clientes/persona-form-dialog/persona-form-dialog.component.ts
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { toObservable } from '@angular/core/rxjs-interop';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import {
   AbstractControl,
   FormControl,
@@ -14,6 +14,7 @@ import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
 import {
   MAT_DIALOG_DATA,
+  MatDialog,
   MatDialogModule,
   MatDialogRef,
 } from '@angular/material/dialog';
@@ -23,6 +24,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { combineLatest, forkJoin, Observable } from 'rxjs';
 import { map, startWith } from 'rxjs/operators';
 import {
@@ -33,6 +35,7 @@ import {
   TipoDocumentoCatalogo,
 } from '../../models/persona.models';
 import { PersonaService } from '../../services/persona.service';
+import { ActorProductivoMineroFormDialogComponent } from '../../parametricas/actor-productivo-minero/actor-productivo-minero-form-dialog.component';
 
 export interface PersonaFormDialogData {
   persona: PersonaCI | null; // null = crear, con valor = editar
@@ -51,6 +54,7 @@ export interface PersonaFormDialogData {
     MatIconModule,
     MatProgressSpinnerModule,
     MatAutocompleteModule,
+    MatTooltipModule,
   ],
   templateUrl: './persona-form-dialog.component.html',
   styleUrl: './persona-form-dialog.component.scss',
@@ -60,6 +64,7 @@ export class PersonaFormDialogComponent implements OnInit {
   private readonly data = inject<PersonaFormDialogData>(MAT_DIALOG_DATA);
   private readonly personaService = inject(PersonaService);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly dialog = inject(MatDialog);
 
   readonly tiposPersonaCatalogo = signal<PersonaTipoCatalogo[]>([]);
   readonly tiposDocumentoCatalogo = signal<TipoDocumentoCatalogo[]>([]);
@@ -110,6 +115,13 @@ export class PersonaFormDialogComponent implements OnInit {
       toObservable(this.actoresMineroCatalogo),
     ]).pipe(map(([valor, lista]) => this.filtrarActores(valor, lista)));
 
+  /** true cuando lo tecleado/buscado no matchea ningún actor del catálogo:
+   *  se usa para ofrecer ahí mismo el botón de registrar uno nuevo. */
+  readonly actorSinResultados = toSignal(
+    this.actoresFiltrados$.pipe(map((lista) => lista.length === 0)),
+    { initialValue: false },
+  );
+
   get f() {
     return this.form.controls;
   }
@@ -135,6 +147,28 @@ export class PersonaFormDialogComponent implements OnInit {
     if (!actor) return '';
     return typeof actor === 'string' ? actor : actor.nombre;
   };
+
+  /** Abre el mismo diálogo de gestión de actores productivos mineros que hay
+   *  en Parametrías, para registrar uno nuevo sin salir de este formulario.
+   *  Al cerrar, recarga el catálogo para que el recién creado aparezca en
+   *  la lista (no se autoselecciona: el usuario lo elige del autocomplete). */
+  abrirRegistrarActor(): void {
+    this.dialog
+      .open(ActorProductivoMineroFormDialogComponent, {
+        width: '900px',
+        maxWidth: '95vw',
+        autoFocus: false,
+      })
+      .afterClosed()
+      .subscribe(() => this.recargarActoresMinero());
+  }
+
+  private recargarActoresMinero(): void {
+    this.personaService.getAllActoresMineros().subscribe({
+      next: (data) => this.actoresMineroCatalogo.set(data),
+      error: () => {},
+    });
+  }
 
   /** Mayúsculas, solo letras (con acentos/ñ) y espacios — sin números ni símbolos */
   private saneaSoloLetras(valor: string): string {

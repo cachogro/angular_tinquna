@@ -9,7 +9,7 @@ import {
 import { MatIconModule } from '@angular/material/icon';
 import { RegistroMineral } from '../../models/registro-mineral.models';
 import { RegistroMineralService } from '../../services/registro-mineral.service';
-import { formatNumeroSinCeros } from 'src/app/shared/utils/numero.util';
+import { formatNumeroConMiles } from 'src/app/shared/utils/numero.util';
 
 export interface VerRecepcionDialogData {
   registro: RegistroMineral;
@@ -73,13 +73,13 @@ export class VerRecepcionDialogComponent implements OnInit {
     return this.registro.detalles
       .map(
         (d) =>
-          `${d.mineral?.simbolo ?? 'Mineral ' + d.idMineral} ${formatNumeroSinCeros(d.ley)}%`,
+          `${d.mineral?.simbolo ?? 'Mineral ' + d.idMineral} ${formatNumeroConMiles(d.ley)}%`,
       )
       .join(' · ');
   }
 
   formatNumero(valor: number | string | null | undefined): string {
-    return formatNumeroSinCeros(valor);
+    return formatNumeroConMiles(valor);
   }
 
   /** Abre una ventana de impresión con el detalle formateado (el navegador permite "Guardar como PDF"). */

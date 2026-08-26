@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import {
+  AbstractControl,
   FormBuilder,
   FormGroup,
   ReactiveFormsModule,
@@ -25,6 +26,18 @@ import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog
 import { ParametricaDialogShellComponent } from '../shared/parametrica-dialog-shell.component';
 import { Laboratorio } from '../models/parametricas.models';
 import { ParametricasService } from '../../services/parametricas.service';
+
+/** Mayúsculas, letras (con acentos/ñ), espacios y puntos */
+const CHARSET_NOMBRE = /^[A-ZÁÉÍÓÚÑÜ .]*$/;
+const CARACTERES_INVALIDOS_NOMBRE = /[^A-ZÁÉÍÓÚÑÜ .]/g;
+
+/** Mayúsculas, letras (con acentos/ñ), números, espacios y .:#/, */
+const CHARSET_DIRECCION = /^[A-ZÁÉÍÓÚÑÜ0-9 .:#/,]*$/;
+const CARACTERES_INVALIDOS_DIRECCION = /[^A-ZÁÉÍÓÚÑÜ0-9 .:#/,]/g;
+
+/** Solo dígitos y el signo "+" */
+const CHARSET_TELEFONO = /^[0-9+]*$/;
+const CARACTERES_INVALIDOS_TELEFONO = /[^0-9+]/g;
 
 @Component({
   selector: 'app-laboratorio-form-dialog',
@@ -68,13 +81,65 @@ export class LaboratorioFormDialogComponent implements OnInit {
 
   // Dirección y teléfono son opcionales según lo definido por el back.
   form: FormGroup = this.fb.group({
-    nombre: ['', [Validators.required, Validators.maxLength(150)]],
-    direccion: ['', [Validators.maxLength(200)]],
-    telefono: ['', [Validators.maxLength(20)]],
+    nombre: [
+      '',
+      [
+        Validators.required,
+        Validators.maxLength(150),
+        Validators.pattern(CHARSET_NOMBRE),
+      ],
+    ],
+    direccion: [
+      '',
+      [Validators.maxLength(200), Validators.pattern(CHARSET_DIRECCION)],
+    ],
+    telefono: [
+      '',
+      [Validators.maxLength(20), Validators.pattern(CHARSET_TELEFONO)],
+    ],
   });
 
   ngOnInit(): void {
     this.recargarTabla();
+
+    this.registrarSaneador(this.form.get('nombre')!, (v) =>
+      this.saneaNombre(v),
+    );
+    this.registrarSaneador(this.form.get('direccion')!, (v) =>
+      this.saneaDireccion(v),
+    );
+    this.registrarSaneador(this.form.get('telefono')!, (v) =>
+      this.saneaTelefono(v),
+    );
+  }
+
+  /** Mayúsculas + solo caracteres permitidos, para nombre */
+  private saneaNombre(valor: string): string {
+    return valor.toUpperCase().replace(CARACTERES_INVALIDOS_NOMBRE, '');
+  }
+
+  /** Mayúsculas + solo caracteres permitidos, para dirección */
+  private saneaDireccion(valor: string): string {
+    return valor.toUpperCase().replace(CARACTERES_INVALIDOS_DIRECCION, '');
+  }
+
+  /** Solo dígitos y "+", para teléfono */
+  private saneaTelefono(valor: string): string {
+    return valor.replace(CARACTERES_INVALIDOS_TELEFONO, '');
+  }
+
+  /** Suscribe un control para reescribir su valor en vivo según la función de saneo dada */
+  private registrarSaneador(
+    control: AbstractControl,
+    sanea: (valor: string) => string,
+  ): void {
+    control.valueChanges.subscribe((valor) => {
+      if (typeof valor !== 'string') return;
+      const limpio = sanea(valor);
+      if (limpio !== valor) {
+        control.setValue(limpio, { emitEvent: false });
+      }
+    });
   }
 
   private recargarTabla(): void {

@@ -60,7 +60,7 @@ TABLA
 
     overflow: auto;
 
-    max-height: 420px;
+    max-height: 360px;
 
 }
 
@@ -71,7 +71,7 @@ TABLA
 
     width: 100%;
 
-    min-width: 700px;
+    min-width: 620px;
 
 }
 
@@ -80,20 +80,16 @@ TABLA
 ENCABEZADO
 ===========================*/
 
-// .mat-mdc-header-row{
-
-//     background: var(--mat-sys-primary);
-//     color: var(--mat-sys-on-primary);
-//     font-weight: 600;
-//     letter-spacing: .3px;
-
-// }
 .mat-mdc-header-row {
 
     background: #0d6efd !important;
     color: #ffffff !important;
     font-weight: 600;
     letter-spacing: .3px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    height: 36px;
 
 }
 
@@ -102,7 +98,10 @@ ENCABEZADO
     background: var(--mat-sys-primary);
     color: var(--mat-sys-on-primary);
     font-weight: 600;
+    font-size: 12px;
     letter-spacing: .3px;
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
 }
 
 .mat-mdc-row:hover {
@@ -117,30 +116,17 @@ FILAS COMPACTAS
 
 .mat-mdc-row {
 
-    height: 42px;
+    height: 34px;
 
 }
 
 .mat-mdc-cell {
 
-    padding-top: 6px !important;
+    padding-top: 3px !important;
 
-    padding-bottom: 6px !important;
+    padding-bottom: 3px !important;
 
-    font-size: 13px;
-
-}
-
-
-/* encabezado fijo */
-
-.mat-mdc-header-row {
-
-    position: sticky;
-
-    top: 0;
-
-    z-index: 10;
+    font-size: 12px;
 
 }
 
@@ -194,7 +180,7 @@ RESPONSIVE
 
     .tabla {
 
-        min-width: 700px;
+        min-width: 620px;
 
     }
 
