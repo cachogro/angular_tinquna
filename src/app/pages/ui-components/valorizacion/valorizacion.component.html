@@ -130,6 +130,13 @@
                 <mat-icon>print</mat-icon>
               </button>
               }
+              @if (puedeMarcarEntregado(v)) {
+              <button mat-icon-button (click)="toggleEntregado(v)"
+                [color]="v.entregado ? 'primary' : undefined"
+                [matTooltip]="v.entregado ? 'Entregada — clic para revertir la marca' : 'Marcar como entregada'">
+                <mat-icon>{{ v.entregado ? 'local_shipping' : 'outbox' }}</mat-icon>
+              </button>
+              }
               <a mat-icon-button [routerLink]="puedeEditar(v) ? ['editar', v.id] : null"
                 [disabled]="!puedeEditar(v)"
                 [matTooltip]="puedeEditar(v) ? 'Editar' : 'No se puede editar: la valorización ya fue finalizada'">

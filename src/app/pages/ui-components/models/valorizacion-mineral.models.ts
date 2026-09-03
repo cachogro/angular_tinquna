@@ -54,6 +54,11 @@ export interface ValorizacionMineral {
   laboratorio?: unknown | null; // TODO: tipar cuando exista catálogo de laboratorios
   idEstadoValorizacion: number;
   estadoValorizacion?: EstadoValorizacion;
+  /** true = el material ya salió del ingenio (marca manual del operador).
+   *  Solo aplica a valorizaciones PRE-VALORIZADO o VALORIZADO. */
+  entregado?: boolean;
+  /** ISO string con el momento en que se marcó como entregada; null al revertir. */
+  fechaEntregado?: string | null;
   pesoBrutoHumedoKilogramos: string | null;
   pesoNetoHumedoKilogramos: string | null;
   /** Solo BCL: peso bruto húmedo − agua (peso bruto húmedo × humedad%).
@@ -225,6 +230,11 @@ export interface ActualizarValorizacionRequest {
   otrosAnticipo?: number;
   totalValorLiquidoVentaBolivianos?: number;
   totalValorLiquidoVentaUsd?: number;
+  /** "Total Liquidación": Valor Bruto de Venta − Total aportes (descuentos de
+   *  ley), sin restar anticipos/transporte. En BCL/BZL: monto AL − rollback −
+   *  flete transporte − aportes. Aplica a todas las codificaciones (ver
+   *  ValorizacionFormComponent.totalLiquidacion). */
+  totalValorNetoVentaBolivianos?: number;
   observaciones?: string;
   detalles?: DetalleValorizacionRequest[];
   aportes?: AporteValorizacionRequest[];
@@ -284,4 +294,35 @@ export interface ValorizacionesMineralPaginadas {
   page: number;
   limit: number;
   totalPages: number;
+}
+
+// ==========================================================
+// REPORTE DE VALORIZACIONES (solo genera el Excel; no hay vista de resultados)
+// ==========================================================
+
+export type EstadoReporteValorizacion =
+  | 'ambas'
+  | 'pre_valorizadas'
+  | 'valorizadas';
+
+export type EntregadoReporteValorizacion =
+  | 'ambos'
+  | 'entregados'
+  | 'no_entregados';
+
+/** Filtros del reporte de valorizaciones. Las 3 formas de acotar por fecha
+ *  son EXCLUYENTES: rango (fechaDesde + fechaHasta), año + mes, o año + semana
+ *  ISO. Sin ninguna → todo el histórico. `mes` y `semana` requieren `anio`. */
+export interface FiltroReporteValorizacion {
+  /** Por defecto 'ambas' (pre-valorizadas y valorizadas). */
+  estado?: EstadoReporteValorizacion;
+  /** Por defecto 'ambos'. */
+  entregado?: EntregadoReporteValorizacion;
+  /** Opcional: limita a una sola codificación. */
+  idCodificacion?: number;
+  fechaDesde?: string; // 'YYYY-MM-DD'
+  fechaHasta?: string; // 'YYYY-MM-DD'
+  anio?: number;
+  mes?: number; // 1-12
+  semana?: number; // 1-53 (ISO)
 }

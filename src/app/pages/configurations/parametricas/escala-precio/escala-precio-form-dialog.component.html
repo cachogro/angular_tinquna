@@ -35,7 +35,7 @@
           </mat-error>
         </mat-form-field>
 
-        <mat-form-field appearance="outline">
+        <mat-form-field appearance="outline" *ngIf="!esEstano">
           <mat-label>Ley inicial</mat-label>
           <input matInput type="number" step="1" min="0" formControlName="leyInicial"
             (keydown)="bloquearNegativos($event)" placeholder="Ej: 6" />
@@ -44,7 +44,7 @@
           </mat-error>
         </mat-form-field>
 
-        <mat-form-field appearance="outline">
+        <mat-form-field appearance="outline" *ngIf="!esEstano">
           <mat-label>Ley final</mat-label>
           <input matInput type="number" step="1" min="0" formControlName="leyFinal"
             (keydown)="bloquearNegativos($event)" placeholder="Ej: 30" />
@@ -72,7 +72,9 @@
         </div>
 
         <p class="hint-ley" *ngIf="filas.length === 0">
-          Ingresa la ley inicial y la ley final para generar la tabla.
+          {{ esEstano
+            ? 'Selecciona el mineral para cargar la tabla.'
+            : 'Ingresa la ley inicial y la ley final para generar la tabla.' }}
         </p>
 
         <div class="tabla-scroll" formArrayName="filas" *ngIf="filas.length > 0">
@@ -81,12 +83,18 @@
               <tr>
                 <th class="col-ley">Ley</th>
                 <th class="col-precio">USD/Punto</th>
-                <th class="col-precio">USD/TM</th>
+                <th class="col-precio">{{ esEstano ? 'Bs/Kg' : 'USD/TM' }}</th>
               </tr>
             </thead>
             <tbody>
               <tr *ngFor="let fila of filas.controls; let i = index" [formGroupName]="i">
-                <td class="col-ley">{{ leyFila(i) }}</td>
+                <td class="col-ley">
+                  <ng-container *ngIf="esEstano; else leyCalculada">
+                    <input class="input-inline" type="number" step="0.01" min="0" formControlName="ley"
+                      (keydown)="bloquearNegativos($event)" />
+                  </ng-container>
+                  <ng-template #leyCalculada>{{ leyFila(i) }}</ng-template>
+                </td>
                 <td class="col-precio">
                   <input class="input-inline" type="number" step="0.01" min="0" formControlName="precioPunto"
                     (keydown)="bloquearNegativos($event)" />
@@ -154,7 +162,7 @@
             </ng-container>
 
             <ng-container matColumnDef="precioTm">
-              <th mat-header-cell *matHeaderCellDef>USD/TM</th>
+              <th mat-header-cell *matHeaderCellDef>{{ esEstano ? 'Bs/Kg' : 'USD/TM' }}</th>
               <td mat-cell *matCellDef="let row">
                 {{ filaEditandoId === row.id ? precioTmEdicion(row.ley) : row.precioTm }}
               </td>

@@ -29,7 +29,7 @@
       @if (!esEditable) {
       <div class="valorizacion-preview__aviso">
         <mat-icon>lock</mat-icon>
-        <span>Esta valorización ya no está en borrador, por lo que no se puede editar.</span>
+        <span>Esta valorización ya fue valorizada, por lo que no se puede editar.</span>
       </div>
       }
 
@@ -38,6 +38,8 @@
         <mat-spinner diameter="18"></mat-spinner>
         <span>
           {{ esCodificacionRam() ? 'Verificando tabla de escala de precio vigente de los minerales...' :
+          esCodificacionAc() ? 'Verificando precio vigente de los minerales (cotización o tabla de escala de precio)...'
+          :
           'Verificando cotización vigente de los minerales...' }}
         </span>
       </div>
@@ -49,6 +51,9 @@
             {{ esCodificacionRam() ?
             'Los siguientes minerales no tienen tabla de escala de precio vigente. No se puede valorizar hasta
             registrarla:'
+            : esCodificacionAc() ?
+            'Los siguientes minerales no tienen precio vigente (cotización o tabla de escala de precio). No se puede
+            valorizar hasta registrarlo:'
             : 'Los siguientes minerales no tienen cotización vigente. No se puede valorizar hasta registrarla:' }}
           </span>
           @for (m of mineralesSinPrecioVigente; track m.id) {
@@ -56,7 +61,7 @@
             <span>{{ m.descripcion }}{{ m.simbolo ? ' (' + m.simbolo + ')' : '' }}</span>
             <button mat-stroked-button color="primary" type="button" (click)="abrirRegistrarPrecioVigente(m.id)">
               <mat-icon>request_quote</mat-icon>
-              {{ esCodificacionRam() ? 'Registrar tabla' : 'Registrar cotización' }}
+              {{ etiquetaRegistrarPrecioVigente(m.id) }}
             </button>
           </div>
           }
@@ -67,6 +72,8 @@
         <mat-icon>check_circle</mat-icon>
         <span>
           {{ esCodificacionRam() ? 'Tabla de escala de precio vigente verificada para todos los minerales de la ley.'
+          : esCodificacionAc() ? 'Precio vigente verificado para todos los minerales de la ley (cotización o tabla de
+          escala de precio).'
           : 'Cotización vigente verificada para todos los minerales de la ley.' }}
         </span>
       </div>
@@ -400,7 +407,8 @@
                   <mat-select formControlName="idMineral" [compareWith]="compararIds"
                     (selectionChange)="onMineralFilaChange(i)">
                     @for (m of opcionesMineral(i); track m.id) {
-                    <mat-option [value]="m.id">{{ m.descripcion }}</mat-option>
+                    <mat-option [value]="m.id">{{ m.descripcion }}{{ m.simbolo ? ' (' + m.simbolo + ')' : ''
+                      }}</mat-option>
                     }
                   </mat-select>
                 </mat-form-field>
@@ -409,6 +417,12 @@
                   class="valorizacion-form__ley-campo valorizacion-form__ley-campo--ley">
                   <mat-label>Ley</mat-label>
                   <input matInput type="number" step="0.01" formControlName="ley" (input)="recalcularFilaLey(i)" />
+                  @if (filaUsaEscalaPrecio(i)) {
+                  <button matSuffix mat-icon-button type="button" matTooltip="Ver tabla de precio vigente"
+                    [disabled]="!fila.get('idMineral')?.value" (click)="verTablaPrecioVigente(i)">
+                    <mat-icon>table_chart</mat-icon>
+                  </button>
+                  }
                 </mat-form-field>
 
                 <mat-form-field appearance="outline"
@@ -472,6 +486,18 @@
                   <mat-label>P/KL</mat-label>
                   <input matInput type="number" formControlName="pKl" />
                 </mat-form-field>
+
+                @if (filaUsaEscalaPrecio(i) && filaSinTablaPrecioVigente(i)) {
+                <div class="valorizacion-form__ley-tramo-aviso">
+                  <mat-icon inline="true">error_outline</mat-icon>
+                  <span>Este mineral no tiene tabla de precio vigente.</span>
+                  <button mat-stroked-button type="button" color="primary"
+                    (click)="abrirRegistrarPrecioVigente(fila.get('idMineral')?.value)">
+                    <mat-icon>request_quote</mat-icon>
+                    Registrar tabla
+                  </button>
+                </div>
+                }
               </div>
               }
               }
@@ -483,7 +509,8 @@
                 </div>
                 <div class="valorizacion-form__ley-totales-item">
                   <span class="valorizacion-form__ley-totales-label">Valor Tonelada (Bs)</span>
-                  <span class="valorizacion-form__ley-totales-valor">{{ formatTotal(truncarDecimales(valorToneladaBsRam())) }}</span>
+                  <span class="valorizacion-form__ley-totales-valor">{{
+                    formatTotal(truncarDecimales(valorToneladaBsRam())) }}</span>
                 </div>
                 <div class="valorizacion-form__ley-totales-item">
                   <span class="valorizacion-form__ley-totales-label">Valor Bruto de Venta (Bs)</span>
@@ -655,13 +682,14 @@
             <div class="valorizacion-form__ley-totales">
               <div class="valorizacion-form__ley-totales-item">
                 <span class="valorizacion-form__ley-totales-label">Total Gastos + Penalidades (Bs)</span>
-                <span class="valorizacion-form__ley-totales-valor">{{ formatTotal(totalGastosYPenalidadesBcl()) }}</span>
+                <span class="valorizacion-form__ley-totales-valor">{{ formatTotal(totalGastosYPenalidadesBcl())
+                  }}</span>
               </div>
               <div class="valorizacion-form__ley-totales-item">
                 <span class="valorizacion-form__ley-totales-label">Valor Neto TM</span>
                 <span class="valorizacion-form__ley-totales-valor">{{ formatTotal(valorNetoTmBclMostrado()) }}</span>
               </div>
-      
+
 
               <div class="valorizacion-form__ley-totales-item">
                 <span class="valorizacion-form__ley-totales-label">Valorización Lote (VBV)</span>
@@ -704,7 +732,8 @@
                     </mat-form-field>
                   </td>
                   <td class="valorizacion-form__ley-totales-valor"
-                    matTooltip="Resultado = Rollback × Peso bruto húmedo ÷ 1000">{{ formatTotal(rollbackResultadoBcl()) }}</td>
+                    matTooltip="Resultado = Rollback × Peso bruto húmedo ÷ 1000">{{ formatTotal(rollbackResultadoBcl())
+                    }}</td>
                 </tr>
 
                 <tr>
@@ -843,16 +872,17 @@
                 <!-- <mat-hint>Peso neto seco × suma de P/KL</mat-hint> -->
               </mat-form-field>
 
-                <mat-form-field appearance="outline" class="valorizacion-form__campo" subscriptSizing="dynamic">
+              <mat-form-field appearance="outline" class="valorizacion-form__campo" subscriptSizing="dynamic">
                 <mat-label>Total aportes (descuentos de ley)</mat-label>
                 <input matInput type="text" [value]="formatTotalAportes()" disabled />
                 <!-- <mat-hint>Suma de los aportes aplicados</mat-hint> -->
               </mat-form-field>
 
-              <mat-form-field appearance="outline" class="valorizacion-form__campo valorizacion-form__saldo-pagar" subscriptSizing="dynamic">
+              <mat-form-field appearance="outline" class="valorizacion-form__campo valorizacion-form__saldo-pagar"
+                subscriptSizing="dynamic">
                 <mat-label>Total Liquidación </mat-label>
                 <input matInput type="text" [value]="formatTotalLiquidacion()" disabled />
-                <!-- <mat-hint>Solo referencial, no se guarda</mat-hint> -->
+                <!-- <mat-hint>VBV − Total aportes; se guarda como totalValorNetoVentaBolivianos</mat-hint> -->
               </mat-form-field>
 
               <mat-form-field appearance="outline" class="valorizacion-form__campo" subscriptSizing="dynamic">
@@ -866,12 +896,12 @@
                 <!-- <mat-hint>Resta al saldo a pagar</mat-hint> -->
               </mat-form-field>
 
-            
+
 
               <mat-form-field appearance="outline" class="valorizacion-form__campo" subscriptSizing="dynamic">
                 <mat-label>Transporte</mat-label>
-                <input matInput type="number" step="0.01" formControlName="ajusteTransporte" data-permite-negativo="true"
-                  matTooltip="Positivo suma, negativo resta al VLV" />
+                <input matInput type="number" step="0.01" formControlName="ajusteTransporte"
+                  data-permite-negativo="true" matTooltip="Positivo suma, negativo resta al VLV" />
               </mat-form-field>
 
 

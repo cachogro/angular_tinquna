@@ -39,6 +39,7 @@ import {
   ValorizacionMineral,
 } from '../models/valorizacion-mineral.models';
 import { ValorizacionMineralService } from '../services/valorizacion-mineral.service';
+import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog/confirm-dialog.component';
 
 interface OpcionOrden {
   value: string;
@@ -279,6 +280,67 @@ export class ValorizacionComponent implements OnInit {
    *  más allá del borrador (PRE-VALORIZADO o VALORIZADO). */
   puedeVerImprimir(v: ValorizacionMineral): boolean {
     return v.idEstadoValorizacion !== ESTADO_VALORIZACION_BORRADOR_ID;
+  }
+
+  /** La marca "Entregado" solo tiene sentido una vez pre-valorizada o
+   *  valorizada (en BORRADOR el material sigue en el ingenio). */
+  puedeMarcarEntregado(v: ValorizacionMineral): boolean {
+    return v.idEstadoValorizacion !== ESTADO_VALORIZACION_BORRADOR_ID;
+  }
+
+  /** Marca / desmarca la valorización como entregada, previa confirmación. */
+  toggleEntregado(v: ValorizacionMineral): void {
+    const nuevoValor = !v.entregado;
+
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: nuevoValor
+          ? '¿Marcar como entregada?'
+          : '¿Quitar la marca de entregada?',
+        message: nuevoValor
+          ? 'Se registrará que el material salió del ingenio. ¿Confirmás marcar esta valorización como entregada?'
+          : 'Se revertirá la marca y se borrará la fecha de entrega. ¿Deseás continuar?',
+        confirmLabel: nuevoValor ? 'Sí, marcar entregada' : 'Sí, quitar marca',
+        cancelLabel: 'Cancelar',
+        icon: 'local_shipping',
+      },
+    });
+
+    dialogRef.afterClosed().subscribe((confirmado) => {
+      if (!confirmado) return;
+
+      this.valorizacionMineralService
+        .marcarEntregado(v.id, nuevoValor)
+        .subscribe({
+          next: (actualizada) => {
+            this.registros.update((lista) =>
+              lista.map((item) =>
+                item.id === v.id
+                  ? {
+                      ...item,
+                      entregado: actualizada.entregado,
+                      fechaEntregado: actualizada.fechaEntregado,
+                    }
+                  : item,
+              ),
+            );
+            this.snackBar.open(
+              nuevoValor
+                ? 'Valorización marcada como entregada'
+                : 'Se quitó la marca de entregada',
+              'Cerrar',
+              { duration: 3000 },
+            );
+          },
+          error: () => {
+            this.snackBar.open(
+              'No se pudo actualizar la marca de entrega',
+              'Cerrar',
+              { duration: 4000 },
+            );
+          },
+        });
+    });
   }
 
   /** Abre la vista previa (formato de ticket) de una valorización ya

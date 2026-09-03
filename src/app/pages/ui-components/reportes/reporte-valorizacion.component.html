@@ -1,0 +1,120 @@
+<mat-card class="cardWithShadow theme-card">
+  <mat-card-header>
+    <div>
+      <mat-card-title class="m-b-0">Reportes Valorización</mat-card-title>
+      <mat-card-subtitle class="m-b-0">
+        Elige los filtros y genera el Excel — no se muestran resultados en pantalla
+      </mat-card-subtitle>
+    </div>
+    <div class="reporte-header__acciones">
+      <button mat-button (click)="limpiarFiltros()" class="reporte-toolbar__clear" [disabled]="generando()">
+        <mat-icon>filter_alt_off</mat-icon>
+        Limpiar
+      </button>
+      <button mat-flat-button color="primary" (click)="generarExcel()" [disabled]="generando()">
+        @if (generando()) {
+        <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
+        <span>Generando...</span>
+        } @else {
+        <ng-container>
+          <mat-icon>grid_on</mat-icon>
+          <span>Generar Excel</span>
+        </ng-container>
+        }
+      </button>
+    </div>
+  </mat-card-header>
+
+  <mat-card-content class="b-t-1">
+    <div class="reporte-page">
+
+      <div class="reporte-toolbar">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Estado</mat-label>
+          <mat-select [formControl]="estadoControl">
+            <mat-option value="ambas">Pre-valorizadas y valorizadas</mat-option>
+            <mat-option value="pre_valorizadas">Solo pre-valorizadas</mat-option>
+            <mat-option value="valorizadas">Solo valorizadas</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Entregado</mat-label>
+          <mat-select [formControl]="entregadoControl">
+            <mat-option value="ambos">Entregados y no entregados</mat-option>
+            <mat-option value="entregados">Solo entregados</mat-option>
+            <mat-option value="no_entregados">Solo no entregados</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Codificación</mat-label>
+          <mat-select [formControl]="codificacionControl">
+            <mat-option [value]="null">Todas</mat-option>
+            @for (c of codificaciones(); track c.id) {
+            <mat-option [value]="c.id">{{ c.codigo }} — {{ c.nombre }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <div class="reporte-toolbar">
+        <mat-button-toggle-group [formControl]="periodoModoControl" aria-label="Tipo de período">
+          <mat-button-toggle value="todos">Todo el histórico</mat-button-toggle>
+          <mat-button-toggle value="fechas">Rango de fechas</mat-button-toggle>
+          <mat-button-toggle value="mes">Mes</mat-button-toggle>
+          <mat-button-toggle value="semana">Semana</mat-button-toggle>
+        </mat-button-toggle-group>
+
+        @if (periodoModoControl.value === 'fechas') {
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Desde</mat-label>
+          <input matInput [matDatepicker]="pickerDesde" [max]="hoy" [formControl]="fechaDesdeControl" />
+          <mat-datepicker-toggle matSuffix [for]="pickerDesde"></mat-datepicker-toggle>
+          <mat-datepicker #pickerDesde></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Hasta</mat-label>
+          <input matInput [matDatepicker]="pickerHasta" [max]="hoy" [formControl]="fechaHastaControl" />
+          <mat-datepicker-toggle matSuffix [for]="pickerHasta"></mat-datepicker-toggle>
+          <mat-datepicker #pickerHasta></mat-datepicker>
+        </mat-form-field>
+        }
+
+        @if (periodoModoControl.value === 'mes') {
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="reporte-toolbar__anio">
+          <mat-label>Año</mat-label>
+          <input matInput type="number" [formControl]="anioControl" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Mes</mat-label>
+          <mat-select [formControl]="mesControl">
+            @for (m of meses; track m.value) {
+            <mat-option [value]="m.value">{{ m.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        }
+
+        @if (periodoModoControl.value === 'semana') {
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="reporte-toolbar__anio">
+          <mat-label>Año</mat-label>
+          <input matInput type="number" [formControl]="anioControl" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="reporte-toolbar__anio">
+          <mat-label>Semana (1-53)</mat-label>
+          <input matInput type="number" min="1" max="53" [formControl]="semanaControl" />
+        </mat-form-field>
+        }
+      </div>
+
+      <p class="reporte-nota">
+        <mat-icon inline="true">info</mat-icon>
+        El Excel lo arma el servidor con todas las valorizaciones que cumplan estos filtros.
+        Sin filtro de fecha se incluye todo el histórico.
+      </p>
+
+    </div>
+  </mat-card-content>
+</mat-card>

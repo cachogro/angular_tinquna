@@ -80,6 +80,11 @@ export class EscalaPrecioFormDialogComponent implements OnInit {
    *  registran 100 tramos por tabla (ej. rango de ley 0 a 100). */
   private readonly MAX_FILAS = 100;
 
+  /** El estaño no usa rango de ley: se muestra una tabla fija de 11 filas
+   *  donde el usuario teclea tanto la ley como el USD/Punto, y la tercera
+   *  columna es "Bs/Kg" (= USD/Punto / 1000 * 10) en vez de "USD/TM". */
+  private readonly FILAS_ESTANO = 11;
+
   /** leyInicial con el que se generó la tabla actual (se guarda aparte del
    *  form porque cuando cambia el rango hay que saber el rango VIEJO para
    *  poder emparejar cada fila con su ley real y no perder lo ya tecleado). */
@@ -146,9 +151,38 @@ export class EscalaPrecioFormDialogComponent implements OnInit {
     return this.form.get('filas') as FormArray;
   }
 
+  /** Mineral actualmente elegido en el formulario (o undefined). */
+  get mineralSeleccionado(): Mineral | undefined {
+    return this.minerales.find(
+      (m) => m.id === this.form.get('idMineral')?.value,
+    );
+  }
+
+  /** true cuando el mineral elegido es estaño: en ese caso no hay rango de
+   *  ley, la tabla arranca con 11 filas fijas y la ley la teclea el usuario. */
+  get esEstano(): boolean {
+    const mineral = this.mineralSeleccionado;
+    if (!mineral) return false;
+    const descripcion = (mineral.descripcion ?? '').toUpperCase();
+    const simbolo = (mineral.simbolo ?? '').toUpperCase();
+    return (
+      descripcion.includes('ESTAÑO') ||
+      descripcion.includes('ESTANO') ||
+      simbolo === 'SN'
+    );
+  }
+
   private crearFilaNueva(precioPuntoInicial: number | null = null): FormGroup {
     return this.fb.group({
       precioPunto: [precioPuntoInicial, [Validators.min(0)]],
+    });
+  }
+
+  /** Fila de la tabla de estaño: la ley también la teclea el usuario. */
+  private crearFilaEstano(): FormGroup {
+    return this.fb.group({
+      ley: [null as number | null, [Validators.min(0)]],
+      precioPunto: [null as number | null, [Validators.min(0)]],
     });
   }
 
@@ -186,6 +220,35 @@ export class EscalaPrecioFormDialogComponent implements OnInit {
     }
   }
 
+  /** Ajusta el formulario al mineral elegido: el estaño no lleva rango de
+   *  ley (se oculta y deja de ser obligatorio) y arranca con 11 filas fijas
+   *  donde la ley la teclea el usuario; el resto usa el rango normal. */
+  private aplicarModoMineral(): void {
+    const leyInicial = this.form.get('leyInicial')!;
+    const leyFinal = this.form.get('leyFinal')!;
+
+    if (this.esEstano) {
+      leyInicial.clearValidators();
+      leyFinal.clearValidators();
+      leyInicial.setValue(null, { emitEvent: false });
+      leyFinal.setValue(null, { emitEvent: false });
+      leyInicial.updateValueAndValidity({ emitEvent: false });
+      leyFinal.updateValueAndValidity({ emitEvent: false });
+      this.leyInicialVigente = null;
+      this.filas.clear();
+      for (let i = 0; i < this.FILAS_ESTANO; i++) {
+        this.filas.push(this.crearFilaEstano());
+      }
+    } else {
+      leyInicial.setValidators([Validators.required, Validators.min(0)]);
+      leyFinal.setValidators([Validators.required, Validators.min(0)]);
+      leyInicial.updateValueAndValidity({ emitEvent: false });
+      leyFinal.updateValueAndValidity({ emitEvent: false });
+      this.leyInicialVigente = null;
+      this.regenerarFilas();
+    }
+  }
+
   /** Al menos una fila debe tener el USD/Punto cargado para poder guardar. */
   private static alMenosUnaFilaLlena(): ValidatorFn {
     return (control: AbstractControl): ValidationErrors | null => {
@@ -213,7 +276,9 @@ export class EscalaPrecioFormDialogComponent implements OnInit {
       const final = group.get('leyFinal')?.value;
       if (inicial === null || inicial === '' || final === null || final === '')
         return null;
-      return Number(final) >= Number(inicial) ? null : { rangoLeyInvalido: true };
+      return Number(final) >= Number(inicial)
+        ? null
+        : { rangoLeyInvalido: true };
     };
   }
 
@@ -232,6 +297,7 @@ export class EscalaPrecioFormDialogComponent implements OnInit {
     this.form.get('idMineral')!.valueChanges.subscribe(() => {
       this.filaEditandoId = null;
       this.fechaConsultaControl.setValue('', { emitEvent: false });
+      this.aplicarModoMineral();
       this.recargarTablaVigente();
     });
 
@@ -241,8 +307,12 @@ export class EscalaPrecioFormDialogComponent implements OnInit {
 
     // El tamaño de la tabla sale directo del rango de ley: se regenera sola
     // apenas el usuario termina de escribir leyInicial o leyFinal.
-    this.form.get('leyInicial')!.valueChanges.subscribe(() => this.regenerarFilas());
-    this.form.get('leyFinal')!.valueChanges.subscribe(() => this.regenerarFilas());
+    this.form
+      .get('leyInicial')!
+      .valueChanges.subscribe(() => this.regenerarFilas());
+    this.form
+      .get('leyFinal')!
+      .valueChanges.subscribe(() => this.regenerarFilas());
 
     // Filtro de historial: con fecha, trae la tabla que regía ese día; vacío
     // vuelve a la vigente ahora mismo.
@@ -266,19 +336,32 @@ export class EscalaPrecioFormDialogComponent implements OnInit {
     this.fechaConsultaControl.setValue('');
   }
 
-  /** Ley que le corresponde a la fila `i`: leyInicial + i (correlativa, no se teclea). */
+  /** Ley que le corresponde a la fila `i`. Para estaño la teclea el usuario;
+   *  para el resto es correlativa (leyInicial + i). */
   leyFila(i: number): number | null {
+    if (this.esEstano) {
+      const valor = this.filas.at(i)?.get('ley')?.value;
+      return valor === null || valor === undefined || valor === ''
+        ? null
+        : Number(valor);
+    }
     const inicial = this.form.get('leyInicial')?.value;
     if (inicial === null || inicial === undefined || inicial === '')
       return null;
     return Number(inicial) + i;
   }
 
-  /** USD/TM de la fila `i`: ley × USD/Punto, se recalcula solo. */
+  /** Tercera columna de la fila `i`, recalculada sola: para estaño es Bs/Kg
+   *  (= USD/Punto / 1000 * 10); para el resto es USD/TM (= ley × USD/Punto). */
   usdTmFila(i: number): number {
+    const precioPunto = Number(
+      this.filas.at(i)?.get('precioPunto')?.value ?? 0,
+    );
+    if (!precioPunto) return 0;
+    // Bs/Kg del estaño: sin decimales y sin redondear (20.97 -> 20).
+    if (this.esEstano) return Math.trunc((precioPunto / 1000) * 10);
     const ley = this.leyFila(i);
-    const precioPunto = Number(this.filas.at(i)?.get('precioPunto')?.value ?? 0);
-    if (ley === null || !precioPunto) return 0;
+    if (ley === null) return 0;
     return this.redondear(ley * precioPunto);
   }
 
@@ -331,7 +414,9 @@ export class EscalaPrecioFormDialogComponent implements OnInit {
       .map((f) => ({
         ley: f.ley as number,
         precioPunto: Number(f.precioPunto),
-        precioTm: this.redondear((f.ley as number) * Number(f.precioPunto)),
+        precioTm: this.esEstano
+          ? Math.trunc((Number(f.precioPunto) / 1000) * 10)
+          : this.redondear((f.ley as number) * Number(f.precioPunto)),
       }));
   }
 
@@ -376,6 +461,12 @@ export class EscalaPrecioFormDialogComponent implements OnInit {
     );
     this.leyInicialVigente = null;
     this.filas.clear();
+    // El estaño no depende del rango: vuelve a dejar sus 11 filas en blanco.
+    if (this.esEstano) {
+      for (let i = 0; i < this.FILAS_ESTANO; i++) {
+        this.filas.push(this.crearFilaEstano());
+      }
+    }
     // El back ya recargó la tabla vigente ahora mismo (ver crearEscalaPrecio):
     // si había un filtro de fecha activo, se limpia para no mostrar un
     // título "histórico" con datos que en realidad son los recién guardados.
@@ -414,8 +505,11 @@ export class EscalaPrecioFormDialogComponent implements OnInit {
     this.filaEditandoId = null;
   }
 
-  /** precioTm de la fila en edición, recalculado en vivo (nunca se teclea a mano). */
+  /** precioTm de la fila en edición, recalculado en vivo (nunca se teclea a
+   *  mano). Para estaño es Bs/Kg (= USD/Punto / 1000 * 10). */
   precioTmEdicion(ley: number): number {
+    if (this.esEstano)
+      return Math.trunc((this.edicion.precioPunto / 1000) * 10);
     return this.redondear(ley * this.edicion.precioPunto);
   }
 

@@ -8,6 +8,7 @@ import {
   CambiarEstadoValorizacionRequest,
   CrearBorradorValorizacionRequest,
   EstadoValorizacion,
+  FiltroReporteValorizacion,
   FiltrosValorizacionMineral,
   ValorizacionMineral,
   ValorizacionesMineralPaginadas,
@@ -79,6 +80,21 @@ export class ValorizacionMineralService {
   }
 
   /**
+   * Marca / desmarca la valorización como "entregada" (el material salió del
+   * ingenio) vía el endpoint dedicado. `entregado: true` fija además
+   * `fechaEntregado`; `entregado: false` la revierte a null.
+   */
+  marcarEntregado(
+    id: string,
+    entregado: boolean,
+  ): Observable<ValorizacionMineral> {
+    return this.http.patch<ValorizacionMineral>(
+      `${this.baseUrl}/valorizacion_mineral/${id}/entregado`,
+      { entregado },
+    );
+  }
+
+  /**
    * TODO: confirmar con backend el endpoint y los query params exactos de
    * listado. Por ahora se asume la misma convención que
    * RegistroMineralService.listarRegistros (GET al recurso, con
@@ -114,6 +130,31 @@ export class ValorizacionMineralService {
         const url = window.URL.createObjectURL(blob);
         window.open(url, '_blank');
       });
+  }
+
+  /** Descarga el Excel del reporte de valorizaciones con los filtros dados.
+   *  El backend arma el archivo completo (no paginado); acá solo se dispara
+   *  la descarga (el nombre real del archivo lo fija el backend). Las 3
+   *  formas de acotar por fecha son excluyentes (ver FiltroReporteValorizacion). */
+  descargarReporteExcel(filtros: FiltroReporteValorizacion): Observable<Blob> {
+    let params = new HttpParams();
+    const set = (clave: string, valor: string | number | undefined): void => {
+      if (valor !== undefined && valor !== null && valor !== '')
+        params = params.set(clave, valor);
+    };
+    set('estado', filtros.estado);
+    set('entregado', filtros.entregado);
+    set('idCodificacion', filtros.idCodificacion);
+    set('fechaDesde', filtros.fechaDesde);
+    set('fechaHasta', filtros.fechaHasta);
+    set('anio', filtros.anio);
+    set('mes', filtros.mes);
+    set('semana', filtros.semana);
+
+    return this.http.get(
+      `${this.baseUrl}/reportes/valorizacion_mineral/excel`,
+      { params, responseType: 'blob' },
+    );
   }
 
   private construirParams(filtros: FiltrosValorizacionMineral): HttpParams {

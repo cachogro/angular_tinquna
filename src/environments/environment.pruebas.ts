@@ -4,5 +4,7 @@
 export const environment = {
   production: false,
   envName: 'pruebas',
-  apiUrl: 'http://localhost:3000/api',
+  //apiUrl: 'http://localhost:3000/api',
+
+  apiUrl: 'http://192.168.100.165:3000/api'
 };

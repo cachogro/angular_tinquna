@@ -233,6 +233,8 @@ export class RecepcionMineralComponent implements OnInit {
           this.registros.set(res.data);
           this.total.set(res.total);
           this.loading.set(false);
+
+          console.log('Registros cargados:', res.data);
         },
         error: () => {
           this.loading.set(false);

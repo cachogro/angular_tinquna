@@ -45,6 +45,7 @@ import {
   TipoCalculoValorizacion,
 } from 'src/app/pages/configurations/parametricas/models/parametricas.models';
 import { ParametricasService } from 'src/app/pages/configurations/services/parametricas.service';
+import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog/confirm-dialog.component';
 import { formatNumeroConMiles } from 'src/app/shared/utils/numero.util';
 import {
   LeyUnidad,
@@ -101,6 +102,15 @@ const CLAVE_CODIFICACION_BCL = 'BCL';
  *  que se detecta solo por texto (código/nombre), igual que el fallback de
  *  BCL. */
 const CLAVE_CODIFICACION_BZL = 'BZL';
+
+/** AC (Plata + Estaño; una recepción AC puede traer solo Estaño). El layout
+ *  de las filas de ley es el estándar/ICC, NO el de RAM. La fila cuyo mineral
+ *  es Estaño toma el precio de la tabla de Escala de Precio del mineral (igual
+ *  que RAM); la fila de Plata sigue con cotización de mercado. La fórmula
+ *  "precio por kilo" propia del estaño la define el usuario en un paso
+ *  posterior: por ahora solo se agrega la tabla + el control de vigencia. */
+const ID_CODIFICACION_AC = '4';
+const CLAVE_CODIFICACION_AC = 'AC';
 
 /** Regalía minera no tiene alícuota configurada en su detalleAporte (a
  *  diferencia del resto de entidades de aporte): la suya sale de la suma de
@@ -458,12 +468,27 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     () => this.esCodificacionBcl() || this.esCodificacionBzl(),
   );
 
+  /** AC (Plata + Estaño): layout de ley estándar/ICC; la fila de Estaño toma
+   *  el precio de la tabla de Escala de Precio, la de Plata de la cotización.
+   *  "AC" es demasiado corto para un texto.includes() seguro (colisiones con
+   *  otros nombres): se exige id === '4' o el CÓDIGO exacto "AC". */
+  readonly esCodificacionAc = computed(() => {
+    const cod = this.valorizacion()?.recepcionMineral?.codificacion;
+    if (!cod) return false;
+    return (
+      String(cod.id) === ID_CODIFICACION_AC ||
+      (cod.codigo ?? '').trim().toUpperCase() === CLAVE_CODIFICACION_AC
+    );
+  });
+
   private valorizacionId!: string;
 
+  /** BORRADOR y PRE-VALORIZADO se pueden seguir editando (campos y
+   *  cálculos); solo VALORIZADO queda cerrado de forma definitiva. */
   get esEditable(): boolean {
     return (
-      this.valorizacion()?.idEstadoValorizacion ===
-      ESTADO_VALORIZACION_BORRADOR_ID
+      this.valorizacion()?.idEstadoValorizacion !==
+      ESTADO_VALORIZACION_VALORIZADO_ID
     );
   }
 
@@ -530,11 +555,21 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
   }
 
   /** Fuente de verdad para el gating de guardado: cotización de mercado en
-   *  el resto de codificaciones, tabla de Escala de Precio en RAM. */
+   *  el resto de codificaciones, tabla de Escala de Precio en RAM. En AC se
+   *  decide por mineral: el Estaño se controla con la tabla de Escala de
+   *  Precio, la Plata con la cotización (ver mineralUsaEscalaPrecio). */
   get verificandoPrecioVigente(): boolean {
-    return this.esCodificacionRam()
-      ? this.verificandoEscalaPrecio
-      : this.verificandoCotizacion;
+    if (this.esCodificacionRam()) return this.verificandoEscalaPrecio;
+    if (this.esCodificacionAc()) {
+      const escalas = this.escalaPrecioPorMineral();
+      const cotis = this.cotizacionesPorMineral();
+      return this.idsMineralesEnFilas().some((id) =>
+        this.mineralUsaEscalaPrecio(id)
+          ? escalas[id]?.cargando
+          : cotis[id]?.cargando,
+      );
+    }
+    return this.verificandoCotizacion;
   }
 
   get mineralesSinPrecioVigente(): Array<{
@@ -542,9 +577,26 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     descripcion: string;
     simbolo?: string;
   }> {
-    return this.esCodificacionRam()
-      ? this.mineralesSinEscalaPrecio
-      : this.mineralesSinCotizacion;
+    if (this.esCodificacionRam()) return this.mineralesSinEscalaPrecio;
+    if (this.esCodificacionAc()) {
+      const escalas = this.escalaPrecioPorMineral();
+      const cotis = this.cotizacionesPorMineral();
+      return this.idsMineralesEnFilas()
+        .filter((id) =>
+          this.mineralUsaEscalaPrecio(id)
+            ? escalas[id]?.sinTabla
+            : cotis[id]?.sinCotizacion,
+        )
+        .map((id) => {
+          const mineral = this.buscarMineralPorId(id);
+          return {
+            id,
+            descripcion: mineral?.descripcion ?? `Mineral #${id}`,
+            simbolo: mineral?.simbolo,
+          };
+        });
+    }
+    return this.mineralesSinCotizacion;
   }
 
   /** ids únicos (sin repetir) de los minerales seleccionados en las filas de ley actuales. */
@@ -604,6 +656,56 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     const descripcion = (mineral.descripcion ?? '').toUpperCase();
     const simbolo = (mineral.simbolo ?? '').toUpperCase();
     return descripcion.includes('ZINC') || simbolo === 'ZN';
+  }
+
+  /** true si el mineral de la fila es Estaño (por nombre o símbolo del
+   *  catálogo). En AC, la fila de Estaño toma el precio de la tabla de Escala
+   *  de Precio (ver mineralUsaEscalaPrecio); la de Plata sigue con cotización. */
+  esMineralEstano(idMineral: number | string | null | undefined): boolean {
+    if (idMineral == null) return false;
+    const mineral = this.buscarMineralPorId(Number(idMineral));
+    if (!mineral) return false;
+    const descripcion = (mineral.descripcion ?? '').toUpperCase();
+    const simbolo = (mineral.simbolo ?? '').toUpperCase();
+    return (
+      descripcion.includes('ESTAÑO') ||
+      descripcion.includes('ESTANO') ||
+      simbolo === 'SN'
+    );
+  }
+
+  /** true si, en la codificación actual, el precio de ESE mineral sale de la
+   *  tabla de Escala de Precio y no de la cotización de mercado: siempre en
+   *  RAM; en AC solo el Estaño. Ruteo único para gating / diálogos /
+   *  verificación de vigencia. */
+  private mineralUsaEscalaPrecio(
+    idMineral: number | string | null | undefined,
+  ): boolean {
+    if (this.esCodificacionRam()) return true;
+    if (this.esCodificacionAc()) return this.esMineralEstano(idMineral);
+    return false;
+  }
+
+  /** Igual que mineralUsaEscalaPrecio pero indexado por fila (para el .html). */
+  filaUsaEscalaPrecio(i: number): boolean {
+    const idMineral = this.detallesMineralesArray.at(i)?.get('idMineral')?.value;
+    return this.mineralUsaEscalaPrecio(idMineral);
+  }
+
+  /** true para la fila de Estaño dentro de la codificación AC: su precio por
+   *  kilo se interpola de la tabla de Escala de Precio (ver
+   *  recalcularFilaLeyAcEstano), no de una cotización de mercado. A diferencia
+   *  de RAM, el resto de campos de la fila siguen el layout estándar/ICC. */
+  private esFilaAcEstano(idMineral: number | string | null | undefined): boolean {
+    return this.esCodificacionAc() && this.esMineralEstano(idMineral);
+  }
+
+  /** Etiqueta del botón "Registrar ..." del aviso de precio faltante: tabla de
+   *  escala de precio o cotización, según de dónde salga el precio del mineral. */
+  etiquetaRegistrarPrecioVigente(idMineral: number): string {
+    return this.mineralUsaEscalaPrecio(idMineral)
+      ? 'Registrar tabla'
+      : 'Registrar cotización';
   }
 
   // ==========================================================
@@ -1004,6 +1106,10 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
   ): void {
     const esRam = this.esCodificacionRam();
     const esBcl = this.esCodificacionConcentrado();
+    /** Fila de Estaño dentro de AC: se precia por la tabla de Escala de
+     *  Precio, así que no lleva "precio" ni se verifica su cotización de
+     *  mercado. La fila de Plata en AC sigue siendo ICC. */
+    const esAcEstano = this.esFilaAcEstano(valor.idMineral);
     const fila = this.fb.group({
       idMineral: [
         { value: valor.idMineral, disabled: mineralBloqueado },
@@ -1014,9 +1120,10 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
       /** Entero tecleado por el liquidador que se resta directo a la
        *  cotización vigente; 0 = se reconoce la cotización vigente completa.
        *  No se usa en RAM (ver ajustePuntosLey). En BCL también aplica
-       *  (ver recalcularFilaLeyBcl). */
+       *  (ver recalcularFilaLeyBcl). En AC (Estaño) va bloqueado: el precio
+       *  sale de la tabla de Escala de Precio, no de la cotización. */
       porcentajeCotizacion: [
-        valor.porcentajeCotizacion ?? 0,
+        { value: valor.porcentajeCotizacion ?? 0, disabled: esAcEstano },
         [Validators.required, Validators.min(0)],
       ],
       /** Calculado: cotización vigente − descuento cotización. No aplica en RAM. */
@@ -1026,8 +1133,10 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
        *  detalle guardado para poder retomar el borrador sin perderlo.
        *  No se usa en RAM ni en BCL (por eso no es requerido en esos casos). */
       precio: [
-        valor.precio ?? (null as number | null),
-        esRam || esBcl ? [] : [Validators.required, Validators.min(1)],
+        { value: valor.precio ?? (null as number | null), disabled: esAcEstano },
+        esRam || esBcl || esAcEstano
+          ? []
+          : [Validators.required, Validators.min(1)],
       ],
       /** Calculado: cotización vigente / factorConversion del mineral × ley × factor de "precio". No aplica en RAM ni en BCL. */
       leyPagable: [{ value: 0, disabled: true }],
@@ -1054,7 +1163,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
       pKl: [{ value: 0, disabled: true }],
     });
     this.detallesMineralesArray.push(fila);
-    if (esRam) {
+    if (esRam || esAcEstano) {
       this.verificarEscalaPrecioMineral(valor.idMineral);
     } else {
       this.verificarCotizacionMineral(valor.idMineral);
@@ -1078,6 +1187,8 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
       this.recalcularFilaLeyRam(fila);
     } else if (this.esCodificacionConcentrado()) {
       this.recalcularFilaLeyBcl(fila);
+    } else if (this.esFilaAcEstano(fila.get('idMineral')?.value)) {
+      this.recalcularFilaLeyAcEstano(fila);
     } else {
       this.recalcularFilaLeyEstandar(fila);
     }
@@ -1797,6 +1908,68 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     );
   }
 
+  /** AC – fila de Estaño: el "precio por kilo" NO sale de una cotización de
+   *  mercado, se interpola de la tabla de Escala de Precio del mineral
+   *  (columna Bs/Kg, guardada en `precioTm`). Fórmula confirmada por el
+   *  usuario 2026-08-27:
+   *   - Ley que cae justo en un tramo tabulado → precio por kilo = su Bs/Kg
+   *     (ej. ley 15 ⇒ 42).
+   *   - Ley entre dos tramos [inferior, superior]:
+   *       paso  = ENTERO( Bs/Kg del tramo superior ÷ (ley sup − ley inf) )
+   *       precio por kilo = paso × (ley tecleada − ley inf) + Bs/Kg del inf
+   *     (ej. ley 18 con tramos 15→42 y 20→69 ⇒ ENTERO(69/5)=13;
+   *      13×(18−15)=39; 39+42 = 81).
+   *   - Ley fuera del rango de la tabla → se recorta al tramo extremo.
+   *  El valor de la tabla ya está en Bs/Kg: no interviene el tipo de cambio.
+   *  El resto de campos de la fila (cotización, ley pagable) quedan en 0. */
+  private recalcularFilaLeyAcEstano(fila: AbstractControl): void {
+    const idMineral = fila.get('idMineral')?.value;
+    const ley = Number(fila.get('ley')?.value ?? 0);
+
+    const precioPorKilo = this.precioPorKiloEscalaEstano(idMineral, ley);
+    const pKl = Math.floor(precioPorKilo);
+
+    fila.patchValue(
+      { cotizacionAplicada: 0, leyPagable: 0, precioPorKilo, pKl },
+      { emitEvent: false },
+    );
+  }
+
+  /** Interpola la tabla de Escala de Precio del estaño para una ley dada
+   *  (ver recalcularFilaLeyAcEstano). 0 si el mineral no tiene tramos. */
+  private precioPorKiloEscalaEstano(
+    idMineral: number | string | null | undefined,
+    ley: number,
+  ): number {
+    if (idMineral == null) return 0;
+    const filas = this.escalaPrecioPorMineral()[Number(idMineral)]?.filas ?? [];
+    if (filas.length === 0) return 0;
+
+    // Ley fuera del rango de la tabla: se recorta al tramo extremo.
+    const leyClamped = this.clamparLeyARangoDeTabla(idMineral, ley);
+
+    // Tramo inferior: el de mayor ley que no supere la ley (ya recortada).
+    let indiceInferior = 0;
+    for (let i = 0; i < filas.length; i++) {
+      if (filas[i].ley > leyClamped) break;
+      indiceInferior = i;
+    }
+    const inferior = filas[indiceInferior];
+
+    // Ley justo sobre un tramo (o recortada a un extremo): su Bs/Kg tal cual.
+    if (leyClamped === inferior.ley || indiceInferior === filas.length - 1) {
+      return this.redondear(inferior.precioTm, 2);
+    }
+
+    const superior = filas[indiceInferior + 1];
+    const intervalo = superior.ley - inferior.ley;
+    if (intervalo <= 0) return this.redondear(inferior.precioTm, 2);
+
+    const paso = Math.trunc(superior.precioTm / intervalo);
+    const resultado = paso * (leyClamped - inferior.ley) + inferior.precioTm;
+    return this.redondear(resultado, 2);
+  }
+
   /** ley ajustada = ley − ajuste de puntos (el entero tecleado siempre se
    *  resta; para sumar puntos el liquidador teclea un valor negativo)
    *  tramo = fila de la tabla de Escala de Precio vigente del mineral cuyo
@@ -1986,7 +2159,13 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
         (acc, c) => acc + Number(c.get('pKl')?.value ?? 0),
         0,
       );
-      liquido = this.redondear(pesoNetoSeco * sumaPKl, 2);
+      // AC (Estaño): el Valor Bruto de Venta toma el peso neto seco SIN
+      // decimales (truncado, ej. 2754,4x → 2754), tal cual el Excel de
+      // referencia. El resto de codificaciones estándar/ICC lo usa completo.
+      const pesoParaVbv = this.esCodificacionAc()
+        ? Math.trunc(pesoNetoSeco)
+        : pesoNetoSeco;
+      liquido = this.redondear(pesoParaVbv * sumaPKl, 2);
     }
     this.valorBrutoVenta.set(liquido);
 
@@ -2047,7 +2226,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     const idMineral = this.detallesMineralesArray
       .at(i)
       ?.get('idMineral')?.value;
-    if (this.esCodificacionRam()) {
+    if (this.esCodificacionRam() || this.esFilaAcEstano(idMineral)) {
       this.verificarEscalaPrecioMineral(idMineral);
     } else {
       this.verificarCotizacionMineral(idMineral);
@@ -2195,9 +2374,14 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
 
     const mineral = this.buscarMineralPorId(idMineral);
     const tieneLey = fila?.get('ley')?.value != null;
-    const leyAjustada = Number(fila?.get('leyAjustada')?.value ?? 0);
+    // RAM ajusta la ley con "ajuste de puntos" (control leyAjustada); en AC
+    // (Estaño) no hay ajuste y la fila usa el layout ICC, cuyo leyAjustada
+    // queda siempre en 0, así que ahí se busca el tramo con la ley cruda.
+    const leyParaTramo = this.esCodificacionRam()
+      ? Number(fila?.get('leyAjustada')?.value ?? 0)
+      : Number(fila?.get('ley')?.value ?? 0);
     const tramo = tieneLey
-      ? this.buscarTramoEscalaPrecio(idMineral, leyAjustada)
+      ? this.buscarTramoEscalaPrecio(idMineral, leyParaTramo)
       : null;
 
     this.dialog.open(VerTablaPrecioDialogComponent, {
@@ -2206,7 +2390,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
       autoFocus: false,
       data: {
         mineral: mineral?.descripcion ?? `Mineral #${idMineral}`,
-        leyAjustada: tieneLey ? leyAjustada : null,
+        leyAjustada: tieneLey ? leyParaTramo : null,
         idTramoActivo: tramo?.id ?? null,
         tramos: this.escalaPrecioPorMineral()[Number(idMineral)]?.filas ?? [],
       },
@@ -2255,10 +2439,11 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
   }
 
   /** Abre el diálogo para registrar el precio vigente que le falta al
-   *  mineral: tabla de Escala de Precio en RAM, cotización de mercado en el
-   *  resto. Usado desde el aviso "minerales sin precio vigente". */
+   *  mineral: tabla de Escala de Precio cuando el precio del mineral sale de
+   *  esa tabla (RAM, o el Estaño en AC), cotización de mercado en el resto.
+   *  Usado desde el aviso "minerales sin precio vigente". */
   abrirRegistrarPrecioVigente(idMineral: number): void {
-    if (this.esCodificacionRam()) {
+    if (this.mineralUsaEscalaPrecio(idMineral)) {
       this.dialog
         .open(EscalaPrecioFormDialogComponent, {
           width: '1100px',
@@ -2712,6 +2897,11 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
           // (ver recalcularFilaLeyBcl): se manda el USD/TM tal cual,
           // igual que RAM.
           detalle.precioUsdTm = d.precioUsdTm;
+        } else if (this.esFilaAcEstano(idMineral)) {
+          // Estaño en AC: el precio por kilo se interpola de la tabla de
+          // Escala de Precio (ver recalcularFilaLeyAcEstano), no hay
+          // cotización de mercado ni descuento.
+          detalle.precioKilo = d.precioPorKilo;
         } else {
           if (d.precio != null) detalle.precio = Number(d.precio);
           const cotizacion = estadosCotizacion[idMineral]?.cotizacion;
@@ -2775,6 +2965,9 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
       otrosAnticipo: v.otrosAnticipo ?? 0,
       totalValorLiquidoVentaBolivianos: this.valorLiquidoVentaBs(),
       totalValorLiquidoVentaUsd: this.saldoAPagarUsd(),
+      // "Total Liquidación" (VBV − Total aportes): aplica a todas las
+      // codificaciones, incluida la variante BCL/BZL (ver totalLiquidacion).
+      totalValorNetoVentaBolivianos: this.totalLiquidacion(),
     };
 
     if (this.esCodificacionRam()) {
@@ -2983,14 +3176,6 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Cancela cualquier autoguardado programado: el guardado explícito de
-    // acá abajo ya manda el estado más reciente del form, así que ese
-    // temporizador quedaría redundante (y podría disparar un PATCH en
-    // paralelo con el de más abajo).
-    if (this.autoguardadoTimeout) {
-      clearTimeout(this.autoguardadoTimeout);
-      this.autoguardadoTimeout = undefined;
-    }
     // Si hay un autoguardado en vuelo justo ahora, se espera a que termine
     // en vez de lanzar un segundo PATCH en paralelo sobre el mismo recurso.
     if (this.guardadoEnCurso) {
@@ -3000,6 +3185,35 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
         { duration: 3000 },
       );
       return;
+    }
+
+    const esValorizacionFinal =
+      idEstadoValorizacion === ESTADO_VALORIZACION_VALORIZADO_ID;
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: esValorizacionFinal ? '¿Valorizar?' : '¿Pre-valorizar?',
+        message: esValorizacionFinal
+          ? 'Al valorizar, esta operación quedará cerrada de forma definitiva y ya no podrás modificar estos datos. ¿Estás seguro de valorizar?'
+          : 'Se guardará como pre-valorizado. Podrás seguir editando estos datos hasta que se valorice de forma definitiva. ¿Estás seguro de pre-valorizar?',
+        confirmLabel: esValorizacionFinal ? 'Sí, valorizar' : 'Sí, pre-valorizar',
+        tone: esValorizacionFinal ? 'danger' : 'default',
+        icon: esValorizacionFinal ? 'lock' : 'help_outline',
+      },
+    });
+
+    dialogRef.afterClosed().subscribe((confirmado) => {
+      if (confirmado) this.guardarConEstado(idEstadoValorizacion);
+    });
+  }
+
+  private guardarConEstado(idEstadoValorizacion: number): void {
+    // Cancela cualquier autoguardado programado: el guardado explícito de
+    // acá abajo ya manda el estado más reciente del form, así que ese
+    // temporizador quedaría redundante (y podría disparar un PATCH en
+    // paralelo con el de más abajo).
+    if (this.autoguardadoTimeout) {
+      clearTimeout(this.autoguardadoTimeout);
+      this.autoguardadoTimeout = undefined;
     }
 
     // El cambio de estado usa el endpoint dedicado (PATCH .../estado), que
@@ -3211,8 +3425,9 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     return formatNumeroConMiles(valor);
   }
 
-  /** "Total Liquidación": es solo referencial para el operador — no forma
-   *  parte del formGroup ni se envía al backend.
+  /** "Total Liquidación" (numérico, redondeado a 2): Valor Bruto de Venta −
+   *  Total aportes (descuentos de ley). NO resta anticipos ni transporte
+   *  (eso es el Líquido Pagable / VLV).
    *  - BCL/BZL: AL − Rollback − Flete Transporte − Total deducciones de ley
    *    — confirmado por el usuario 2026-08-26. Usa las versiones SIN
    *    redondear de AL/Rollback/Flete (montoAlRawBcl/
@@ -3222,9 +3437,10 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
    *    resultado hasta 0.01 respecto al Excel de referencia, el mismo
    *    problema que tenía valorNetoTmBcl. A diferencia de valorBrutoVenta()
    *    (que todavía NO resta Flete Transporte), acá sí se resta.
-   *  - RAM/estándar: Valorización Lote (VBV) − Total aportes (descuentos de
-   *    ley), sin cambios. */
-  formatTotalLiquidacion(): string {
+   *  - RAM/estándar/AC: Valorización Lote (VBV) − Total aportes.
+   *  Se envía al backend como `totalValorNetoVentaBolivianos` (ver
+   *  construirPayloadActual). */
+  totalLiquidacion(): number {
     const valor = this.esCodificacionConcentrado()
       ? this.montoAlRawBcl -
         this.rollbackResultadoRawBcl -
@@ -3232,9 +3448,13 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
         this.totalImporteAportes()
       : this.valorBrutoVenta() - this.totalImporteAportes();
     // El cálculo usa los valores sin redondear (ver comentario de arriba);
-    // el redondeo a 2 decimales es solo para mostrar, una única vez sobre
-    // el resultado final — no sobre cada componente por separado.
-    return formatNumeroConMiles(this.redondear(valor, 2));
+    // el redondeo a 2 decimales es una única vez sobre el resultado final —
+    // no sobre cada componente por separado.
+    return this.redondear(valor, 2);
+  }
+
+  formatTotalLiquidacion(): string {
+    return formatNumeroConMiles(this.totalLiquidacion());
   }
 
   /** USD/TM (BCL, por fila y total): siempre 2 decimales, redondeados

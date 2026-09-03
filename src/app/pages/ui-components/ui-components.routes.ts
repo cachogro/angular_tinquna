@@ -46,6 +46,14 @@ export const UiComponentsRoutes: Routes = [
       },
 
       {
+        path: 'reportes-valorizacion',
+        loadComponent: () =>
+          import('./reportes/reporte-valorizacion.component').then(
+            (m) => m.ReporteValorizacionComponent,
+          ),
+      },
+
+      {
         path: 'valorizacion',
         canActivate: [roleGuard],
         data: {
