@@ -1,0 +1,133 @@
+<h2 mat-dialog-title>
+  {{ esEdicion ? 'Editar movimiento' : 'Nuevo movimiento' }}
+  @if (data.nombreDestinatario) {
+  <span class="mk-titulo__destinatario"> — {{ data.nombreDestinatario }}</span>
+  }
+</h2>
+
+<mat-dialog-content>
+  @if (cargandoCatalogos()) {
+  <div class="mk-loading">
+    <mat-spinner diameter="32"></mat-spinner>
+    <span>Cargando catálogos...</span>
+  </div>
+  } @else {
+  <form [formGroup]="form" class="mk-form">
+    <div class="mk-form__row3">
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha</mat-label>
+        <input matInput [matDatepicker]="picker" formControlName="fecha" readonly
+          (click)="picker.open()" />
+        <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+        <mat-datepicker #picker></mat-datepicker>
+        @if (f.fecha.hasError('required') && f.fecha.touched) {
+        <mat-error>Obligatorio</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Tipo</mat-label>
+        <mat-select formControlName="tipo">
+          <mat-option value="DEBE">DEBE — Anticipo (sube deuda)</mat-option>
+          <mat-option value="HABER">HABER — Pago / descuento (baja deuda)</mat-option>
+        </mat-select>
+        @if (f.tipo.hasError('required') && f.tipo.touched) {
+        <mat-error>Obligatorio</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Monto (Bs)</mat-label>
+        <input matInput type="number" step="0.01" min="0.01" formControlName="monto" />
+        @if (f.monto.hasError('required') && f.monto.touched) {
+        <mat-error>Obligatorio</mat-error>
+        }
+        @if (f.monto.hasError('min') && f.monto.touched) {
+        <mat-error>Debe ser mayor a 0</mat-error>
+        }
+      </mat-form-field>
+    </div>
+
+    <mat-form-field appearance="outline" class="mk-form__full">
+      <mat-label>Detalle</mat-label>
+      <input matInput formControlName="detalle" maxlength="255"
+        placeholder="Ej: ANTICIPO A CTA COMPRESORA" />
+      @if (f.detalle.hasError('required') && f.detalle.touched) {
+      <mat-error>Obligatorio</mat-error>
+      }
+    </mat-form-field>
+
+    <div class="mk-form__row2">
+      <mat-form-field appearance="outline">
+        <mat-label>N° de comprobante (opcional)</mat-label>
+        <input matInput formControlName="nroComprobante" maxlength="30" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Subcuenta (opcional)</mat-label>
+        <mat-select formControlName="idSubcuenta">
+          <mat-option [value]="null">— Sin subcuenta —</mat-option>
+          @for (s of subcuentas(); track s.id) {
+          <mat-option [value]="s.id">{{ s.nombre }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <div class="mk-form__row2">
+      <mat-form-field appearance="outline">
+        <mat-label>Forma de pago (opcional)</mat-label>
+        <mat-select formControlName="idFormaPago">
+          <mat-option [value]="null">— Sin especificar —</mat-option>
+          @for (fp of formasPago(); track fp.id) {
+          <mat-option [value]="fp.id">{{ fp.nombre }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Tipo de movimiento (opcional)</mat-label>
+        <mat-select formControlName="idTipoMovimiento">
+          <mat-option [value]="null">— Sin especificar —</mat-option>
+          @for (tm of tiposMovimiento(); track tm.id) {
+          <mat-option [value]="tm.id">{{ tm.nombre }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <mat-form-field appearance="outline" class="mk-form__full">
+      <mat-label>Cobrador (opcional)</mat-label>
+      <input matInput formControlName="cobrador" [matAutocomplete]="autoCobrador"
+        #cobradorTrigger="matAutocompleteTrigger" (focus)="cobradorTrigger.openPanel()"
+        placeholder="Persona que cobró / entregó" />
+      <mat-autocomplete #autoCobrador="matAutocomplete" [displayWith]="displayCobrador">
+        @for (p of (cobradoresFiltrados$ | async); track p.id) {
+        <mat-option [value]="p">
+          <span>{{ nombreCompleto(p) }}</span>
+          <small class="mk-doc"> · {{ p.numeroDocumento }}</small>
+        </mat-option>
+        } @empty {
+        <mat-option disabled>Sin coincidencias — se guarda solo si es una persona registrada</mat-option>
+        }
+      </mat-autocomplete>
+      <mat-hint>Por defecto, el propietario del kardex; puedes escribirlo o elegir a otra persona registrada</mat-hint>
+    </mat-form-field>
+  </form>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-stroked-button (click)="cancelar()" [disabled]="guardando()">
+    Cancelar
+  </button>
+  <button mat-flat-button color="primary" (click)="guardar()"
+    [disabled]="guardando() || cargandoCatalogos()">
+    @if (guardando()) {
+    <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
+    <span>Guardando...</span>
+    } @else {
+    <span>{{ esEdicion ? 'Guardar cambios' : 'Registrar' }}</span>
+    }
+  </button>
+</mat-dialog-actions>

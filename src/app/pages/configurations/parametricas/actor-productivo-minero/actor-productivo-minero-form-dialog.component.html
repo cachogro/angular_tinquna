@@ -4,7 +4,7 @@
     <!-- ==================== FORMULARIO ==================== -->
     <form [formGroup]="form" (ngSubmit)="guardar()" class="actor-form">
 
-      <!-- Fila 1: nombre, tipo, dirección, teléfono -->
+      <!-- Fila 1: nombre, tipo, dirección -->
       <div class="fila-uno">
         <mat-form-field appearance="outline">
           <mat-label>Nombre</mat-label>
@@ -41,7 +41,10 @@
             Solo letras, números, espacios y # / ° ' " . - _ ,
           </mat-error>
         </mat-form-field>
+      </div>
 
+      <!-- Fila 2: teléfono y fecha de inicio de operaciones -->
+      <div class="fila-tres">
         <mat-form-field appearance="outline">
           <mat-label>Teléfono</mat-label>
           <input matInput formControlName="telefono" maxlength="10" placeholder="Ej: 72450000" />
@@ -52,9 +55,18 @@
             Solo números y "+"
           </mat-error>
         </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha de inicio de operaciones</mat-label>
+          <input matInput [matDatepicker]="pickerInicioOperaciones" [max]="hoy"
+            formControlName="fechaInicioOperaciones" placeholder="dd/mm/aaaa" />
+          <mat-datepicker-toggle matSuffix [for]="pickerInicioOperaciones"></mat-datepicker-toggle>
+          <mat-datepicker #pickerInicioOperaciones [restoreFocus]="false"></mat-datepicker>
+          <mat-hint>Opcional</mat-hint>
+        </mat-form-field>
       </div>
 
-      <!-- Fila 2: municipio (departamento/provincia/municipio-ETIOC/código), NIM y código -->
+      <!-- Fila 3: municipio (departamento/provincia/municipio-ETIOC/código), NIM y código -->
       <div class="fila-dos">
         <mat-form-field appearance="outline">
           <mat-label>Departamento/provincia/municipio-ETIOC/código</mat-label>
@@ -122,113 +134,11 @@
     <!-- ==================== BOTONES ==================== -->
     <div class="acciones">
       <button mat-stroked-button type="button" (click)="cancelar()" [disabled]="guardando">
-        {{ modoEdicion ? 'Cancelar edición' : 'Limpiar' }}
+        Cancelar
       </button>
       <button mat-flat-button color="primary" type="button" (click)="guardar()" [disabled]="guardando">
         {{ modoEdicion ? 'Actualizar' : 'Guardar' }}
       </button>
     </div>
-
-    <!-- ==================== TABLA ==================== -->
-    <mat-card class="tabla-card">
-      <mat-card-title>Actores productivos mineros registrados</mat-card-title>
-
-      <mat-card-content>
-
-        <!-- Búsqueda y filtro por tipo -->
-        <div class="filtros">
-          <mat-form-field appearance="outline" class="buscador" subscriptSizing="dynamic">
-            <mat-label>Buscar por nombre</mat-label>
-            <input matInput [formControl]="searchControl" placeholder="Ej: San Cristóbal" />
-            <mat-icon matSuffix>search</mat-icon>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline" class="filtro-tipo" subscriptSizing="dynamic">
-            <mat-label>Filtrar por tipo</mat-label>
-            <mat-select [formControl]="filtroTipoControl">
-              <mat-option [value]="null">Todos</mat-option>
-              <mat-option *ngFor="let tipo of tipos" [value]="tipo.id">
-                {{ tipo.descripcion }}
-              </mat-option>
-            </mat-select>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline" class="filtro-orden" subscriptSizing="dynamic">
-            <mat-select [formControl]="orderByControl" placeholder="Ordenar por">
-              <mat-option *ngFor="let opcion of opcionesOrden" [value]="opcion.value">{{ opcion.label }}</mat-option>
-            </mat-select>
-          </mat-form-field>
-
-          <button mat-icon-button type="button" (click)="toggleOrden()"
-            [matTooltip]="orderDirectionControl.value === 'ASC' ? 'Ascendente' : 'Descendente'">
-            <mat-icon>{{ orderDirectionControl.value === 'ASC' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
-          </button>
-
-          <button mat-stroked-button type="button" class="btn-limpiar"
-            matTooltip="Limpiar búsqueda y restablecer la lista" (click)="limpiarBusqueda()">
-            <mat-icon>filter_alt_off</mat-icon>
-            Limpiar
-          </button>
-        </div>
-
-        <div class="tabla-scroll">
-          <table mat-table [dataSource]="actores" class="tabla mat-elevation-z1">
-
-            <ng-container matColumnDef="id">
-              <th mat-header-cell *matHeaderCellDef>N°</th>
-              <td mat-cell *matCellDef="let row; let i = index">{{ numeroFila(i) }}</td>
-            </ng-container>
-
-            <ng-container matColumnDef="nombre">
-              <th mat-header-cell *matHeaderCellDef>Nombre</th>
-              <td mat-cell *matCellDef="let row">{{ row.nombre }}</td>
-            </ng-container>
-
-            <ng-container matColumnDef="tipo">
-              <th mat-header-cell *matHeaderCellDef>Tipo</th>
-              <td mat-cell *matCellDef="let row">{{ descripcionTipo(row) }}</td>
-            </ng-container>
-
-            <ng-container matColumnDef="direccion">
-              <th mat-header-cell *matHeaderCellDef>Dirección</th>
-              <td mat-cell *matCellDef="let row">{{ row.direccion }}</td>
-            </ng-container>
-
-            <ng-container matColumnDef="estado">
-              <th mat-header-cell *matHeaderCellDef>Estado</th>
-              <td mat-cell *matCellDef="let row">
-                <span class="badge" [class.badge--vigente]="row.activo" [class.badge--vencida]="!row.activo">
-                  {{ row.activo ? 'Activo' : 'Inactivo' }}
-                </span>
-              </td>
-            </ng-container>
-
-            <ng-container matColumnDef="acciones">
-              <th mat-header-cell *matHeaderCellDef>Acciones</th>
-              <td mat-cell *matCellDef="let row">
-                <button mat-icon-button color="primary" matTooltip="Editar" (click)="editar(row)">
-                  <mat-icon>edit</mat-icon>
-                </button>
-                <button mat-icon-button [color]="row.activo ? 'warn' : 'primary'"
-                  [matTooltip]="row.activo ? 'Desactivar' : 'Activar'" (click)="cambiarEstado(row)">
-                  <mat-icon>{{ row.activo ? 'toggle_on' : 'toggle_off' }}</mat-icon>
-                </button>
-              </td>
-            </ng-container>
-
-            <tr mat-header-row *matHeaderRowDef="columnas"></tr>
-            <tr mat-row *matRowDef="let row; columns: columnas"></tr>
-          </table>
-        </div>
-
-        <p *ngIf="!cargando && actores.length === 0" class="sin-datos">
-          No hay actores productivos mineros registrados.
-        </p>
-
-        <mat-paginator [length]="totalActores" [pageIndex]="pageIndex" [pageSize]="pageSize"
-          [pageSizeOptions]="[10, 20, 50]" (page)="onPageChange($event)"></mat-paginator>
-
-      </mat-card-content>
-    </mat-card>
   </app-parametrica-dialog-shell>
 </div>

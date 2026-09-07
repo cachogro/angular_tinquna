@@ -29,6 +29,10 @@ import {
   PersonaFormDialogComponent,
   PersonaFormDialogData,
 } from './persona-form-dialog/persona-form-dialog.component';
+import {
+  KardexDialogComponent,
+  KardexDialogData,
+} from '../../contabilidad/kardex/kardex-dialog.component';
 
 interface OpcionOrden {
   value: string;
@@ -197,15 +201,37 @@ export class GestionClientesComponent implements OnInit {
 
   abrirDialogo(persona: PersonaCI | null): void {
     const data: PersonaFormDialogData = { persona };
+    const esAlta = !persona;
 
     this.dialog
-      .open(PersonaFormDialogComponent, { data, width: '600px' })
+      .open(PersonaFormDialogComponent, {
+        data,
+        width: '820px',
+        maxWidth: '95vw',
+        autoFocus: false,
+      })
       .afterClosed()
       .subscribe((resultado) => {
-        if (resultado) {
-          this.cargarPersonas();
-        }
+        if (!resultado) return;
+        // En alta, volvemos a la primera página (orden por defecto DESC: la
+        // recién creada queda arriba); en edición mantenemos la página actual.
+        if (esAlta) this.pageIndex = 0;
+        this.cargarPersonas();
       });
+  }
+
+  abrirKardex(persona: PersonaCI): void {
+    const data: KardexDialogData = {
+      tipo: 'PERSONAL',
+      idPersona: persona.id,
+      nombreDestinatario: this.nombreCompleto(persona),
+    };
+    this.dialog.open(KardexDialogComponent, {
+      data,
+      width: '1000px',
+      maxWidth: '95vw',
+      autoFocus: false,
+    });
   }
 
   confirmarCambioEstado(persona: PersonaCI): void {

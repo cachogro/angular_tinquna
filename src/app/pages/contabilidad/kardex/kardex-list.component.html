@@ -1,0 +1,135 @@
+<mat-card class="cardWithShadow theme-card">
+  <mat-card-header>
+    <div>
+      <mat-card-title class="m-b-0">Kardex</mat-card-title>
+      <mat-card-subtitle class="m-b-0">Contabilidad · todos los kardex aperturados, por actor y por persona</mat-card-subtitle>
+    </div>
+  </mat-card-header>
+
+  <mat-card-content class="b-t-1">
+
+    <div class="kl-toolbar">
+      <mat-form-field appearance="outline" class="kl-toolbar__search" subscriptSizing="dynamic">
+        <mat-icon matPrefix>search</mat-icon>
+        <input matInput placeholder="Buscar por actor, persona o descripción" [formControl]="searchControl" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="kl-toolbar__sel" subscriptSizing="dynamic">
+        <mat-select [formControl]="tipoControl" placeholder="Tipo">
+          <mat-option [value]="null">Todos</mat-option>
+          <mat-option value="ACTOR">Actor productivo</mat-option>
+          <mat-option value="PERSONAL">Persona</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="kl-toolbar__sel" subscriptSizing="dynamic">
+        <mat-select [formControl]="estadoControl" placeholder="Estado">
+          <mat-option [value]="null">Todos</mat-option>
+          <mat-option value="ABIERTO">Abierto</mat-option>
+          <mat-option value="CERRADO">Cerrado</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="kl-toolbar__gestion" subscriptSizing="dynamic">
+        <input matInput type="number" placeholder="Gestión" [formControl]="gestionControl" />
+      </mat-form-field>
+
+      <button mat-icon-button (click)="toggleOrden()"
+        [matTooltip]="orderDirectionControl.value === 'ASC' ? 'Ascendente' : 'Descendente'">
+        <mat-icon>{{ orderDirectionControl.value === 'ASC' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+      </button>
+
+      <button mat-button (click)="limpiarFiltros()" class="kl-toolbar__clear">
+        <mat-icon>filter_alt_off</mat-icon>
+        Limpiar
+      </button>
+    </div>
+
+    <div class="kl-tabla-wrap">
+      @if (cargando()) {
+      <div class="kl-loading">
+        <mat-spinner diameter="32"></mat-spinner>
+        <span>Cargando kardex...</span>
+      </div>
+      } @else if (registros().length === 0) {
+      <div class="kl-empty">
+        <mat-icon>menu_book</mat-icon>
+        <p>No se encontraron kardex con estos filtros</p>
+      </div>
+      } @else {
+      <div class="kl-tabla-scroll">
+        <table mat-table [dataSource]="registros()" class="kl-tabla mat-elevation-z1">
+
+          <ng-container matColumnDef="destinatario">
+            <th mat-header-cell *matHeaderCellDef>Destinatario</th>
+            <td mat-cell *matCellDef="let k">{{ nombreDestinatario(k) }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="numero">
+            <th mat-header-cell *matHeaderCellDef>N°</th>
+            <td mat-cell *matCellDef="let k">{{ k.numero }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="tipo">
+            <th mat-header-cell *matHeaderCellDef>Tipo</th>
+            <td mat-cell *matCellDef="let k">
+              <span class="kl-chip" [class.kl-chip--personal]="k.tipo === 'PERSONAL'">
+                {{ k.tipo === 'ACTOR' ? 'Actor' : 'Persona' }}
+              </span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="apertura">
+            <th mat-header-cell *matHeaderCellDef>Apertura</th>
+            <td mat-cell *matCellDef="let k">{{ k.fechaApertura ? fechaFmt(k.fechaApertura) : k.gestion }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="descripcion">
+            <th mat-header-cell *matHeaderCellDef>Descripción</th>
+            <td mat-cell *matCellDef="let k">{{ k.descripcion || '—' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="estado">
+            <th mat-header-cell *matHeaderCellDef>Estado</th>
+            <td mat-cell *matCellDef="let k">
+              <span class="kl-badge" [class.kl-badge--cerrado]="k.estado === 'CERRADO'">
+                {{ k.estado }}
+              </span>
+              @if (k.activo === false) {
+              <span class="kl-badge kl-badge--baja">BAJA</span>
+              }
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="saldoInicial">
+            <th mat-header-cell *matHeaderCellDef class="kl-num">Saldo inicial</th>
+            <td mat-cell *matCellDef="let k" class="kl-num">{{ num(k.saldoInicial) | number:'1.2-2' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="saldo">
+            <th mat-header-cell *matHeaderCellDef class="kl-num">Saldo actual / cierre</th>
+            <td mat-cell *matCellDef="let k" class="kl-num">
+              {{ (k.estado === 'ABIERTO' ? num(k.saldoActual) : num(k.saldoCierre)) | number:'1.2-2' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="acciones">
+            <th mat-header-cell *matHeaderCellDef>Acciones</th>
+            <td mat-cell *matCellDef="let k">
+              <button mat-icon-button color="primary" matTooltip="Gestionar kardex" (click)="gestionarKardex(k)">
+                <mat-icon>menu_book</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+          <tr mat-row *matRowDef="let k; columns: columnas" [class.kl-row-inactiva]="k.activo === false"></tr>
+        </table>
+      </div>
+
+      <mat-paginator [length]="total()" [pageSize]="pageSize" [pageIndex]="pageIndex" [pageSizeOptions]="[10, 25, 50]"
+        (page)="onPageChange($event)"></mat-paginator>
+      }
+    </div>
+  </mat-card-content>
+</mat-card>

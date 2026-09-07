@@ -45,11 +45,18 @@ export const ConfiguracionesRoutes: Routes = [
       },
 
       {
-        path: 'gestion-clientes',
+        path: 'actores-clientes',
         loadComponent: () =>
-          import('./gestion-clientes/gestion-clientes.component').then(
-            (m) => m.GestionClientesComponent,
+          import('./actores-clientes/actores-clientes.component').then(
+            (m) => m.ActoresClientesComponent,
           ),
+      },
+
+      {
+        // Compatibilidad: el módulo pasó a llamarse "Actores y Clientes".
+        path: 'gestion-clientes',
+        redirectTo: 'actores-clientes',
+        pathMatch: 'full',
       },
 
       {

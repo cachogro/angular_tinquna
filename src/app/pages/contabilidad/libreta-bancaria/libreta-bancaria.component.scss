@@ -1,0 +1,261 @@
+.lb-header__actions {
+  margin-left: auto;
+}
+
+.lb-loading,
+.lb-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 40px 16px;
+  color: rgba(0, 0, 0, 0.45);
+  text-align: center;
+}
+
+.lb-empty mat-icon {
+  font-size: 40px;
+  width: 40px;
+  height: 40px;
+}
+
+.lb-loading {
+  flex-direction: row;
+}
+
+/* ===== Toolbar ===== */
+.lb-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: flex-start;
+  margin: 8px 0 16px;
+}
+
+.lb-toolbar__cuenta {
+  flex: 1 1 340px;
+  min-width: 260px;
+}
+
+.lb-toolbar__sel {
+  flex: 0 0 150px;
+}
+
+/* ===== Avisos ===== */
+.lb-aviso {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--mat-sys-primary) 8%, transparent);
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.lb-aviso button {
+  margin-left: auto;
+}
+
+.lb-aviso mat-icon {
+  color: var(--mat-sys-primary);
+  flex-shrink: 0;
+}
+
+.lb-aviso--warn {
+  background: color-mix(in srgb, #ff9800 16%, transparent);
+}
+
+.lb-aviso--warn mat-icon {
+  color: #e65100;
+}
+
+/* ===== Período ===== */
+.lb-periodo {
+  border: 1px solid var(--mat-sys-outline-variant, #e0e0e0);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+
+.lb-periodo__titulo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.lb-badge {
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .3px;
+  background: color-mix(in srgb, #2e7d32 15%, transparent);
+  color: #2e7d32;
+}
+
+.lb-badge--cerrado {
+  background: color-mix(in srgb, #9e9e9e 22%, transparent);
+  color: #616161;
+}
+
+.lb-tiles {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.lb-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--mat-sys-primary) 5%, transparent);
+}
+
+.lb-tile small {
+  color: rgba(0, 0, 0, 0.55);
+  font-size: 11px;
+}
+
+.lb-tile strong {
+  font-size: 15px;
+}
+
+.lb-periodo__acciones {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.lb-cerrado-info {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+/* ===== Tabla ===== */
+.lb-tabla-wrap {
+  margin-top: 4px;
+}
+
+.lb-tabla-scroll {
+  overflow: auto;
+  max-height: 420px;
+}
+
+.lb-tabla {
+  width: 100%;
+  min-width: 820px;
+}
+
+.lb-tabla .mat-mdc-header-row {
+  background: #0d6efd !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  letter-spacing: .2px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  height: 28px;
+}
+
+.lb-tabla .mat-mdc-header-cell {
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  font-weight: 600;
+  font-size: 10.5px;
+  letter-spacing: .2px;
+  padding: 2px 8px !important;
+}
+
+.lb-tabla .mat-mdc-row {
+  height: 26px;
+}
+
+.lb-tabla .mat-mdc-cell {
+  padding: 2px 8px !important;
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+/* Botones de acción compactos para no inflar la fila */
+.lb-tabla .mat-column-acciones {
+  white-space: nowrap;
+}
+
+.lb-tabla ::ng-deep .mat-mdc-icon-button {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  line-height: 26px;
+  --mat-icon-button-state-layer-size: 26px;
+}
+
+.lb-tabla ::ng-deep .mat-mdc-icon-button .mat-mdc-button-touch-target {
+  width: 26px;
+  height: 26px;
+}
+
+.lb-tabla ::ng-deep .mat-mdc-icon-button .mat-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  line-height: 16px;
+}
+
+.lb-tabla .mat-mdc-row:hover {
+  background: color-mix(in srgb, var(--mat-sys-primary) 8%, transparent);
+  transition: background-color .2s ease;
+}
+
+.lb-num {
+  text-align: right;
+}
+
+.lb-pos {
+  color: #2e7d32;
+}
+
+.lb-neg {
+  color: #c62828;
+}
+
+.lb-row-inactiva {
+  opacity: .5;
+  text-decoration: line-through;
+}
+
+.lb-lock {
+  color: rgba(0, 0, 0, 0.35);
+  font-size: 15px;
+  width: 15px;
+  height: 15px;
+}
+
+.lb-persona-ico {
+  color: var(--mat-sys-primary);
+  font-size: 13px;
+  width: 13px;
+  height: 13px;
+  vertical-align: text-bottom;
+  margin-right: 2px;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 900px) {
+  .lb-tiles {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .lb-toolbar__sel {
+    flex: 1 1 100%;
+  }
+}

@@ -35,6 +35,30 @@ export const navItems: NavItem[] = [
     iconName: 'solar:chart-2-line-duotone',
     route: '/ui-components/reportes-valorizacion',
   },
+  {
+    navCap: 'Contabilidad',
+    divider: true,
+  },
+  {
+    displayName: 'Recibos',
+    iconName: 'solar:bill-list-line-duotone',
+    route: '/contabilidad/recibos',
+  },
+  {
+    displayName: 'Libreta Bancaria',
+    iconName: 'solar:notebook-line-duotone',
+    route: '/contabilidad/libreta-bancaria',
+  },
+  {
+    displayName: 'Kardex',
+    iconName: 'solar:document-text-line-duotone',
+    route: '/contabilidad/kardex',
+  },
+  {
+    displayName: 'Caja de Flujo',
+    iconName: 'solar:safe-square-line-duotone',
+    route: '/contabilidad/caja-flujo',
+  },
 
   //-----------MODULO LOGUIN NO SE PUEDE ACCEDER SI UYA ESTAS LOGUEADO
   // {
@@ -78,13 +102,6 @@ export const navItems: NavItem[] = [
         route: '/configuraciones/parametricas',
         roles: [RolCodigo.ADMINISTRADOR],
       },
-
-      {
-        displayName: 'Gestion Clientes',
-        subItemIcon: true,
-        iconName: 'solar:user-plus-rounded-line-duotone',
-        route: '/configuraciones/gestion-clientes',
-      },
       {
         displayName: 'Historial de Accesos',
         subItemIcon: true,
@@ -93,5 +110,10 @@ export const navItems: NavItem[] = [
         roles: [RolCodigo.ADMINISTRADOR],
       },
     ],
+  },
+  {
+    displayName: 'Actores y Clientes',
+    iconName: 'solar:users-group-rounded-line-duotone',
+    route: '/configuraciones/actores-clientes',
   },
 ];

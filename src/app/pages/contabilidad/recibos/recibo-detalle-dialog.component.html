@@ -1,0 +1,114 @@
+<h2 mat-dialog-title>
+  @if (recibo(); as r) {
+  <mat-icon [class.rd-icono--ingreso]="r.tipo === 'INGRESO'" [class.rd-icono--egreso]="r.tipo === 'EGRESO'">
+    {{ r.tipo === 'INGRESO' ? 'call_received' : 'call_made' }}
+  </mat-icon>
+  {{ codigoRecibo(r) }}
+  } @else {
+  Detalle del recibo
+  }
+</h2>
+
+<mat-dialog-content class="rd-content">
+  @if (cargando()) {
+  <div class="rd-loading">
+    <mat-spinner diameter="32"></mat-spinner>
+    <span>Cargando recibo...</span>
+  </div>
+  } @else if (recibo(); as r) {
+  <div class="rd-tiles">
+    <div class="rd-tile">
+      <small>Estado</small>
+      <strong>{{ estadoLabel(r) }}</strong>
+    </div>
+    <div class="rd-tile">
+      <small>Fecha</small>
+      <strong>{{ fechaFmt(r.fecha) }}</strong>
+    </div>
+    <div class="rd-tile">
+      <small>{{ labelContraparte(r) }}</small>
+      <strong>{{ nombrePersona(r) }}</strong>
+    </div>
+    <div class="rd-tile">
+      <small>Forma de pago</small>
+      <strong>{{ r.formaPago?.nombre || '—' }}</strong>
+    </div>
+    <div class="rd-tile rd-tile--destacado">
+      <small>Monto total</small>
+      <strong>Bs {{ num(r.montoTotal) | number:'1.2-2' }}</strong>
+    </div>
+  </div>
+
+  <p class="rd-concepto"><strong>Concepto:</strong> {{ r.concepto }}</p>
+
+  @if (r.destinoGasto) {
+  <p class="rd-tipo-mov">
+    <strong>{{ r.tipo === 'INGRESO' ? 'Origen del ingreso' : 'Destino del gasto' }}:</strong>
+    {{ r.destinoGasto.nombre }}
+  </p>
+  }
+
+  @if (r.cuentaBancaria || r.nroComprobante) {
+  <p class="rd-tipo-mov">
+    <strong>Comprobante:</strong>
+    @if (r.cuentaBancaria) { {{ nombreCuenta(r) }} · }
+    N° {{ r.nroComprobante || '—' }}
+  </p>
+  }
+
+  @if (r.detalles.length === 0) {
+  <p class="rd-tipo-mov"><em>Recibo en borrador: todavía sin reparto ni movimientos de caja.</em></p>
+  } @else {
+  <h3>Detalle</h3>
+  <div class="rd-tabla-scroll">
+    <table mat-table [dataSource]="r.detalles" class="rd-tabla mat-elevation-z1">
+
+      <ng-container matColumnDef="destino">
+        <th mat-header-cell *matHeaderCellDef>Destino</th>
+        <td mat-cell *matCellDef="let d">
+          <span class="rd-chip" [class.rd-chip--efectivo]="d.destino === 'EFECTIVO'">
+            {{ d.destino === 'PERSONAL' ? 'Persona' : d.destino === 'ACTOR' ? 'Actor' : 'Efectivo' }}
+          </span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="destinatario">
+        <th mat-header-cell *matHeaderCellDef>Destinatario</th>
+        <td mat-cell *matCellDef="let d">{{ destinatarioDetalle(d) }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="monto">
+        <th mat-header-cell *matHeaderCellDef class="rd-num">Monto</th>
+        <td mat-cell *matCellDef="let d" class="rd-num">{{ num(d.monto) | number:'1.2-2' }}</td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+      <tr mat-row *matRowDef="let d; columns: columnas"></tr>
+    </table>
+  </div>
+
+  @if (r.movimientosCaja.length) {
+  <h3>Movimientos en la caja de flujo</h3>
+  <div class="rd-empresa-lista">
+    @for (mc of r.movimientosCaja; track mc.id) {
+    <div class="rd-empresa">
+      <span class="rd-chip" [class.rd-chip--efectivo]="num(mc.egreso) > 0">
+        {{ num(mc.ingreso) > 0 ? 'INGRESO' : 'EGRESO' }}
+      </span>
+      <span>{{ mc.moneda }} {{ (num(mc.ingreso) > 0 ? num(mc.ingreso) : num(mc.egreso)) | number:'1.2-2' }}
+        · Saldo {{ num(mc.saldo) | number:'1.2-2' }}</span>
+    </div>
+    }
+  </div>
+  }
+  }
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-stroked-button (click)="verPdf()" [disabled]="descargandoPdf()">
+    <mat-icon>picture_as_pdf</mat-icon>
+    {{ descargandoPdf() ? 'Generando...' : 'PDF' }}
+  </button>
+  <button mat-flat-button color="primary" (click)="cerrar()">Cerrar</button>
+</mat-dialog-actions>

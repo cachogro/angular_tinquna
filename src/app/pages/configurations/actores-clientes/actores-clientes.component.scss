@@ -1,0 +1,13 @@
+.actores-clientes-page {
+  display: block;
+  padding: 8px 0 24px;
+}
+
+.tab-body {
+  padding-top: 16px;
+}
+
+// La tarjeta de acceso a actores no necesita ocupar todo el ancho.
+.actor-card {
+  max-width: 420px;
+}

@@ -1,0 +1,176 @@
+.rl-loading,
+.rl-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 40px 16px;
+  color: rgba(0, 0, 0, 0.45);
+  text-align: center;
+}
+
+.rl-empty mat-icon {
+  font-size: 40px;
+  width: 40px;
+  height: 40px;
+}
+
+.rl-loading {
+  flex-direction: row;
+}
+
+/* ===== Acciones ===== */
+.rl-acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.rl-btn--ingreso {
+  --mdc-filled-button-container-color: #2e7d32;
+}
+
+/* ===== Toolbar ===== */
+.rl-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: flex-start;
+  margin: 8px 0 16px;
+}
+
+.rl-toolbar__search {
+  flex: 1 1 260px;
+  min-width: 220px;
+}
+
+.rl-toolbar__sel {
+  flex: 0 0 140px;
+}
+
+.rl-toolbar__fecha {
+  flex: 0 0 140px;
+}
+
+.rl-toolbar__clear {
+  margin-left: auto;
+}
+
+/* ===== Tabla ===== */
+.rl-tabla-scroll {
+  overflow: auto;
+  max-height: 560px;
+}
+
+.rl-tabla {
+  width: 100%;
+  min-width: 900px;
+}
+
+.rl-tabla .mat-mdc-header-row {
+  background: #0d6efd !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  letter-spacing: .2px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  height: 28px;
+}
+
+.rl-tabla .mat-mdc-header-cell {
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  font-weight: 600;
+  font-size: 10.5px;
+  letter-spacing: .2px;
+  padding: 2px 8px !important;
+}
+
+.rl-tabla .mat-mdc-row {
+  height: 30px;
+}
+
+.rl-tabla .mat-mdc-cell {
+  padding: 2px 8px !important;
+  font-size: 11.5px;
+}
+
+.rl-tabla .mat-mdc-row:hover {
+  background: color-mix(in srgb, var(--mat-sys-primary) 8%, transparent);
+  transition: background-color .2s ease;
+}
+
+.rl-tabla ::ng-deep .mat-mdc-icon-button {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  line-height: 28px;
+}
+
+.rl-tabla ::ng-deep .mat-mdc-icon-button .mat-mdc-button-touch-target {
+  width: 28px;
+  height: 28px;
+}
+
+.rl-tabla ::ng-deep .mat-mdc-icon-button .mat-icon {
+  font-size: 17px;
+  width: 17px;
+  height: 17px;
+  line-height: 17px;
+}
+
+.rl-num {
+  text-align: right;
+}
+
+/* ===== Chips ===== */
+.rl-chip {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  background: color-mix(in srgb, #2e7d32 15%, transparent);
+  color: #2e7d32;
+}
+
+.rl-chip--egreso {
+  background: color-mix(in srgb, #c62828 15%, transparent);
+  color: #c62828;
+}
+
+.rl-estado {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.rl-estado--borrador {
+  background: color-mix(in srgb, #f9a825 18%, transparent);
+  color: #a06a00;
+}
+
+.rl-estado--procesado {
+  background: color-mix(in srgb, #2e7d32 15%, transparent);
+  color: #2e7d32;
+}
+
+.rl-estado--anulado {
+  background: color-mix(in srgb, #757575 20%, transparent);
+  color: #616161;
+  text-decoration: line-through;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 700px) {
+  .rl-toolbar__clear {
+    margin-left: 0;
+  }
+  .rl-acciones {
+    flex-wrap: wrap;
+  }
+}

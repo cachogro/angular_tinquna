@@ -12,6 +12,15 @@ export interface PersonaTipoCatalogo {
   descripcion: string;
 }
 
+/** POST /parametricas/persona-tipo — sin `id` crea, con `id` actualiza.
+ *  El backend guarda todo en mayúsculas. `descripcion` "" se guarda como null. */
+export interface GuardarPersonaTipoRequest {
+  id?: number;
+  codigo: string;
+  nombre: string;
+  descripcion?: string;
+}
+
 export interface TipoActorProductivoMineroCatalogo {
   id: string;
   descripcion: string;
@@ -48,6 +57,11 @@ export interface PersonaCI {
   idActorProductivoMinero?: string | null;
   actorProductivoMinero?: ActorProductivoMinero | null;
   personaTipos: PersonaTipoAsignado[];
+  /** Solo para personal de la propia empresa (actor productivo minero id 1).
+   *  Formato "YYYY-MM-DD". */
+  fechaNacimiento?: string | null;
+  fechaInicioLaboral?: string | null;
+  direccion?: string | null;
 }
 
 /** id presente = actualizar (solo se mandan los campos a cambiar); sin id = crear (todos requeridos) */
@@ -61,6 +75,11 @@ export interface GuardarPersonaRequest {
   celular?: string;
   tiposPersona?: number[];
   idActorProductivoMinero?: string | number | null;
+  /** Solo se envían cuando el actor productivo minero es la propia empresa
+   *  (id 1, "TINKURIKUNA"): registro completo de personal. Formato "YYYY-MM-DD". */
+  fechaNacimiento?: string;
+  fechaInicioLaboral?: string;
+  direccion?: string;
 }
 
 export interface FiltrosPersona {

@@ -9,6 +9,45 @@
   } @else {
   <form [formGroup]="form" class="persona-form">
     <div class="persona-form__grid">
+      <mat-form-field appearance="outline" class="persona-form__full">
+        <mat-label>Actor productivo minero</mat-label>
+        <input matInput formControlName="actorProductivoMinero" [matAutocomplete]="autoActor"
+          #actorTrigger="matAutocompleteTrigger" (focus)="actorTrigger.openPanel()"
+          placeholder="Ingenio, cooperativa o empresa minera" />
+        @if (hayActorSeleccionado) {
+        <button mat-icon-button matSuffix type="button"
+          matTooltip="Quitar actor (ninguno)" (click)="limpiarActor()">
+          <mat-icon>close</mat-icon>
+        </button>
+        } @else if (actorSinResultados()) {
+        <button mat-icon-button matSuffix type="button" color="primary"
+          matTooltip="No está en la lista: registrar nuevo actor productivo minero"
+          (click)="abrirRegistrarActor()">
+          <mat-icon>add_circle_outline</mat-icon>
+        </button>
+        } @else {
+        <mat-icon matSuffix>expand_more</mat-icon>
+        }
+        <mat-autocomplete #autoActor="matAutocomplete" [displayWith]="displayActor" requireSelection>
+          @for (actor of (actoresFiltrados$ | async); track actor.id) {
+          <mat-option [value]="actor">
+            <span>{{ actor.nombre }}</span>
+            <small class="actor-option__tipo"> · {{ actor.tipoActorProductivoMinero?.descripcion }}</small>
+          </mat-option>
+          } @empty {
+          <mat-option disabled>Sin resultados</mat-option>
+          }
+        </mat-autocomplete>
+        <mat-hint>Opcional: si el cliente no pertenece a ningún actor productivo, deja este campo vacío</mat-hint>
+      </mat-form-field>
+
+      @if (esRegistroPersonalEmpresa()) {
+      <p class="persona-form__full persona-form__aviso">
+        <mat-icon>badge</mat-icon>
+        Registro de personal de la empresa (TINKURIKUNA): completa los datos adicionales.
+      </p>
+      }
+
       <mat-form-field appearance="outline">
         <mat-label>Nombres</mat-label>
         <input matInput formControlName="nombres" />
@@ -32,11 +71,8 @@
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>Apellido materno</mat-label>
+        <mat-label>Apellido materno (opcional)</mat-label>
         <input matInput formControlName="apellidoMaterno" />
-        @if (f.apellidoMaterno.hasError('required') && f.apellidoMaterno.touched) {
-        <mat-error>Obligatorio</mat-error>
-        }
         @if (f.apellidoMaterno.hasError('pattern') && f.apellidoMaterno.touched) {
         <mat-error>Solo letras y espacios</mat-error>
         }
@@ -66,55 +102,62 @@
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>Celular</mat-label>
-        <input matInput formControlName="celular" />
-        @if (f.celular.hasError('required') && f.celular.touched) {
-        <mat-error>Obligatorio</mat-error>
-        }
+        <mat-label>Celular (opcional)</mat-label>
+        <input matInput formControlName="celular" inputmode="numeric" />
         @if (f.celular.hasError('pattern') && f.celular.touched) {
         <mat-error>Solo números (6 a 15 dígitos)</mat-error>
         }
       </mat-form-field>
 
-      <mat-form-field appearance="outline" class="persona-form__full">
-        <mat-label>Tipos de persona</mat-label>
-        <mat-select formControlName="tiposPersona" multiple>
-          @for (tipo of tiposPersonaCatalogo(); track tipo.id) {
-          <mat-option [value]="tipo.id">{{ tipo.nombre }}</mat-option>
+      <div class="persona-form__full persona-form__tipos">
+        <mat-form-field appearance="outline" class="persona-form__tipos-field">
+          <mat-label>Tipo o rol</mat-label>
+          <mat-select formControlName="tiposPersona" multiple>
+            @for (tipo of tiposPersonaCatalogo(); track tipo.id) {
+            <mat-option [value]="tipo.id">{{ tipo.nombre }}</mat-option>
+            }
+          </mat-select>
+          <mat-hint>Puede seleccionar uno o varios (ej. Cliente y Transportista)</mat-hint>
+          @if (f.tiposPersona.hasError('minSeleccion') && f.tiposPersona.touched) {
+          <mat-error>Selecciona al menos un tipo o rol</mat-error>
           }
-        </mat-select>
-        <mat-hint>Puede seleccionar uno o varios (ej. Cliente y Transportista)</mat-hint>
-        @if (f.tiposPersona.hasError('minSeleccion') && f.tiposPersona.touched) {
-        <mat-error>Selecciona al menos un tipo</mat-error>
+        </mat-form-field>
+        <button mat-stroked-button type="button" class="persona-form__tipos-add"
+          (click)="abrirCrearTipoRol()" matTooltip="¿No está en la lista? Registrar un nuevo tipo o rol">
+          <mat-icon>add</mat-icon>
+          <span>Nuevo tipo o rol</span>
+        </button>
+      </div>
+
+      @if (esRegistroPersonalEmpresa()) {
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha de nacimiento</mat-label>
+        <input matInput [matDatepicker]="pickerNac" [max]="hoy" formControlName="fechaNacimiento" />
+        <mat-datepicker-toggle matSuffix [for]="pickerNac"></mat-datepicker-toggle>
+        <mat-datepicker #pickerNac></mat-datepicker>
+        @if (f.fechaNacimiento.hasError('required') && f.fechaNacimiento.touched) {
+        <mat-error>Obligatorio</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha de inicio laboral</mat-label>
+        <input matInput [matDatepicker]="pickerLab" formControlName="fechaInicioLaboral" />
+        <mat-datepicker-toggle matSuffix [for]="pickerLab"></mat-datepicker-toggle>
+        <mat-datepicker #pickerLab></mat-datepicker>
+        @if (f.fechaInicioLaboral.hasError('required') && f.fechaInicioLaboral.touched) {
+        <mat-error>Obligatorio</mat-error>
         }
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="persona-form__full">
-        <mat-label>Actor productivo minero</mat-label>
-        <input matInput formControlName="actorProductivoMinero" [matAutocomplete]="autoActor"
-          #actorTrigger="matAutocompleteTrigger" (focus)="actorTrigger.openPanel()"
-          placeholder="Ingenio, cooperativa o empresa minera" />
-        @if (actorSinResultados()) {
-        <button mat-icon-button matSuffix type="button" color="primary"
-          matTooltip="No está en la lista: registrar nuevo actor productivo minero"
-          (click)="abrirRegistrarActor()">
-          <mat-icon>add_circle_outline</mat-icon>
-        </button>
-        } @else {
-        <mat-icon matSuffix>expand_more</mat-icon>
+        <mat-label>Dirección</mat-label>
+        <input matInput formControlName="direccion" placeholder="Ej: Calle Sucre N° 120, Potosí" />
+        @if (f.direccion.hasError('required') && f.direccion.touched) {
+        <mat-error>Obligatorio</mat-error>
         }
-        <mat-autocomplete #autoActor="matAutocomplete" [displayWith]="displayActor">
-          @for (actor of (actoresFiltrados$ | async); track actor.id) {
-          <mat-option [value]="actor">
-            <span>{{ actor.nombre }}</span>
-            <small class="actor-option__tipo"> · {{ actor.tipoActorProductivoMinero?.descripcion }}</small>
-          </mat-option>
-          } @empty {
-          <mat-option disabled>Sin resultados</mat-option>
-          }
-        </mat-autocomplete>
-        <mat-hint>Opcional: relaciona a esta persona con un actor productivo minero</mat-hint>
       </mat-form-field>
+      }
     </div>
   </form>
   }

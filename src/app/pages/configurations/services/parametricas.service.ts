@@ -8,26 +8,35 @@ import {
   ActualizarCodificacionRequest,
   ActualizarCotizacionRequest,
   ActualizarEscalaPrecioRequest,
+  Caja,
   Codificacion,
   Cotizacion,
   CotizacionesPaginadas,
   CrearCodificacionRequest,
   CrearCotizacionRequest,
   CrearEscalaPrecioRequest,
+  CuentaFinanciera,
+  DestinoGasto,
   EntidadAporte,
+  EntidadFinanciera,
   EscalaPrecio,
   FiltrosActorProductivoMinero,
   FiltrosCotizacion,
+  FormaPago,
   GuardarActorProductivoMineroRequest,
+  GuardarCajaRequest,
   GuardarEntidadAporteRequest,
+  GuardarEntidadFinancieraRequest,
   GuardarLaboratorioRequest,
   GuardarMineralRequest,
   GuardarTipoCalculoValorizacionRequest,
+  KardexSubcuenta,
   Laboratorio,
   Mineral,
   Municipio,
   TipoActorProductivoMinero,
   TipoCalculoValorizacionAgrupado,
+  TipoMovimientoKardex,
 } from '../parametricas/models/parametricas.models';
 
 @Injectable({ providedIn: 'root' })
@@ -295,6 +304,7 @@ export class ParametricasService {
     this.listarActoresProductivosMineros(filtros).subscribe({
       next: (res) => {
         this.actoresProductivosMineros.set(res.data);
+        console.log('actoresssss',this.actoresProductivosMineros);
         this.totalActoresProductivosMineros.set(res.total);
         this.cargandoActoresProductivosMineros.set(false);
       },
@@ -439,6 +449,71 @@ export class ParametricasService {
   }
 
   // ==========================================================
+  // ENTIDAD FINANCIERA (banco / entidad + sus cuentas)
+  // ==========================================================
+
+  private readonly entidadFinancieraUrl = `${this.baseUrl}/entidad-financiera`;
+
+  // Máximo ~5 entidades esperadas: se listan todas (con sus cuentas) sin paginación.
+  readonly entidadesFinancieras = signal<EntidadFinanciera[]>([]);
+  readonly cargandoEntidadesFinancieras = signal<boolean>(false);
+
+  /** Un solo POST para crear y actualizar: sin `id` crea, con `id` actualiza.
+   *  Acepta `cuentas[]` (upsert incremental). */
+  guardarEntidadFinanciera(
+    data: GuardarEntidadFinancieraRequest,
+  ): Observable<EntidadFinanciera> {
+    return this.http
+      .post<EntidadFinanciera>(this.entidadFinancieraUrl, data)
+      .pipe(tap(() => this.cargarEntidadesFinancieras()));
+  }
+
+  obtenerEntidadesFinancieras(): Observable<EntidadFinanciera[]> {
+    return this.http.get<EntidadFinanciera[]>(this.entidadFinancieraUrl);
+  }
+
+  /** Carga las entidades financieras (con sus cuentas) y actualiza el signal
+   *  para que la tabla se refresque sola. */
+  cargarEntidadesFinancieras(): void {
+    this.cargandoEntidadesFinancieras.set(true);
+    this.obtenerEntidadesFinancieras().subscribe({
+      next: (data) => {
+        this.entidadesFinancieras.set(data);
+        this.cargandoEntidadesFinancieras.set(false);
+      },
+      error: () => {
+        this.cargandoEntidadesFinancieras.set(false);
+      },
+    });
+  }
+
+  /** Activa/desactiva la entidad (no toca sus cuentas). */
+  cambiarEstadoEntidadFinanciera(
+    id: number,
+    activo: boolean,
+  ): Observable<EntidadFinanciera> {
+    return this.http
+      .patch<EntidadFinanciera>(
+        `${this.entidadFinancieraUrl}/cambiar_estado/${id}`,
+        { activo },
+      )
+      .pipe(tap(() => this.cargarEntidadesFinancieras()));
+  }
+
+  /** Activa/desactiva una cuenta puntual de una entidad. */
+  cambiarEstadoCuentaFinanciera(
+    id: number,
+    activo: boolean,
+  ): Observable<CuentaFinanciera> {
+    return this.http
+      .patch<CuentaFinanciera>(
+        `${this.entidadFinancieraUrl}/cuenta/cambiar_estado/${id}`,
+        { activo },
+      )
+      .pipe(tap(() => this.cargarEntidadesFinancieras()));
+  }
+
+  // ==========================================================
   // MINERALES
   // ==========================================================
 
@@ -556,5 +631,101 @@ export class ParametricasService {
         TipoCalculoValorizacionAgrupado['gastos'][number]
       >(`${this.tipoCalculoValorizacionUrl}/cambiar_estado/${id}`, { activo })
       .pipe(tap(() => this.cargarTipoCalculoValorizacion()));
+  }
+
+  // ==========================================================
+  // CATÁLOGOS DEL KARDEX DE ANTICIPOS (forma de pago, tipo de movimiento,
+  // subcuenta) — usados por el formulario de movimiento de kardex.
+  // ==========================================================
+
+  private formasPago$?: Observable<FormaPago[]>;
+
+  /** Catálogo cacheado — no se vuelve a pedir tras la primera carga */
+  obtenerFormasPago(): Observable<FormaPago[]> {
+    if (!this.formasPago$) {
+      this.formasPago$ = this.http
+        .get<FormaPago[]>(`${this.baseUrl}/forma-pago`)
+        .pipe(shareReplay(1));
+    }
+    return this.formasPago$;
+  }
+
+  private tiposMovimientoKardex$?: Observable<TipoMovimientoKardex[]>;
+
+  /** Catálogo cacheado — no se vuelve a pedir tras la primera carga */
+  obtenerTiposMovimientoKardex(): Observable<TipoMovimientoKardex[]> {
+    if (!this.tiposMovimientoKardex$) {
+      this.tiposMovimientoKardex$ = this.http
+        .get<TipoMovimientoKardex[]>(`${this.baseUrl}/tipo-movimiento-kardex`)
+        .pipe(shareReplay(1));
+    }
+    return this.tiposMovimientoKardex$;
+  }
+
+  private destinosGasto$?: Observable<DestinoGasto[]>;
+
+  /** Catálogo cacheado de destinos de gasto (categoría contable del recibo).
+   *  Trae todos; filtrar por `esEgreso` según el tipo de recibo. */
+  obtenerDestinosGasto(): Observable<DestinoGasto[]> {
+    if (!this.destinosGasto$) {
+      this.destinosGasto$ = this.http
+        .get<DestinoGasto[]>(`${this.baseUrl}/destino-gasto`)
+        .pipe(shareReplay(1));
+    }
+    return this.destinosGasto$;
+  }
+
+  private kardexSubcuentas$?: Observable<KardexSubcuenta[]>;
+
+  /** Catálogo cacheado — extensible (PRINCIPAL, COMPRESORA...). `forzar: true`
+   *  descarta la caché (p.ej. si en algún momento se agrega una subcuenta nueva). */
+  obtenerKardexSubcuentas(forzar = false): Observable<KardexSubcuenta[]> {
+    if (forzar || !this.kardexSubcuentas$) {
+      this.kardexSubcuentas$ = this.http
+        .get<KardexSubcuenta[]>(`${this.baseUrl}/kardex-subcuenta`)
+        .pipe(shareReplay(1));
+    }
+    return this.kardexSubcuentas$;
+  }
+
+  // ==========================================================
+  // CAJA (fondo de efectivo — lo usa la Caja de Flujo en Contabilidad)
+  // ==========================================================
+
+  private readonly cajaUrl = `${this.baseUrl}/caja`;
+
+  // Máximo unas pocas cajas esperadas: se listan todas sin paginación.
+  readonly cajas = signal<Caja[]>([]);
+  readonly cargandoCajas = signal<boolean>(false);
+
+  /** Un solo POST para crear y actualizar: sin `id` crea, con `id` actualiza. */
+  guardarCaja(data: GuardarCajaRequest): Observable<Caja> {
+    return this.http
+      .post<Caja>(this.cajaUrl, data)
+      .pipe(tap(() => this.cargarCajas()));
+  }
+
+  obtenerCajas(): Observable<Caja[]> {
+    return this.http.get<Caja[]>(this.cajaUrl);
+  }
+
+  /** Carga las cajas y actualiza el signal para que la tabla/selector se refresque */
+  cargarCajas(): void {
+    this.cargandoCajas.set(true);
+    this.obtenerCajas().subscribe({
+      next: (data) => {
+        this.cajas.set(data);
+        this.cargandoCajas.set(false);
+      },
+      error: () => {
+        this.cargandoCajas.set(false);
+      },
+    });
+  }
+
+  cambiarEstadoCaja(id: number, activo: boolean): Observable<Caja> {
+    return this.http
+      .patch<Caja>(`${this.cajaUrl}/cambiar_estado/${id}`, { activo })
+      .pipe(tap(() => this.cargarCajas()));
   }
 }

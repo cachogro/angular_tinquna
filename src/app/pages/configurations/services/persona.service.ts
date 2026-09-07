@@ -7,6 +7,7 @@ import {
   ActorProductivoMinero,
   FiltrosPersona,
   GuardarPersonaRequest,
+  GuardarPersonaTipoRequest,
   PersonaCI,
   PersonaTipoCatalogo,
   PersonasPaginadas,
@@ -79,14 +80,27 @@ export class PersonaService {
     );
   }
 
-  /** Catálogo cacheado — no se vuelve a pedir tras la primera carga */
-  getAllPersonaTipo(): Observable<PersonaTipoCatalogo[]> {
-    if (!this.personaTipos$) {
+  /** Catálogo cacheado — no se vuelve a pedir tras la primera carga.
+   *  `forzar: true` descarta la caché y vuelve a pedirlo (p.ej. tras crear
+   *  un tipo/rol nuevo desde el formulario de persona). */
+  getAllPersonaTipo(forzar = false): Observable<PersonaTipoCatalogo[]> {
+    if (forzar || !this.personaTipos$) {
       this.personaTipos$ = this.http
         .get<PersonaTipoCatalogo[]>(`${this.parametricasUrl}/allPersonaTipo`)
         .pipe(shareReplay(1));
     }
     return this.personaTipos$;
+  }
+
+  /** Sin `id` crea, con `id` actualiza. El backend responde 201 con el
+   *  registro guardado (en mayúsculas). */
+  guardarPersonaTipo(
+    data: GuardarPersonaTipoRequest,
+  ): Observable<PersonaTipoCatalogo> {
+    return this.http.post<PersonaTipoCatalogo>(
+      `${this.parametricasUrl}/persona-tipo`,
+      data,
+    );
   }
 
   /** Catálogo cacheado — no se vuelve a pedir tras la primera carga */

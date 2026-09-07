@@ -217,6 +217,8 @@ export interface ActorProductivoMinero {
   tipoActorProductivoMinero?: TipoActorProductivoMinero;
   idMunicipio?: number | null;
   municipio?: Municipio;
+  /** Fecha de inicio de operaciones, formato "YYYY-MM-DD" */
+  fechaInicioOperaciones?: string | null;
   nim?: string;
   codigo?: string;
   seccionesMina?: SeccionMina[];
@@ -232,9 +234,12 @@ export interface GuardarActorProductivoMineroRequest {
   direccion: string;
   telefono: string;
   idTipoActorProductivoMinero: number | string;
-  /** idMunicipio, nim, codigo y seccionesMina son opcionales: se omiten si
-   *  no aplican. seccionesMina se reemplaza completo en cada request. */
+  /** idMunicipio, fechaInicioOperaciones, nim, codigo y seccionesMina son
+   *  opcionales: se omiten si no aplican. seccionesMina se reemplaza completo
+   *  en cada request. */
   idMunicipio?: number;
+  /** Formato "YYYY-MM-DD" */
+  fechaInicioOperaciones?: string;
   nim?: string;
   codigo?: string;
   seccionesMina?: SeccionMina[];
@@ -289,6 +294,63 @@ export interface GuardarLaboratorioRequest {
   nombre: string;
   direccion?: string;
   telefono?: string;
+}
+
+// ==========================================================
+// ENTIDAD FINANCIERA (banco / entidad + sus cuentas)
+// ==========================================================
+
+export type MonedaCuenta = 'BOB' | 'USD';
+
+export interface CuentaFinanciera {
+  id: number;
+  idEntidadFinanciera?: number;
+  numeroCuenta: string;
+  moneda: MonedaCuenta;
+  alias?: string | null;
+  /** Saldo de apertura de la cuenta para la libreta de bancos (string tipo "0.00"). */
+  saldoInicial?: string | null;
+  /** "YYYY-MM-DD" — fecha del saldo inicial; null mientras no se configuró. */
+  fechaSaldoInicial?: string | null;
+  activo?: boolean;
+  usuarioUltimaModificacion?: string | null;
+  fechaUltimaModificacion?: string | null;
+}
+
+export interface EntidadFinanciera {
+  id: number;
+  /** Se guarda en MAYÚSCULAS. Único (case-insensitive). */
+  nombre: string;
+  /** Se guarda en MAYÚSCULAS. */
+  sigla: string;
+  cuentas: CuentaFinanciera[];
+  activo?: boolean;
+  usuarioUltimaModificacion?: string | null;
+  fechaUltimaModificacion?: string | null;
+  fechaRegistro?: string;
+}
+
+/** Cuenta tal como va anidada en el request de entidad financiera:
+ *  con `id` se modifica, sin `id` se agrega. `activo` no se manda aquí
+ *  (para dar de baja una cuenta se usa su endpoint cambiar_estado). */
+export interface GuardarCuentaFinancieraRequest {
+  id?: number;
+  numeroCuenta: string;
+  moneda: MonedaCuenta;
+  alias?: string;
+  /** Solo se manda cuando se configura/edita el saldo de apertura. */
+  saldoInicial?: number;
+  /** "YYYY-MM-DD" */
+  fechaSaldoInicial?: string;
+}
+
+/** Un solo POST para crear y actualizar: sin `id` crea, con `id` actualiza.
+ *  Las cuentas se hacen upsert incremental: las que no vienen no se tocan. */
+export interface GuardarEntidadFinancieraRequest {
+  id?: number;
+  nombre: string;
+  sigla: string;
+  cuentas?: GuardarCuentaFinancieraRequest[];
 }
 
 
@@ -400,4 +462,76 @@ export interface TipoCalculoValorizacionAgrupado {
   gastos: TipoCalculoValorizacion<ExtrasGastoTratamiento>[];
   penalidades: TipoCalculoValorizacion<ExtrasPenalidad>[];
   otros: TipoCalculoValorizacion<ExtrasOtros>[];
+}
+
+// ==========================================================
+// CATÁLOGOS DEL KARDEX DE ANTICIPOS (contabilidad.movimiento_kardex)
+// ==========================================================
+
+/** parametrica.forma_pago */
+export interface FormaPago {
+  id: number;
+  codigo: string;
+  nombre: string;
+  /** false = movimiento interno (descuento, tranzado): no mueve caja ni banco. */
+  afectaFondo?: boolean;
+  activo?: boolean;
+}
+
+/** parametrica.tipo_movimiento_kardex */
+export interface TipoMovimientoKardex {
+  id: number;
+  codigo: string;
+  nombre: string;
+  /** D (debe) | H (haber) — informativo, no fuerza el `tipo` de la línea. */
+  signo: 'D' | 'H';
+  activo?: boolean;
+}
+
+/** parametrica.kardex_subcuenta — catálogo extensible (PRINCIPAL, COMPRESORA...). */
+export interface KardexSubcuenta {
+  id: number;
+  nombre: string;
+  origen?: 'SEED' | 'USUARIO';
+  activo?: boolean;
+}
+
+/** parametrica.destino_gasto — categoría contable del recibo.
+ *  `esEgreso: true` → se ofrece en recibos de EGRESO; `false` → en INGRESO. */
+export interface DestinoGasto {
+  id: number;
+  nombre: string;
+  esEgreso: boolean;
+  activo?: boolean;
+}
+
+// ==========================================================
+// CAJA (fondo de efectivo — opera en Bs. y $us. a la vez, cada moneda con
+// su propio saldo inicial; la usa la Caja de Flujo en Contabilidad).
+// ==========================================================
+
+export interface Caja {
+  id: number;
+  /** Se guarda en MAYÚSCULAS. Único (case-insensitive). */
+  nombre: string;
+  /** String tipo "0.00": saldo con el que arranca la caja en bolivianos. */
+  saldoInicialBob: string;
+  /** "YYYY-MM-DD"; null mientras no se aperturó la caja en BOB. */
+  fechaSaldoInicialBob: string | null;
+  saldoInicialUsd: string;
+  fechaSaldoInicialUsd: string | null;
+  activo?: boolean;
+  usuarioUltimaModificacion?: string | null;
+  fechaUltimaModificacion?: string | null;
+  fechaRegistro?: string;
+}
+
+/** Un solo POST para crear y actualizar: sin `id` crea, con `id` actualiza. */
+export interface GuardarCajaRequest {
+  id?: number;
+  nombre: string;
+  saldoInicialBob?: number;
+  fechaSaldoInicialBob?: string;
+  saldoInicialUsd?: number;
+  fechaSaldoInicialUsd?: string;
 }

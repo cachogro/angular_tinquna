@@ -1,0 +1,265 @@
+<mat-card class="cardWithShadow theme-card">
+  <mat-card-header>
+    <div>
+      <mat-card-title class="m-b-0">Libreta Bancaria</mat-card-title>
+      <mat-card-subtitle class="m-b-0">Contabilidad · el mayor de cada cuenta bancaria</mat-card-subtitle>
+    </div>
+    <div class="lb-header__actions">
+      <button mat-flat-button color="primary" (click)="nuevoMovimiento()"
+        [disabled]="cuentaSelId() === null || !saldoInicialConfigurado">
+        <mat-icon>add</mat-icon> Nuevo movimiento
+      </button>
+    </div>
+  </mat-card-header>
+
+  <mat-card-content class="b-t-1">
+    @if (cargandoCuentas()) {
+    <div class="lb-loading">
+      <mat-spinner diameter="32"></mat-spinner>
+      <span>Cargando cuentas...</span>
+    </div>
+    } @else if (cuentas().length === 0) {
+    <div class="lb-empty">
+      <mat-icon>account_balance</mat-icon>
+      <p>No hay cuentas bancarias registradas. Créalas en Parametricas › Entidad Financiera.</p>
+    </div>
+    } @else {
+
+    <!-- ===== Filtros ===== -->
+    <div class="lb-toolbar">
+      <mat-form-field appearance="outline" class="lb-toolbar__cuenta" subscriptSizing="dynamic">
+        <mat-label>Cuenta bancaria</mat-label>
+        <mat-select [ngModel]="cuentaSelId()" (ngModelChange)="onCuentaChange($event)">
+          @for (c of cuentas(); track c.idCuenta) {
+          <mat-option [value]="c.idCuenta">{{ etiquetaCuenta(c) }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="lb-toolbar__sel" subscriptSizing="dynamic">
+        <mat-label>Gestión</mat-label>
+        <mat-select [ngModel]="gestionSel()" (ngModelChange)="onGestionChange($event)">
+          <mat-option [value]="null">Todas</mat-option>
+          @for (g of gestiones(); track g) {
+          <mat-option [value]="g">{{ g }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="lb-toolbar__sel" subscriptSizing="dynamic">
+        <mat-label>Mes</mat-label>
+        <mat-select [ngModel]="mesSel()" (ngModelChange)="onMesChange($event)"
+          [disabled]="gestionSel() === null">
+          <mat-option [value]="null">Todos</mat-option>
+          @for (p of mesesDeGestion(); track p.id) {
+          <mat-option [value]="p.mes">
+            {{ etiquetaMes(p.mes) }}
+            @if (p.estado === 'CERRADO') { · cerrado }
+          </mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <!-- ===== Saldo inicial ===== -->
+    @if (cuentaSel(); as c) {
+    @if (!saldoInicialConfigurado) {
+    <div class="lb-aviso lb-aviso--warn">
+      <mat-icon>info</mat-icon>
+      <span>Configura el <strong>saldo inicial</strong> de la cuenta antes de cargar movimientos.</span>
+      <button mat-stroked-button color="primary" (click)="abrirSaldoInicial()">Configurar</button>
+    </div>
+    } @else {
+    <div class="lb-aviso">
+      <mat-icon>savings</mat-icon>
+      <span>Saldo inicial: <strong>Bs {{ num(c.saldoInicial) | number:'1.2-2' }}</strong>
+        al {{ fechaFmt(c.fechaSaldoInicial) }}</span>
+      <button mat-icon-button matTooltip="Editar saldo inicial" (click)="abrirSaldoInicial()">
+        <mat-icon>edit</mat-icon>
+      </button>
+    </div>
+    }
+    }
+
+    <!-- ===== Resumen del período ===== -->
+    @if (periodoMesSel(); as p) {
+    <div class="lb-periodo">
+      <div class="lb-periodo__titulo">
+        <span>{{ etiquetaMes(p.mes) }} {{ p.gestion }}</span>
+        <span class="lb-badge" [class.lb-badge--cerrado]="p.estado === 'CERRADO'">
+          {{ p.estado }}
+        </span>
+      </div>
+      <div class="lb-tiles">
+        <div class="lb-tile">
+          <small>Saldo inicial</small>
+          <strong>Bs {{ num(p.saldoInicial) | number:'1.2-2' }}</strong>
+        </div>
+        <div class="lb-tile">
+          <small>Total DEBE (egresos)</small>
+          <strong class="lb-neg">Bs {{ num(p.totalDebe) | number:'1.2-2' }}</strong>
+        </div>
+        <div class="lb-tile">
+          <small>Total HABER (ingresos)</small>
+          <strong class="lb-pos">Bs {{ num(p.totalHaber) | number:'1.2-2' }}</strong>
+        </div>
+        <div class="lb-tile">
+          <small>{{ p.estado === 'CERRADO' ? 'Saldo final' : 'Saldo actual' }}</small>
+          <strong>Bs
+            {{ (p.estado === 'CERRADO' ? num(p.saldoFinal) : num(p.saldoInicial) + num(p.totalHaber) - num(p.totalDebe)) | number:'1.2-2' }}
+          </strong>
+        </div>
+      </div>
+      <div class="lb-periodo__acciones">
+        @if (p.estado === 'ABIERTO') {
+        <button mat-stroked-button (click)="cerrarMes()">
+          <mat-icon>lock</mat-icon> Cerrar mes
+        </button>
+        } @else {
+        <span class="lb-cerrado-info">
+          Cerrado el {{ fechaFmt(p.fechaCierre) }} por {{ p.cerradoPor }}
+        </span>
+        <button mat-stroked-button color="warn" (click)="reabrirMes()">
+          <mat-icon>lock_open</mat-icon> Reabrir mes
+        </button>
+        }
+      </div>
+    </div>
+    } @else if (gestionSel() !== null) {
+    <div class="lb-periodo">
+      <div class="lb-periodo__titulo">
+        <span>Gestión {{ gestionSel() }}</span>
+        @if (periodoGestionSel(); as pg) {
+        <span class="lb-badge" [class.lb-badge--cerrado]="pg.estado === 'CERRADO'">{{ pg.estado }}</span>
+        }
+      </div>
+      @if (periodoGestionSel(); as pg) {
+      <div class="lb-tiles">
+        <div class="lb-tile">
+          <small>Saldo inicial (enero)</small>
+          <strong>Bs {{ num(pg.saldoInicial) | number:'1.2-2' }}</strong>
+        </div>
+        <div class="lb-tile">
+          <small>Total DEBE</small>
+          <strong class="lb-neg">Bs {{ num(pg.totalDebe) | number:'1.2-2' }}</strong>
+        </div>
+        <div class="lb-tile">
+          <small>Total HABER</small>
+          <strong class="lb-pos">Bs {{ num(pg.totalHaber) | number:'1.2-2' }}</strong>
+        </div>
+        <div class="lb-tile">
+          <small>Saldo final (diciembre)</small>
+          <strong>Bs {{ num(pg.saldoFinal) | number:'1.2-2' }}</strong>
+        </div>
+      </div>
+      }
+      <div class="lb-periodo__acciones">
+        @if (periodoGestionSel()?.estado === 'CERRADO') {
+        <button mat-stroked-button color="warn" (click)="reabrirGestion()">
+          <mat-icon>lock_open</mat-icon> Reabrir gestión {{ gestionSel() }}
+        </button>
+        } @else {
+        <button mat-stroked-button (click)="cerrarGestion()"
+          [disabled]="mesesFaltantesGestion().length > 0"
+          [matTooltip]="mesesFaltantesGestion().length > 0
+            ? ('Faltan cerrar meses: ' + mesesFaltantesGestion().join(', '))
+            : 'Cierra la gestión completa'">
+          <mat-icon>lock</mat-icon> Cerrar gestión {{ gestionSel() }}
+        </button>
+        }
+      </div>
+    </div>
+    }
+
+    <!-- ===== Movimientos ===== -->
+    <div class="lb-tabla-wrap">
+      @if (cargando()) {
+      <div class="lb-loading">
+        <mat-spinner diameter="28"></mat-spinner>
+        <span>Cargando libreta...</span>
+      </div>
+      } @else if (movimientos().length === 0) {
+      <div class="lb-empty">
+        <mat-icon>receipt_long</mat-icon>
+        <p>Sin movimientos para el filtro seleccionado.</p>
+      </div>
+      } @else {
+      <div class="lb-tabla-scroll">
+        <table mat-table [dataSource]="movimientos()" class="lb-tabla mat-elevation-z1">
+
+          <ng-container matColumnDef="folio">
+            <th mat-header-cell *matHeaderCellDef>Folio</th>
+            <td mat-cell *matCellDef="let m">{{ m.folio }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="fecha">
+            <th mat-header-cell *matHeaderCellDef>Fecha</th>
+            <td mat-cell *matCellDef="let m">{{ fechaFmt(m.fecha) }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="nroTransaccion">
+            <th mat-header-cell *matHeaderCellDef>N° transacción</th>
+            <td mat-cell *matCellDef="let m">{{ m.nroTransaccion || '—' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="nombresApellidos">
+            <th mat-header-cell *matHeaderCellDef>Nombres y apellidos</th>
+            <td mat-cell *matCellDef="let m">
+              @if (m.persona) {
+              <mat-icon class="lb-persona-ico" matTooltip="Persona CI registrada">how_to_reg</mat-icon>
+              }
+              {{ m.nombresApellidos || '—' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="concepto">
+            <th mat-header-cell *matHeaderCellDef>Concepto</th>
+            <td mat-cell *matCellDef="let m">{{ m.concepto }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="debe">
+            <th mat-header-cell *matHeaderCellDef class="lb-num">DEBE</th>
+            <td mat-cell *matCellDef="let m" class="lb-num lb-neg">
+              {{ num(m.debe) ? (num(m.debe) | number:'1.2-2') : '' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="haber">
+            <th mat-header-cell *matHeaderCellDef class="lb-num">HABER</th>
+            <td mat-cell *matCellDef="let m" class="lb-num lb-pos">
+              {{ num(m.haber) ? (num(m.haber) | number:'1.2-2') : '' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="saldo">
+            <th mat-header-cell *matHeaderCellDef class="lb-num">SALDO</th>
+            <td mat-cell *matCellDef="let m" class="lb-num">{{ num(m.saldo) | number:'1.2-2' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="acciones">
+            <th mat-header-cell *matHeaderCellDef>Acciones</th>
+            <td mat-cell *matCellDef="let m">
+              @if (movimientoEditable(m)) {
+              <button mat-icon-button color="primary" matTooltip="Editar" (click)="editarMovimiento(m)">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button color="warn" matTooltip="Desactivar" (click)="desactivarMovimiento(m)">
+                <mat-icon>block</mat-icon>
+              </button>
+              } @else {
+              <mat-icon class="lb-lock" matTooltip="Período cerrado">lock</mat-icon>
+              }
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+          <tr mat-row *matRowDef="let m; columns: columnas"
+            [class.lb-row-inactiva]="m.activo === false"></tr>
+        </table>
+      </div>
+      }
+    </div>
+
+    }
+  </mat-card-content>
+</mat-card>

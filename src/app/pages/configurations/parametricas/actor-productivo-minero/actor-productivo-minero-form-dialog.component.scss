@@ -17,10 +17,17 @@ FORMULARIO
     text-transform: uppercase;
 }
 
-/* Fila 1: nombre, tipo (más angosto), dirección, teléfono */
+/* Fila 1: nombre, tipo (más angosto), dirección */
 .fila-uno {
     display: grid;
-    grid-template-columns: 1.6fr 0.8fr 1.6fr 1fr;
+    grid-template-columns: 1.6fr 0.9fr 1.6fr;
+    gap: 18px;
+}
+
+/* Fila 2: teléfono y fecha de inicio de operaciones */
+.fila-tres {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 18px;
 }
 
@@ -244,14 +251,16 @@ RESPONSIVE
 
 @media (max-width: 1000px) {
     .fila-uno,
-    .fila-dos {
+    .fila-dos,
+    .fila-tres {
         grid-template-columns: repeat(2, 1fr);
     }
 }
 
 @media (max-width: 700px) {
     .fila-uno,
-    .fila-dos {
+    .fila-dos,
+    .fila-tres {
         grid-template-columns: 1fr;
     }
 

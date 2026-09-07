@@ -1,0 +1,122 @@
+<h2 mat-dialog-title>
+  {{ esEdicion ? 'Editar movimiento' : 'Nuevo movimiento' }} — {{ data.moneda }}
+</h2>
+
+<mat-dialog-content>
+  @if (cargandoCatalogos()) {
+  <div class="mc-loading">
+    <mat-spinner diameter="32"></mat-spinner>
+    <span>Cargando catálogos...</span>
+  </div>
+  } @else {
+  <form [formGroup]="form" class="mc-form">
+    <div class="mc-form__row3">
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha</mat-label>
+        <input matInput [matDatepicker]="picker" formControlName="fecha" readonly
+          (click)="picker.open()" />
+        <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+        <mat-datepicker #picker></mat-datepicker>
+        @if (f.fecha.hasError('required') && f.fecha.touched) {
+        <mat-error>Obligatorio</mat-error>
+        }
+        <mat-hint>Define el mes y la gestión</mat-hint>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Tipo</mat-label>
+        <mat-select formControlName="tipo">
+          <mat-option value="INGRESO">INGRESO — Entrada de efectivo</mat-option>
+          <mat-option value="EGRESO">EGRESO — Salida de efectivo</mat-option>
+        </mat-select>
+        @if (f.tipo.hasError('required') && f.tipo.touched) {
+        <mat-error>Obligatorio</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Monto ({{ data.moneda }})</mat-label>
+        <input matInput type="number" step="0.01" min="0.01" formControlName="monto" />
+        @if (f.monto.hasError('required') && f.monto.touched) {
+        <mat-error>Obligatorio</mat-error>
+        }
+        @if (f.monto.hasError('min') && f.monto.touched) {
+        <mat-error>Debe ser mayor a 0</mat-error>
+        }
+      </mat-form-field>
+    </div>
+
+    <mat-form-field appearance="outline" class="mc-form__full">
+      <mat-label>Concepto</mat-label>
+      <input matInput formControlName="concepto" maxlength="255" />
+      @if (f.concepto.hasError('required') && f.concepto.touched) {
+      <mat-error>Obligatorio</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="mc-form__full">
+      <mat-label>Destino del gasto (opcional)</mat-label>
+      <input matInput formControlName="destinoGasto" maxlength="255"
+        placeholder="Ej: COMPRA DE COMBUSTIBLE" />
+    </mat-form-field>
+
+    <div class="mc-form__row2">
+      <mat-form-field appearance="outline">
+        <mat-label>N° de comprobante (opcional)</mat-label>
+        <input matInput formControlName="nroComprobante" maxlength="30"
+          placeholder="Ej: REC:R-0084" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Forma de pago (opcional)</mat-label>
+        <mat-select formControlName="idFormaPago">
+          <mat-option [value]="null">— Sin especificar —</mat-option>
+          @for (fp of formasPago(); track fp.id) {
+          <mat-option [value]="fp.id">{{ fp.nombre }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <mat-form-field appearance="outline" class="mc-form__full">
+      <mat-label>Nombres y apellidos (opcional)</mat-label>
+      <input matInput formControlName="beneficiario" maxlength="255"
+        [matAutocomplete]="autoBenef" #benefTrigger="matAutocompleteTrigger"
+        (focus)="benefTrigger.openPanel()"
+        placeholder="Buscar persona registrada o escribir libremente" />
+      <mat-autocomplete #autoBenef="matAutocomplete" [displayWith]="displayBeneficiario">
+        @for (p of personasFiltradas$ | async; track p.id) {
+        <mat-option [value]="p">
+          <span>{{ nombreCompleto(p) }}</span>
+          <small class="mc-doc"> · {{ p.numeroDocumento }}</small>
+        </mat-option>
+        } @empty {
+        <mat-option disabled>Sin coincidencias — se guarda el texto tal cual</mat-option>
+        }
+      </mat-autocomplete>
+      @if (personaVinculada()) {
+      <mat-icon matSuffix matTooltip="Vinculada a persona registrada" color="primary">how_to_reg</mat-icon>
+      }
+      <mat-hint>
+        @if (personaVinculada()) { Vinculada a persona CI registrada }
+        @else { No está en la lista: se guarda el texto libre }
+      </mat-hint>
+    </mat-form-field>
+  </form>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-stroked-button (click)="cancelar()" [disabled]="guardando()">
+    Cancelar
+  </button>
+  <button mat-flat-button color="primary" (click)="guardar()"
+    [disabled]="guardando() || cargandoCatalogos()">
+    @if (guardando()) {
+    <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
+    <span>Guardando...</span>
+    } @else {
+    <span>{{ esEdicion ? 'Guardar cambios' : 'Registrar' }}</span>
+    }
+  </button>
+</mat-dialog-actions>

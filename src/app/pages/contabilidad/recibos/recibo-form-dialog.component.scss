@@ -1,0 +1,225 @@
+.rf-icono--ingreso {
+  color: #2e7d32;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+.rf-icono--egreso {
+  color: #c62828;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+.rf-loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 32px;
+  justify-content: center;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.rf-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 680px;
+}
+
+.rf-form mat-form-field {
+  width: 100%;
+}
+
+.rf-form__row3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.3fr;
+  gap: 14px;
+}
+
+.rf-form__row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.rf-form__full {
+  width: 100%;
+}
+
+.rf-doc {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+/* Cabecera fija del borrador (solo lectura al procesar) */
+.rf-fijos {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  gap: 8px 16px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 8px;
+}
+
+.rf-fijo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rf-fijo small {
+  color: rgba(0, 0, 0, 0.5);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.rf-fijo--full {
+  grid-column: 1 / -1;
+}
+
+.rf-fijo--monto strong {
+  color: #1565c0;
+}
+
+/* Contraparte: toggle de tipo + campo dependiente */
+.rf-contraparte {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 4px 0 2px;
+}
+
+.rf-contraparte__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.rf-contraparte__tipo {
+  align-self: flex-start;
+}
+
+.rf-detalles {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.rf-detalles__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.rf-detalles__head h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.rf-fila {
+  display: grid;
+  grid-template-columns: 150px 1fr 160px 40px;
+  gap: 10px;
+  align-items: start;
+}
+
+.rf-monto-total ::ng-deep .mat-mdc-text-field-wrapper {
+  font-size: 15px;
+}
+
+.rf-detalles__vacio {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-style: italic;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.rf-total {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 10px 4px 0;
+  font-size: 14px;
+}
+
+.rf-total__linea {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  min-width: 240px;
+}
+
+.rf-total__linea--fuerte {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.rf-total__linea--fuerte strong {
+  font-size: 16px;
+}
+
+.rf-total__linea--error {
+  color: #c62828;
+  font-weight: 600;
+}
+
+.rf-total__alerta {
+  margin: 4px 0 0;
+  color: #c62828;
+  font-size: 12px;
+}
+
+/* Panel del select de cuenta bancaria: textos más chicos y que envuelvan,
+   así no se desfasan las etiquetas largas (n° cuenta · moneda · alias). */
+::ng-deep .rf-cuenta-panel {
+  &.mat-mdc-select-panel {
+    max-width: 460px;
+  }
+
+  .mat-mdc-option {
+    min-height: 34px;
+    line-height: 1.25;
+  }
+
+  .mat-mdc-option .mdc-list-item__primary-text {
+    font-size: 12px;
+    white-space: normal;
+  }
+
+  .mat-mdc-optgroup-label {
+    min-height: 30px;
+  }
+
+  .mat-mdc-optgroup-label .mdc-list-item__primary-text {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    opacity: 0.75;
+  }
+}
+
+.btn-spinner {
+  display: inline-block;
+}
+
+.btn-spinner ::ng-deep circle {
+  stroke: currentColor;
+}
+
+@media (max-width: 720px) {
+  .rf-form {
+    min-width: 0;
+  }
+  .rf-form__row3,
+  .rf-form__row2 {
+    grid-template-columns: 1fr;
+  }
+  .rf-fila {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,26 @@
+<mat-card class="cardWithShadow theme-card">
+  <mat-card-header>
+    <div>
+      <mat-card-title class="m-b-0">Actores productivos y clientes</mat-card-title>
+      <mat-card-subtitle class="m-b-0">Titulares mineros y las personas vinculadas a cada uno</mat-card-subtitle>
+    </div>
+  </mat-card-header>
+
+  <mat-card-content class="b-t-1">
+    <mat-tab-group animationDuration="200ms" mat-stretch-tabs="false">
+
+      <mat-tab label="Actores productivos">
+        <div class="tab-body">
+          <app-actores-productivos></app-actores-productivos>
+        </div>
+      </mat-tab>
+
+      <mat-tab label="Personas y clientes">
+        <div class="tab-body">
+          <app-gestion-clientes></app-gestion-clientes>
+        </div>
+      </mat-tab>
+
+    </mat-tab-group>
+  </mat-card-content>
+</mat-card>

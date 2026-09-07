@@ -44,24 +44,6 @@
       </div>
       <div class="col-lg-4 col-sm-6">
         <mat-card class="b-1 curso-card">
-          <mat-card-header class="card-header header-pink">
-            <mat-card-title>Actor Productivo Minero</mat-card-title>
-          </mat-card-header>
-          <mat-card-content class="b-t-1" style="display: flex; justify-content: flex-start;">
-            <p>
-              Panel de Registro de Actores Productivos Mineros
-            </p>
-          </mat-card-content>
-          <mat-card-actions class="card-footer">
-            <button matButton style="width: 100%; font-weight: bold;" matTooltip="registrar nuevo ingenio"
-              (click)="abrirNuevoActorProductivoMinero()">
-              Nuevo A.P.M.
-            </button>
-          </mat-card-actions>
-        </mat-card>
-      </div>
-      <div class="col-lg-4 col-sm-6">
-        <mat-card class="b-1 curso-card">
           <mat-card-header class="card-header header-blue">
             <mat-card-title>Laboratorio</mat-card-title>
           </mat-card-header>
@@ -92,6 +74,24 @@
             <button matButton style="width: 100%; font-weight: bold;" matTooltip="registrar nueva entidad de aporte"
               (click)="abrirNuevaEntidadAporte()">
               Nueva Entidad de Aporte
+            </button>
+          </mat-card-actions>
+        </mat-card>
+      </div>
+      <div class="col-lg-4 col-sm-6">
+        <mat-card class="b-1 curso-card">
+          <mat-card-header class="card-header header-pink">
+            <mat-card-title>Entidad Financiera</mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="b-t-1" style="display: flex; justify-content: flex-start;">
+            <p>
+              Panel de Registro de Entidades Financieras y sus Cuentas
+            </p>
+          </mat-card-content>
+          <mat-card-actions class="card-footer">
+            <button matButton style="width: 100%; font-weight: bold;" matTooltip="registrar nueva entidad financiera"
+              (click)="abrirNuevaEntidadFinanciera()">
+              Nueva Entidad Financiera
             </button>
           </mat-card-actions>
         </mat-card>
@@ -164,6 +164,24 @@
             <button matButton style="width: 100%; font-weight: bold;" matTooltip="registrar penalidad"
               (click)="abrirNuevaPenalidad()">
               Nueva Penalidad
+            </button>
+          </mat-card-actions>
+        </mat-card>
+      </div>
+      <div class="col-lg-4 col-sm-6">
+        <mat-card class="b-1 curso-card">
+          <mat-card-header class="card-header header-green">
+            <mat-card-title>Caja</mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="b-t-1" style="display: flex; justify-content: flex-start;">
+            <p>
+              Panel de Registro de Cajas (fondos de efectivo) y su saldo inicial en Bs. y $us.
+            </p>
+          </mat-card-content>
+          <mat-card-actions class="card-footer">
+            <button matButton style="width: 100%; font-weight: bold;" matTooltip="registrar nueva caja"
+              (click)="abrirNuevaCaja()">
+              Nueva Caja
             </button>
           </mat-card-actions>
         </mat-card>

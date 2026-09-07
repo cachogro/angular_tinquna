@@ -1,0 +1,129 @@
+.actores-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.actores-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.actores-toolbar__search {
+  flex: 1 1 220px;
+  min-width: 150px;
+}
+
+.actores-toolbar__tipo {
+  flex: 0 1 160px;
+  min-width: 120px;
+}
+
+.actores-toolbar__estado {
+  flex: 0 1 110px;
+  min-width: 90px;
+}
+
+.actores-toolbar__clear {
+  color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.actores-toolbar__nuevo {
+  margin-left: auto;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.actores-table-wrapper {
+  min-height: 200px;
+}
+
+.actores-loading,
+.actores-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 56px 24px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.actores-table {
+  width: 100%;
+}
+
+.actor-cell__nombre {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.actor-cell__telefono {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.55);
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+    vertical-align: middle;
+  }
+}
+
+.estado-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #28c76f;
+}
+
+.estado-badge__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #28c76f;
+}
+
+.estado-badge--inactivo {
+  color: #a8aaae;
+}
+
+.estado-badge--inactivo .estado-badge__dot {
+  background: #a8aaae;
+}
+
+.row-inactivo {
+  opacity: 0.55;
+}
+
+.acciones-header {
+  text-align: right;
+}
+
+.acciones-cell {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.text-danger {
+  color: #ea5455;
+}
+
+.mat-mdc-header-row {
+  background: #0d6efd !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}

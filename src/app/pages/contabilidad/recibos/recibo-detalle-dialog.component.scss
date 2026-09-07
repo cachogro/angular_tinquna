@@ -1,0 +1,114 @@
+.rd-icono--ingreso {
+  color: #2e7d32;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+.rd-icono--egreso {
+  color: #c62828;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+.rd-content {
+  min-width: 560px;
+}
+
+.rd-loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 32px;
+  justify-content: center;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.rd-tiles {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.rd-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.rd-tile small {
+  color: rgba(0, 0, 0, 0.55);
+  font-size: 11px;
+}
+
+.rd-tile--destacado {
+  background: color-mix(in srgb, var(--mat-sys-primary) 12%, transparent);
+}
+
+.rd-concepto,
+.rd-tipo-mov {
+  margin: 4px 0;
+  font-size: 13px;
+}
+
+.rd-tabla-scroll {
+  overflow: auto;
+  max-height: 300px;
+  margin-top: 6px;
+}
+
+.rd-tabla {
+  width: 100%;
+}
+
+.rd-num {
+  text-align: right;
+}
+
+.rd-chip {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--mat-sys-primary) 12%, transparent);
+  color: var(--mat-sys-primary);
+}
+
+.rd-chip--efectivo {
+  background: color-mix(in srgb, #ff9800 20%, transparent);
+  color: #e65100;
+}
+
+.rd-empresa-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.rd-empresa {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.04);
+  font-size: 12.5px;
+}
+
+.rd-empresa small {
+  color: rgba(0, 0, 0, 0.55);
+  font-size: 11px;
+}
+
+@media (max-width: 680px) {
+  .rd-content {
+    min-width: 0;
+  }
+  .rd-tiles {
+    grid-template-columns: 1fr 1fr;
+  }
+}

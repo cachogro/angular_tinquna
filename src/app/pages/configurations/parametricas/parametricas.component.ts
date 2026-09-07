@@ -6,13 +6,14 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { CodificacionFormDialogComponent } from './codificaciones/codificacion-form-dialog.component';
 import { CotizacionFormDialogComponent } from './cotizacion/cotizacion-form-dialog.component';
-import { ActorProductivoMineroFormDialogComponent } from './actor-productivo-minero/actor-productivo-minero-form-dialog.component';
 import { LaboratorioFormDialogComponent } from './laboratorio/laboratorio-form-dialog.component';
 import { EntidadAporteFormDialogComponent } from './entidad-aporte/entidad-aporte-form-dialog.component';
+import { EntidadFinancieraFormDialogComponent } from './entidad-financiera/entidad-financiera-form-dialog.component';
 import { MineralFormDialogComponent } from './mineral/mineral-form-dialog.component';
 import { EscalaPrecioFormDialogComponent } from './escala-precio/escala-precio-form-dialog.component';
 import { GastoTratamientoFormDialogComponent } from './gasto-tratamiento/gasto-tratamiento-form-dialog.component';
 import { PenalidadFormDialogComponent } from './penalidad/penalidad-form-dialog.component';
+import { CajaFormDialogComponent } from './caja/caja-form-dialog.component';
 
 // A futuro, cuando implementes Ley e Ingenio, importa aquí sus modales
 // y sus tablas, siguiendo exactamente el mismo patrón que Codificación:
@@ -53,14 +54,6 @@ export class ParametricasComponent {
     });
   }
 
-  abrirNuevoActorProductivoMinero(): void {
-    this.dialog.open(ActorProductivoMineroFormDialogComponent, {
-      width: '900px',
-      maxWidth: '95vw',
-      autoFocus: false,
-    });
-  }
-
   abrirNuevoLaboratorio(): void {
     this.dialog.open(LaboratorioFormDialogComponent, {
       width: '800px',
@@ -72,6 +65,14 @@ export class ParametricasComponent {
   abrirNuevaEntidadAporte(): void {
     this.dialog.open(EntidadAporteFormDialogComponent, {
       width: '900px',
+      maxWidth: '95vw',
+      autoFocus: false,
+    });
+  }
+
+  abrirNuevaEntidadFinanciera(): void {
+    this.dialog.open(EntidadFinancieraFormDialogComponent, {
+      width: '1000px',
       maxWidth: '95vw',
       autoFocus: false,
     });
@@ -103,6 +104,14 @@ export class ParametricasComponent {
 
   abrirNuevaPenalidad(): void {
     this.dialog.open(PenalidadFormDialogComponent, {
+      width: '900px',
+      maxWidth: '95vw',
+      autoFocus: false,
+    });
+  }
+
+  abrirNuevaCaja(): void {
+    this.dialog.open(CajaFormDialogComponent, {
       width: '900px',
       maxWidth: '95vw',
       autoFocus: false,

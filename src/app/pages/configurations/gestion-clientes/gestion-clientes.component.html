@@ -2,7 +2,7 @@
   <mat-card-header>
     <div>
       <mat-card-title class="m-b-0">Clientes y personas</mat-card-title>
-      <mat-card-subtitle class="m-b-0">Proveedores, clientes, choferes, distribuidores y
+      <mat-card-subtitle class="m-b-0">Personal Interno, Proveedores, clientes, choferes, distribuidores y
         transportistas</mat-card-subtitle>
     </div>
     <div style="margin-left: auto;">
@@ -136,6 +136,9 @@
           <ng-container matColumnDef="acciones">
             <th mat-header-cell *matHeaderCellDef class="acciones-header">Acciones</th>
             <td mat-cell *matCellDef="let persona" class="acciones-cell">
+              <button mat-icon-button (click)="abrirKardex(persona)" matTooltip="Kardex">
+                <mat-icon>menu_book</mat-icon>
+              </button>
               <button mat-icon-button (click)="abrirDialogo(persona)" matTooltip="Editar">
                 <mat-icon>edit</mat-icon>
               </button>

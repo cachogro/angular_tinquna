@@ -8,21 +8,66 @@
 }
 
 .persona-form {
-  min-width: 480px;
+  min-width: 620px;
 }
 
 .persona-form__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 4px 16px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 4px 20px;
 }
 
 .persona-form__full {
   grid-column: 1 / -1;
 }
 
+.persona-form__tipos {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.persona-form__tipos-field {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.persona-form__tipos-add {
+  flex: 0 0 auto;
+  /* alinea el botón con el input, no con el subscript de la hint */
+  margin-top: 4px;
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .persona-form__tipos {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .persona-form__tipos-add {
+    margin-top: 0;
+  }
+}
+
 .actor-option__tipo {
   color: rgba(0, 0, 0, 0.5);
+}
+
+.persona-form__aviso {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(63, 81, 181, 0.08);
+  color: rgba(0, 0, 0, 0.75);
+  font-size: 13px;
+
+  mat-icon {
+    color: #3f51b5;
+    flex-shrink: 0;
+  }
 }
 
 .btn-spinner {

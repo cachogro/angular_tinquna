@@ -1,0 +1,124 @@
+<div class="actores-page">
+
+  <div class="actores-toolbar">
+    <mat-form-field appearance="outline" class="actores-toolbar__search" subscriptSizing="dynamic">
+      <mat-icon matPrefix>search</mat-icon>
+      <input matInput placeholder="Buscar por nombre" [formControl]="searchControl" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="actores-toolbar__tipo" subscriptSizing="dynamic">
+      <mat-select [formControl]="tipoControl" placeholder="Tipo">
+        <mat-option [value]="null">Todos los tipos</mat-option>
+        @for (tipo of tipos; track tipo.id) {
+        <mat-option [value]="tipo.id">{{ tipo.descripcion }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="actores-toolbar__estado" subscriptSizing="dynamic">
+      <mat-select [formControl]="estadoControl" placeholder="Estado">
+        <mat-option [value]="null">Todos</mat-option>
+        <mat-option value="true">Activos</mat-option>
+        <mat-option value="false">Inactivos</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <button mat-icon-button (click)="toggleOrden()"
+      [matTooltip]="orderDirectionControl.value === 'ASC' ? 'Ascendente' : 'Descendente'">
+      <mat-icon>{{ orderDirectionControl.value === 'ASC' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+    </button>
+
+    <button mat-button (click)="limpiarFiltros()" class="actores-toolbar__clear">
+      <mat-icon>filter_alt_off</mat-icon>
+      Limpiar
+    </button>
+
+    <button mat-flat-button color="primary" class="actores-toolbar__nuevo" (click)="abrirDialogo(null)">
+      <mat-icon>domain_add</mat-icon>
+      Nuevo actor productivo
+    </button>
+  </div>
+
+  <div class="actores-table-wrapper">
+    @if (loading) {
+    <div class="actores-loading">
+      <mat-spinner diameter="36"></mat-spinner>
+      <span>Cargando actores productivos...</span>
+    </div>
+    } @else if (actores.length === 0) {
+    <div class="actores-empty">
+      <mat-icon>domain_disabled</mat-icon>
+      <p>No se encontraron actores productivos con estos filtros</p>
+    </div>
+    } @else {
+    <table mat-table [dataSource]="actores" class="actores-table">
+
+      <ng-container matColumnDef="id">
+        <th mat-header-cell *matHeaderCellDef>N°</th>
+        <td mat-cell *matCellDef="let row; let i = index">{{ numeroFila(i) }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="actor">
+        <th mat-header-cell *matHeaderCellDef>Actor productivo</th>
+        <td mat-cell *matCellDef="let row">
+          <div class="actor-cell__nombre">{{ row.nombre }}</div>
+          @if (row.telefono) {
+          <div class="actor-cell__telefono">
+            <mat-icon inline>call</mat-icon> {{ row.telefono }}
+          </div>
+          }
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="tipo">
+        <th mat-header-cell *matHeaderCellDef>Tipo</th>
+        <td mat-cell *matCellDef="let row">{{ descripcionTipo(row) }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="direccion">
+        <th mat-header-cell *matHeaderCellDef>Dirección</th>
+        <td mat-cell *matCellDef="let row">{{ row.direccion || '—' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="estado">
+        <th mat-header-cell *matHeaderCellDef>Estado</th>
+        <td mat-cell *matCellDef="let row">
+          <span class="estado-badge" [class.estado-badge--inactivo]="!row.activo">
+            <span class="estado-badge__dot"></span>
+            {{ row.activo ? 'Activo' : 'Inactivo' }}
+          </span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="acciones">
+        <th mat-header-cell *matHeaderCellDef class="acciones-header">Acciones</th>
+        <td mat-cell *matCellDef="let row" class="acciones-cell">
+          <button mat-icon-button (click)="verPersonas(row)" matTooltip="Ver personas asociadas">
+            <mat-icon>groups</mat-icon>
+          </button>
+          @if (!esEmpresa(row)) {
+          <button mat-icon-button (click)="abrirKardex(row)" matTooltip="Kardex">
+            <mat-icon>menu_book</mat-icon>
+          </button>
+          }
+          <button mat-icon-button (click)="abrirDialogo(row)" matTooltip="Editar">
+            <mat-icon>edit</mat-icon>
+          </button>
+          <button mat-icon-button [matTooltip]="row.activo ? 'Desactivar' : 'Activar'"
+            (click)="confirmarCambioEstado(row)">
+            <mat-icon [class.text-danger]="row.activo">
+              {{ row.activo ? 'block' : 'check_circle_outline' }}
+            </mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns" [class.row-inactivo]="!row.activo"></tr>
+    </table>
+
+    <mat-paginator [length]="total" [pageSize]="pageSize" [pageIndex]="pageIndex" [pageSizeOptions]="[10, 25, 50]"
+      (page)="onPageChange($event)"></mat-paginator>
+    }
+  </div>
+</div>

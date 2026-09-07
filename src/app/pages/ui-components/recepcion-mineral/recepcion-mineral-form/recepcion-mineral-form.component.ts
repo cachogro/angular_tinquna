@@ -656,7 +656,7 @@ export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
     const data: PersonaFormDialogData = { persona };
 
     this.dialog
-      .open(PersonaFormDialogComponent, { data, width: '600px' })
+      .open(PersonaFormDialogComponent, { data, width: '820px', maxWidth: '95vw' })
       .afterClosed()
       .subscribe((resultado) => {
         if (resultado) {

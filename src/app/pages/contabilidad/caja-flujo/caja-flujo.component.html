@@ -1,0 +1,277 @@
+<mat-card class="cardWithShadow theme-card">
+  <mat-card-header>
+    <div>
+      <mat-card-title class="m-b-0">Caja de Flujo</mat-card-title>
+      <mat-card-subtitle class="m-b-0">Contabilidad · registro maestro de ingresos y egresos de la empresa</mat-card-subtitle>
+    </div>
+    <div class="cf-header__actions">
+      <button mat-flat-button color="primary" (click)="nuevoMovimiento()"
+        [disabled]="cajaSelId() === null || !saldoInicialConfigurado()">
+        <mat-icon>add</mat-icon> Nuevo movimiento
+      </button>
+    </div>
+  </mat-card-header>
+
+  <mat-card-content class="b-t-1">
+    @if (cargandoCajas()) {
+    <div class="cf-loading">
+      <mat-spinner diameter="32"></mat-spinner>
+      <span>Cargando cajas...</span>
+    </div>
+    } @else if (cajas().length === 0) {
+    <div class="cf-empty">
+      <mat-icon>savings</mat-icon>
+      <p>No hay cajas registradas. Créalas en Parametricas › Caja.</p>
+    </div>
+    } @else {
+
+    <!-- ===== Filtros ===== -->
+    <div class="cf-toolbar">
+      <mat-form-field appearance="outline" class="cf-toolbar__caja" subscriptSizing="dynamic">
+        <mat-label>Caja</mat-label>
+        <mat-select [ngModel]="cajaSelId()" (ngModelChange)="onCajaChange($event)">
+          @for (c of cajas(); track c.id) {
+          <mat-option [value]="c.id">{{ etiquetaCaja(c) }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="cf-toolbar__sel" subscriptSizing="dynamic">
+        <mat-label>Moneda</mat-label>
+        <mat-select [ngModel]="monedaSel()" (ngModelChange)="onMonedaChange($event)">
+          <mat-option value="BOB">Bs (BOB)</mat-option>
+          <mat-option value="USD">$us (USD)</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="cf-toolbar__sel" subscriptSizing="dynamic">
+        <mat-label>Gestión</mat-label>
+        <mat-select [ngModel]="gestionSel()" (ngModelChange)="onGestionChange($event)">
+          <mat-option [value]="null">Todas</mat-option>
+          @for (g of gestiones(); track g) {
+          <mat-option [value]="g">{{ g }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="cf-toolbar__sel" subscriptSizing="dynamic">
+        <mat-label>Mes</mat-label>
+        <mat-select [ngModel]="mesSel()" (ngModelChange)="onMesChange($event)"
+          [disabled]="gestionSel() === null">
+          <mat-option [value]="null">Todos</mat-option>
+          @for (p of mesesDeGestion(); track p.id) {
+          <mat-option [value]="p.mes">
+            {{ etiquetaMes(p.mes) }}
+            @if (p.estado === 'CERRADO') { · cerrado }
+          </mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <!-- ===== Apertura de la caja en esta moneda ===== -->
+    @if (!saldoInicialConfigurado()) {
+    <div class="cf-aviso cf-aviso--warn">
+      <mat-icon>info</mat-icon>
+      <span>Esta caja todavía no fue <strong>aperturada en {{ monedaSel() }}</strong>. Configura el saldo inicial y su fecha en Parametricas › Caja antes de cargar movimientos.</span>
+    </div>
+    } @else if (resp(); as r) {
+    <div class="cf-aviso">
+      <mat-icon>savings</mat-icon>
+      <span>Saldo inicial de apertura ({{ monedaSel() }}): <strong>{{ r.caja.saldoInicial | number:'1.2-2' }}</strong>
+        al {{ fechaFmt(r.caja.fechaSaldoInicial) }}</span>
+    </div>
+    }
+
+    <!-- ===== Resumen del período ===== -->
+    @if (periodoMesSel(); as p) {
+    <div class="cf-periodo">
+      <div class="cf-periodo__titulo">
+        <span>{{ etiquetaMes(p.mes) }} {{ p.gestion }} · {{ monedaSel() }}</span>
+        <span class="cf-badge" [class.cf-badge--cerrado]="p.estado === 'CERRADO'">
+          {{ p.estado }}
+        </span>
+      </div>
+      <div class="cf-tiles">
+        <div class="cf-tile">
+          <small>Saldo inicial</small>
+          <strong>{{ num(p.saldoInicial) | number:'1.2-2' }}</strong>
+        </div>
+        <div class="cf-tile">
+          <small>Total ingresos</small>
+          <strong class="cf-pos">{{ num(p.totalIngreso) | number:'1.2-2' }}</strong>
+        </div>
+        <div class="cf-tile">
+          <small>Total egresos</small>
+          <strong class="cf-neg">{{ num(p.totalEgreso) | number:'1.2-2' }}</strong>
+        </div>
+        <div class="cf-tile">
+          <small>{{ p.estado === 'CERRADO' ? 'Saldo final' : 'Saldo actual' }}</small>
+          <strong>
+            {{ (p.estado === 'CERRADO' ? num(p.saldoFinal) : num(p.saldoInicial) + num(p.totalIngreso) - num(p.totalEgreso)) | number:'1.2-2' }}
+          </strong>
+        </div>
+      </div>
+      <div class="cf-periodo__acciones">
+        @if (p.estado === 'ABIERTO') {
+        <button mat-stroked-button (click)="cerrarMes()">
+          <mat-icon>lock</mat-icon> Cerrar mes
+        </button>
+        } @else {
+        <span class="cf-cerrado-info">
+          Cerrado el {{ fechaFmt(p.fechaCierre) }} por {{ p.cerradoPor }}
+        </span>
+        <button mat-stroked-button color="warn" (click)="reabrirMes()">
+          <mat-icon>lock_open</mat-icon> Reabrir mes
+        </button>
+        }
+      </div>
+    </div>
+    } @else if (gestionSel() !== null) {
+    <div class="cf-periodo">
+      <div class="cf-periodo__titulo">
+        <span>Gestión {{ gestionSel() }} · {{ monedaSel() }}</span>
+        @if (periodoGestionSel(); as pg) {
+        <span class="cf-badge" [class.cf-badge--cerrado]="pg.estado === 'CERRADO'">{{ pg.estado }}</span>
+        }
+      </div>
+      @if (periodoGestionSel(); as pg) {
+      <div class="cf-tiles">
+        <div class="cf-tile">
+          <small>Saldo inicial (enero)</small>
+          <strong>{{ num(pg.saldoInicial) | number:'1.2-2' }}</strong>
+        </div>
+        <div class="cf-tile">
+          <small>Total ingresos</small>
+          <strong class="cf-pos">{{ num(pg.totalIngreso) | number:'1.2-2' }}</strong>
+        </div>
+        <div class="cf-tile">
+          <small>Total egresos</small>
+          <strong class="cf-neg">{{ num(pg.totalEgreso) | number:'1.2-2' }}</strong>
+        </div>
+        <div class="cf-tile">
+          <small>Saldo final (diciembre)</small>
+          <strong>{{ num(pg.saldoFinal) | number:'1.2-2' }}</strong>
+        </div>
+      </div>
+      }
+      <div class="cf-periodo__acciones">
+        @if (periodoGestionSel()?.estado === 'CERRADO') {
+        <button mat-stroked-button color="warn" (click)="reabrirGestion()">
+          <mat-icon>lock_open</mat-icon> Reabrir gestión {{ gestionSel() }}
+        </button>
+        } @else {
+        <button mat-stroked-button (click)="cerrarGestion()"
+          [disabled]="mesesFaltantesGestion().length > 0"
+          [matTooltip]="mesesFaltantesGestion().length > 0
+            ? ('Faltan cerrar meses: ' + mesesFaltantesGestion().join(', '))
+            : 'Cierra la gestión completa'">
+          <mat-icon>lock</mat-icon> Cerrar gestión {{ gestionSel() }}
+        </button>
+        }
+      </div>
+    </div>
+    }
+
+    <!-- ===== Movimientos ===== -->
+    <div class="cf-tabla-wrap">
+      @if (cargando()) {
+      <div class="cf-loading">
+        <mat-spinner diameter="28"></mat-spinner>
+        <span>Cargando caja de flujo...</span>
+      </div>
+      } @else if (!saldoInicialConfigurado()) {
+      <!-- aviso ya mostrado arriba -->
+      } @else if (movimientos().length === 0) {
+      <div class="cf-empty">
+        <mat-icon>receipt_long</mat-icon>
+        <p>Sin movimientos para el filtro seleccionado.</p>
+      </div>
+      } @else {
+      <div class="cf-tabla-scroll">
+        <table mat-table [dataSource]="movimientos()" class="cf-tabla mat-elevation-z1">
+
+          <ng-container matColumnDef="folio">
+            <th mat-header-cell *matHeaderCellDef>Folio</th>
+            <td mat-cell *matCellDef="let m">{{ m.folio }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="fecha">
+            <th mat-header-cell *matHeaderCellDef>Fecha</th>
+            <td mat-cell *matCellDef="let m">{{ fechaFmt(m.fecha) }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="nroComprobante">
+            <th mat-header-cell *matHeaderCellDef>N° comprobante</th>
+            <td mat-cell *matCellDef="let m">{{ m.nroComprobante || '—' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="nombresApellidos">
+            <th mat-header-cell *matHeaderCellDef>Nombres y apellidos</th>
+            <td mat-cell *matCellDef="let m">
+              @if (m.persona) {
+              <mat-icon class="cf-persona-ico" matTooltip="Persona CI registrada">how_to_reg</mat-icon>
+              }
+              @if (m.idRecibo) {
+              <mat-icon class="cf-recibo-ico" matTooltip="Generado desde un recibo">receipt</mat-icon>
+              }
+              {{ m.nombresApellidos || '—' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="concepto">
+            <th mat-header-cell *matHeaderCellDef>Concepto</th>
+            <td mat-cell *matCellDef="let m">{{ m.concepto }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="destinoGasto">
+            <th mat-header-cell *matHeaderCellDef>Destino del gasto</th>
+            <td mat-cell *matCellDef="let m">{{ m.destinoGasto || '—' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="ingreso">
+            <th mat-header-cell *matHeaderCellDef class="cf-num">INGRESO</th>
+            <td mat-cell *matCellDef="let m" class="cf-num cf-pos">
+              {{ num(m.ingreso) ? (num(m.ingreso) | number:'1.2-2') : '' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="egreso">
+            <th mat-header-cell *matHeaderCellDef class="cf-num">EGRESO</th>
+            <td mat-cell *matCellDef="let m" class="cf-num cf-neg">
+              {{ num(m.egreso) ? (num(m.egreso) | number:'1.2-2') : '' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="saldo">
+            <th mat-header-cell *matHeaderCellDef class="cf-num">SALDO</th>
+            <td mat-cell *matCellDef="let m" class="cf-num">{{ num(m.saldo) | number:'1.2-2' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="acciones">
+            <th mat-header-cell *matHeaderCellDef>Acciones</th>
+            <td mat-cell *matCellDef="let m">
+              @if (movimientoEditable(m)) {
+              <button mat-icon-button color="primary" matTooltip="Editar" (click)="editarMovimiento(m)">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button color="warn" matTooltip="Desactivar" (click)="desactivarMovimiento(m)">
+                <mat-icon>block</mat-icon>
+              </button>
+              } @else {
+              <mat-icon class="cf-lock" matTooltip="Período cerrado">lock</mat-icon>
+              }
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+          <tr mat-row *matRowDef="let m; columns: columnas"
+            [class.cf-row-inactiva]="m.activo === false"></tr>
+        </table>
+      </div>
+      }
+    </div>
+
+    }
+  </mat-card-content>
+</mat-card>

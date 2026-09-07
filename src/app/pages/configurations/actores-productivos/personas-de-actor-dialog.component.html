@@ -1,0 +1,90 @@
+<h2 mat-dialog-title>Personas de {{ data.actor.nombre }}</h2>
+
+<mat-dialog-content class="personas-actor">
+  <div class="personas-actor__toolbar">
+    <span class="personas-actor__count">
+      {{ personas().length }} persona(s) vinculada(s)
+    </span>
+    <button mat-flat-button color="primary" (click)="agregarPersona()">
+      <mat-icon>person_add</mat-icon>
+      Agregar persona
+    </button>
+  </div>
+
+  @if (loading()) {
+  <div class="personas-actor__state">
+    <mat-spinner diameter="32"></mat-spinner>
+    <span>Cargando personas...</span>
+  </div>
+  } @else if (personas().length === 0) {
+  <div class="personas-actor__state">
+    <mat-icon>person_off</mat-icon>
+    <p>Este actor productivo todavía no tiene personas vinculadas.</p>
+  </div>
+  } @else {
+  <table mat-table [dataSource]="personas()" class="personas-actor__table">
+
+    <ng-container matColumnDef="id">
+      <th mat-header-cell *matHeaderCellDef>N°</th>
+      <td mat-cell *matCellDef="let p; let i = index">{{ i + 1 }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="persona">
+      <th mat-header-cell *matHeaderCellDef>Persona</th>
+      <td mat-cell *matCellDef="let p">
+        <div class="persona-cell__nombre">{{ nombreCompleto(p) }}</div>
+        <div class="persona-cell__celular">
+          <mat-icon inline>call</mat-icon> {{ p.celular }}
+        </div>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="documento">
+      <th mat-header-cell *matHeaderCellDef>Documento</th>
+      <td mat-cell *matCellDef="let p">
+        <span class="documento-badge">{{ p.tipoDocumento?.codigo ?? '—' }}</span>
+        {{ p.numeroDocumento }}
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="tipos">
+      <th mat-header-cell *matHeaderCellDef>Tipos</th>
+      <td mat-cell *matCellDef="let p">
+        <div class="tipos-chips">
+          @for (pt of p.personaTipos; track pt.idPersonaTipo) {
+          @if (pt.personaTipo) {
+          <mat-chip class="tipo-chip">{{ pt.personaTipo.nombre }}</mat-chip>
+          }
+          }
+        </div>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="estado">
+      <th mat-header-cell *matHeaderCellDef>Estado</th>
+      <td mat-cell *matCellDef="let p">
+        <span class="estado-badge" [class.estado-badge--inactivo]="!p.activo">
+          <span class="estado-badge__dot"></span>
+          {{ p.activo ? 'Activo' : 'Inactivo' }}
+        </span>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="acciones">
+      <th mat-header-cell *matHeaderCellDef class="acciones-header">Acciones</th>
+      <td mat-cell *matCellDef="let p" class="acciones-cell">
+        <button mat-icon-button (click)="editarPersona(p)" matTooltip="Editar persona">
+          <mat-icon>edit</mat-icon>
+        </button>
+      </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns" [class.row-inactivo]="!row.activo"></tr>
+  </table>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-stroked-button mat-dialog-close>Cerrar</button>
+</mat-dialog-actions>

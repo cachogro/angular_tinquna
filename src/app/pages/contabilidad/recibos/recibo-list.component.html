@@ -1,0 +1,181 @@
+<mat-card class="cardWithShadow theme-card">
+  <mat-card-header>
+    <div>
+      <mat-card-title class="m-b-0">Recibos</mat-card-title>
+      <mat-card-subtitle class="m-b-0">Contabilidad · bandeja de ingresos y egresos de caja</mat-card-subtitle>
+    </div>
+  </mat-card-header>
+
+  <mat-card-content class="b-t-1">
+
+    <div class="rl-acciones">
+      <button mat-flat-button color="primary" [matMenuTriggerFor]="menuGenerar">
+        <mat-icon>receipt_long</mat-icon> Generar recibo
+        <mat-icon iconPositionEnd>arrow_drop_down</mat-icon>
+      </button>
+      <mat-menu #menuGenerar="matMenu">
+        <button mat-menu-item (click)="generarRecibo('INGRESO')">
+          <mat-icon>call_received</mat-icon> Ingreso
+        </button>
+        <button mat-menu-item (click)="generarRecibo('EGRESO')">
+          <mat-icon>call_made</mat-icon> Egreso
+        </button>
+      </mat-menu>
+
+      <button mat-stroked-button [matMenuTriggerFor]="menuProcesar">
+        <mat-icon>fact_check</mat-icon> Procesar recibo
+        <mat-icon iconPositionEnd>arrow_drop_down</mat-icon>
+      </button>
+      <mat-menu #menuProcesar="matMenu">
+        <button mat-menu-item (click)="procesarDirecto('INGRESO')">
+          <mat-icon>call_received</mat-icon> Ingreso
+        </button>
+        <button mat-menu-item (click)="procesarDirecto('EGRESO')">
+          <mat-icon>call_made</mat-icon> Egreso
+        </button>
+      </mat-menu>
+    </div>
+
+    <div class="rl-toolbar">
+      <mat-form-field appearance="outline" class="rl-toolbar__search" subscriptSizing="dynamic">
+        <mat-icon matPrefix>search</mat-icon>
+        <input matInput placeholder="Buscar por N°, persona o concepto" [formControl]="searchControl" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="rl-toolbar__sel" subscriptSizing="dynamic">
+        <mat-select [formControl]="tipoControl" placeholder="Tipo">
+          <mat-option [value]="null">Todos</mat-option>
+          <mat-option value="INGRESO">Ingreso</mat-option>
+          <mat-option value="EGRESO">Egreso</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="rl-toolbar__sel" subscriptSizing="dynamic">
+        <mat-select [formControl]="estadoControl" placeholder="Estado">
+          <mat-option [value]="null">Todos</mat-option>
+          <mat-option value="BORRADOR">Borrador</mat-option>
+          <mat-option value="PROCESADO">Procesado</mat-option>
+          <mat-option value="ANULADO">Anulado</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="rl-toolbar__fecha" subscriptSizing="dynamic">
+        <input matInput [matDatepicker]="pickerDesde" placeholder="Desde" readonly
+          [formControl]="fechaDesdeControl" (click)="pickerDesde.open()" />
+        <mat-datepicker-toggle matSuffix [for]="pickerDesde"></mat-datepicker-toggle>
+        <mat-datepicker #pickerDesde></mat-datepicker>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="rl-toolbar__fecha" subscriptSizing="dynamic">
+        <input matInput [matDatepicker]="pickerHasta" placeholder="Hasta" readonly
+          [formControl]="fechaHastaControl" (click)="pickerHasta.open()" />
+        <mat-datepicker-toggle matSuffix [for]="pickerHasta"></mat-datepicker-toggle>
+        <mat-datepicker #pickerHasta></mat-datepicker>
+      </mat-form-field>
+
+      <button mat-icon-button (click)="toggleOrden()"
+        [matTooltip]="orderDirectionControl.value === 'ASC' ? 'Ascendente' : 'Descendente'">
+        <mat-icon>{{ orderDirectionControl.value === 'ASC' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+      </button>
+
+      <button mat-button (click)="limpiarFiltros()" class="rl-toolbar__clear">
+        <mat-icon>filter_alt_off</mat-icon>
+        Limpiar
+      </button>
+    </div>
+
+    <div class="rl-tabla-wrap">
+      @if (cargando()) {
+      <div class="rl-loading">
+        <mat-spinner diameter="32"></mat-spinner>
+        <span>Cargando recibos...</span>
+      </div>
+      } @else if (registros().length === 0) {
+      <div class="rl-empty">
+        <mat-icon>receipt_long</mat-icon>
+        <p>No se encontraron recibos con estos filtros</p>
+      </div>
+      } @else {
+      <div class="rl-tabla-scroll">
+        <table mat-table [dataSource]="registros()" class="rl-tabla mat-elevation-z1">
+
+          <ng-container matColumnDef="numero">
+            <th mat-header-cell *matHeaderCellDef>N°</th>
+            <td mat-cell *matCellDef="let r">{{ codigoRecibo(r) }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="tipo">
+            <th mat-header-cell *matHeaderCellDef>Tipo</th>
+            <td mat-cell *matCellDef="let r">
+              <span class="rl-chip" [class.rl-chip--egreso]="r.tipo === 'EGRESO'">
+                {{ r.tipo === 'INGRESO' ? 'Ingreso' : 'Egreso' }}
+              </span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="estado">
+            <th mat-header-cell *matHeaderCellDef>Estado</th>
+            <td mat-cell *matCellDef="let r">
+              <span class="rl-estado" [class]="'rl-estado--' + r.estado.toLowerCase()">
+                {{ estadoLabel(r.estado) }}
+              </span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="fecha">
+            <th mat-header-cell *matHeaderCellDef>Fecha</th>
+            <td mat-cell *matCellDef="let r">{{ fechaFmt(r.fecha) }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="persona">
+            <th mat-header-cell *matHeaderCellDef>Persona</th>
+            <td mat-cell *matCellDef="let r">{{ nombrePersona(r) }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="concepto">
+            <th mat-header-cell *matHeaderCellDef>Concepto</th>
+            <td mat-cell *matCellDef="let r">{{ r.concepto }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="formaPago">
+            <th mat-header-cell *matHeaderCellDef>F. pago</th>
+            <td mat-cell *matCellDef="let r">{{ r.formaPago?.nombre || '—' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="monto">
+            <th mat-header-cell *matHeaderCellDef class="rl-num">Monto</th>
+            <td mat-cell *matCellDef="let r" class="rl-num">{{ num(r.montoTotal) | number:'1.2-2' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="acciones">
+            <th mat-header-cell *matHeaderCellDef>Acciones</th>
+            <td mat-cell *matCellDef="let r">
+              @if (r.estado === 'BORRADOR') {
+              <button mat-icon-button color="primary" matTooltip="Procesar" (click)="procesarBorrador(r)">
+                <mat-icon>fact_check</mat-icon>
+              </button>
+              <button mat-icon-button color="warn" matTooltip="Anular" (click)="anular(r)">
+                <mat-icon>block</mat-icon>
+              </button>
+              }
+              <button mat-icon-button matTooltip="PDF" (click)="verPdf(r)"
+                [disabled]="descargandoPdf() === r.id">
+                <mat-icon>picture_as_pdf</mat-icon>
+              </button>
+              <button mat-icon-button matTooltip="Ver detalle" (click)="verDetalle(r)">
+                <mat-icon>visibility</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+          <tr mat-row *matRowDef="let r; columns: columnas"></tr>
+        </table>
+      </div>
+
+      <mat-paginator [length]="total()" [pageSize]="pageSize" [pageIndex]="pageIndex" [pageSizeOptions]="[10, 25, 50]"
+        (page)="onPageChange($event)"></mat-paginator>
+      }
+    </div>
+  </mat-card-content>
+</mat-card>

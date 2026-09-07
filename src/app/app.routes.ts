@@ -48,6 +48,13 @@ export const routes: Routes = [
             (m) => m.ConfiguracionesRoutes,
           ),
       },
+      {
+        path: 'contabilidad',
+        loadChildren: () =>
+          import('./pages/contabilidad/contabilidad.routes').then(
+            (m) => m.ContabilidadRoutes,
+          ),
+      },
     ],
   },
   {
