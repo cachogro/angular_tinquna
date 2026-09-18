@@ -134,6 +134,14 @@
   flex-wrap: wrap;
 }
 
+.btn-spinner {
+  display: inline-block;
+}
+
+.btn-spinner ::ng-deep circle {
+  stroke: currentColor;
+}
+
 .cf-cerrado-info {
   font-size: 12px;
   color: rgba(0, 0, 0, 0.55);
@@ -253,6 +261,11 @@
   height: 13px;
   vertical-align: text-bottom;
   margin-right: 2px;
+}
+
+.cf-cpte-nro {
+  display: block;
+  color: rgba(0, 0, 0, 0.5);
 }
 
 /* ===== Responsive ===== */

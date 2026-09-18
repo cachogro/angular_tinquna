@@ -20,7 +20,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { debounceTime, distinctUntilChanged } from 'rxjs';
+import { Observable, debounceTime, distinctUntilChanged } from 'rxjs';
 import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog/confirm-dialog.component';
 import {
   EstadoRecibo,
@@ -96,7 +96,10 @@ export class ReciboListComponent implements OnInit {
   readonly fechaHastaControl = new FormControl<Date | null>(null);
   readonly searchControl = new FormControl('');
   readonly orderDirectionControl = new FormControl<'ASC' | 'DESC'>('DESC');
-  readonly orderBy: OrdenRecibo = 'fecha';
+  /** Por número (correlativo que nunca reinicia), no por fecha: la fecha es
+   *  editable por el usuario y no siempre coincide con el orden real de
+   *  registro; con "numero" el último creado siempre queda primero. */
+  readonly orderBy: OrdenRecibo = 'numero';
 
   ngOnInit(): void {
     this.searchControl.valueChanges
@@ -254,11 +257,20 @@ export class ReciboListComponent implements OnInit {
 
   readonly descargandoPdf = signal<string | null>(null);
 
-  /** Abre el PDF del recibo en una pestaña nueva (sirve en cualquier estado). */
+  /** PDF del recibo generado (sirve en cualquier estado). */
   verPdf(r: Recibo): void {
+    this.abrirPdf(r, this.reciboService.obtenerPdf(r.id));
+  }
+
+  /** PDF del recibo procesado, con el detalle del reparto. */
+  verPdfDetallado(r: Recibo): void {
+    this.abrirPdf(r, this.reciboService.obtenerPdfDetallado(r.id));
+  }
+
+  private abrirPdf(r: Recibo, obs: Observable<Blob>): void {
     if (this.descargandoPdf()) return;
     this.descargandoPdf.set(r.id);
-    this.reciboService.obtenerPdf(r.id).subscribe({
+    obs.subscribe({
       next: (blob) => {
         this.descargandoPdf.set(null);
         const url = window.URL.createObjectURL(blob);

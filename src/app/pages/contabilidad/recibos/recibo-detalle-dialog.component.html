@@ -41,13 +41,6 @@
 
   <p class="rd-concepto"><strong>Concepto:</strong> {{ r.concepto }}</p>
 
-  @if (r.destinoGasto) {
-  <p class="rd-tipo-mov">
-    <strong>{{ r.tipo === 'INGRESO' ? 'Origen del ingreso' : 'Destino del gasto' }}:</strong>
-    {{ r.destinoGasto.nombre }}
-  </p>
-  }
-
   @if (r.cuentaBancaria || r.nroComprobante) {
   <p class="rd-tipo-mov">
     <strong>Comprobante:</strong>
@@ -75,6 +68,11 @@
       <ng-container matColumnDef="destinatario">
         <th mat-header-cell *matHeaderCellDef>Destinatario</th>
         <td mat-cell *matCellDef="let d">{{ destinatarioDetalle(d) }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="destinoGasto">
+        <th mat-header-cell *matHeaderCellDef>Destino del gasto</th>
+        <td mat-cell *matCellDef="let d">{{ d.destinoGasto?.nombre || '—' }}</td>
       </ng-container>
 
       <ng-container matColumnDef="monto">
@@ -108,7 +106,13 @@
 <mat-dialog-actions align="end">
   <button mat-stroked-button (click)="verPdf()" [disabled]="descargandoPdf()">
     <mat-icon>picture_as_pdf</mat-icon>
-    {{ descargandoPdf() ? 'Generando...' : 'PDF' }}
+    {{ descargandoPdf() ? 'Generando...' : 'PDF recibo' }}
   </button>
+  @if (recibo()?.estado === 'PROCESADO') {
+  <button mat-stroked-button (click)="verPdfDetallado()" [disabled]="descargandoPdf()">
+    <mat-icon>fact_check</mat-icon>
+    PDF detallado
+  </button>
+  }
   <button mat-flat-button color="primary" (click)="cerrar()">Cerrar</button>
 </mat-dialog-actions>

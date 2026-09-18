@@ -29,6 +29,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { combineLatest, map, Observable, startWith } from 'rxjs';
 import { PersonaCI } from '../../configurations/models/persona.models';
 import { PersonaService } from '../../configurations/services/persona.service';
+import { ParametricasService } from '../../configurations/services/parametricas.service';
 import {
   GuardarMovimientoBancoRequest,
   MovimientoBanco,
@@ -36,6 +37,7 @@ import {
   TipoMovimientoBanco,
 } from '../models/libreta-banco.models';
 import { LibretaBancoService } from '../services/libreta-banco.service';
+import { ReciboService } from '../services/recibo.service';
 
 export interface MovimientoFormDialogData {
   idCuentaBancaria: number;
@@ -101,10 +103,11 @@ type Beneficiario = PersonaCI | PersonaMovimientoRef | string | null;
             <mat-label>Monto (Bs)</mat-label>
             <input
               matInput
-              type="number"
-              step="0.01"
-              min="0.01"
+              type="text"
+              inputmode="decimal"
+              class="mov-input-derecha"
               formControlName="monto"
+              (keydown)="restringirEntradaNumerica($event)"
             />
             @if (f.monto.hasError('required') && f.monto.touched) {
             <mat-error>Obligatorio</mat-error>
@@ -117,7 +120,14 @@ type Beneficiario = PersonaCI | PersonaMovimientoRef | string | null;
 
         <mat-form-field appearance="outline" class="mov-form__full">
           <mat-label>Concepto</mat-label>
-          <input matInput formControlName="concepto" maxlength="255" />
+          <input matInput formControlName="concepto" maxlength="255"
+            [matAutocomplete]="autoConcepto" #conceptoTrigger="matAutocompleteTrigger"
+            (focus)="conceptoTrigger.openPanel()" />
+          <mat-autocomplete #autoConcepto="matAutocomplete">
+            @for (s of conceptoSugerido$ | async; track s) {
+            <mat-option [value]="s">{{ s }}</mat-option>
+            }
+          </mat-autocomplete>
           @if (f.concepto.hasError('required') && f.concepto.touched) {
           <mat-error>Obligatorio</mat-error>
           }
@@ -200,6 +210,9 @@ type Beneficiario = PersonaCI | PersonaMovimientoRef | string | null;
       .mov-form mat-form-field {
         width: 100%;
       }
+      .mov-input-derecha {
+        text-align: right;
+      }
       .benef-doc {
         color: rgba(0, 0, 0, 0.5);
       }
@@ -228,10 +241,14 @@ export class MovimientoFormDialogComponent implements OnInit {
   private readonly data = inject<MovimientoFormDialogData>(MAT_DIALOG_DATA);
   private readonly libretaService = inject(LibretaBancoService);
   private readonly personaService = inject(PersonaService);
+  private readonly parametricasService = inject(ParametricasService);
+  private readonly reciboService = inject(ReciboService);
   private readonly snackBar = inject(MatSnackBar);
 
   readonly guardando = signal(false);
   readonly personas = signal<PersonaCI[]>([]);
+  /** Sugerencias de concepto: destinos de gasto + conceptos de recibos procesados. */
+  readonly sugerenciasConcepto = signal<string[]>([]);
 
   get esEdicion(): boolean {
     return !!this.data.movimiento;
@@ -242,7 +259,7 @@ export class MovimientoFormDialogComponent implements OnInit {
     tipo: new FormControl<TipoMovimientoBanco | null>(null, [
       Validators.required,
     ]),
-    monto: new FormControl<number | null>(null, [
+    monto: new FormControl<number | string | null>(null, [
       Validators.required,
       Validators.min(0.01),
     ]),
@@ -260,6 +277,21 @@ export class MovimientoFormDialogComponent implements OnInit {
     this.form.controls.beneficiario.valueChanges.pipe(startWith('')),
     toObservable(this.personas),
   ]).pipe(map(([valor, lista]) => this.filtrarPersonas(valor, lista)));
+
+  /** Sugerencias de concepto filtradas según lo tecleado; si no coincide con
+   *  ninguna, se guarda el texto libre igual que antes. */
+  readonly conceptoSugerido$: Observable<string[]> = combineLatest([
+    this.form.controls.concepto.valueChanges.pipe(startWith('')),
+    toObservable(this.sugerenciasConcepto),
+  ]).pipe(
+    map(([valor, lista]) => {
+      const texto = (valor ?? '').trim().toLowerCase();
+      const filtradas = texto
+        ? lista.filter((s) => s.toLowerCase().includes(texto))
+        : lista;
+      return filtradas.slice(0, 50);
+    }),
+  );
 
   /** true cuando el valor actual del control es una persona elegida (objeto con id). */
   readonly personaVinculada = toSignal(
@@ -291,6 +323,8 @@ export class MovimientoFormDialogComponent implements OnInit {
         error: () => this.personas.set([]),
       });
 
+    this.cargarSugerenciasConcepto();
+
     const m = this.data.movimiento;
     if (m) {
       const debe = Number(m.debe);
@@ -305,6 +339,32 @@ export class MovimientoFormDialogComponent implements OnInit {
     } else if (this.data.fechaSugerida) {
       this.form.controls.fecha.setValue(this.parseFecha(this.data.fechaSugerida));
     }
+  }
+
+  // ---------- Autocomplete concepto ----------
+
+  /** Junta el catálogo de destino de gasto con los conceptos de recibos ya
+   *  procesados, como sugerencias; el campo sigue siendo texto libre. */
+  private cargarSugerenciasConcepto(): void {
+    combineLatest([
+      this.parametricasService.obtenerDestinosGasto(),
+      this.reciboService.listar({ estado: 'PROCESADO', limit: 500 }),
+    ]).subscribe({
+      next: ([destinos, recibos]) => {
+        const set = new Set<string>();
+        for (const d of destinos) {
+          if (d.activo === false) continue;
+          const nombre = d.nombre?.trim();
+          if (nombre) set.add(nombre);
+        }
+        for (const r of recibos.data ?? []) {
+          const concepto = r.concepto?.trim();
+          if (concepto) set.add(concepto);
+        }
+        this.sugerenciasConcepto.set([...set].sort((a, b) => a.localeCompare(b)));
+      },
+      error: () => this.sugerenciasConcepto.set([]),
+    });
   }
 
   // ---------- Autocomplete beneficiario ----------
@@ -349,6 +409,33 @@ export class MovimientoFormDialogComponent implements OnInit {
 
   cancelar(): void {
     this.dialogRef.close();
+  }
+
+  restringirEntradaNumerica(event: KeyboardEvent): void {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    if (event.ctrlKey || event.metaKey) return;
+    const teclasControl = [
+      'Backspace',
+      'Delete',
+      'Tab',
+      'Escape',
+      'Enter',
+      'ArrowLeft',
+      'ArrowRight',
+      'ArrowUp',
+      'ArrowDown',
+      'Home',
+      'End',
+    ];
+    if (teclasControl.includes(event.key)) return;
+    if (event.key === '.') {
+      if (target.value.includes('.')) event.preventDefault();
+      return;
+    }
+    if (!/^\d$/.test(event.key)) {
+      event.preventDefault();
+    }
   }
 
   guardar(): void {

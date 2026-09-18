@@ -52,6 +52,26 @@
   stroke: currentColor;
 }
 
+/* Panel del select de cuenta bancaria: textos chicos y que envuelvan. */
+::ng-deep .mk-cuenta-panel {
+  &.mat-mdc-select-panel {
+    max-width: 460px;
+  }
+  .mat-mdc-option {
+    min-height: 34px;
+    line-height: 1.25;
+  }
+  .mat-mdc-option .mdc-list-item__primary-text {
+    font-size: 12px;
+    white-space: normal;
+  }
+  .mat-mdc-optgroup-label .mdc-list-item__primary-text {
+    font-size: 11px;
+    font-weight: 700;
+    opacity: 0.75;
+  }
+}
+
 @media (max-width: 680px) {
   .mk-form {
     min-width: 0;

@@ -62,6 +62,7 @@ import {
   Recibo,
   TipoRecibo,
 } from '../models/recibo.models';
+import { KardexService } from '../services/kardex.service';
 import { ReciboService } from '../services/recibo.service';
 
 export type ReciboFormModo = 'GENERAR' | 'PROCESAR';
@@ -87,12 +88,16 @@ type DestinoGastoControlValue = DestinoGasto | string | null;
  *  resto calculado (monto total − suma de filas) y no se teclea. */
 type DestinoFila = Exclude<DestinoDetalleRecibo, 'EFECTIVO'>;
 
-interface FilaDetalleValue {
-  destino: DestinoFila;
-  persona: PersonaControlValue;
-  idActorProductivoMinero: string | null;
-  monto: number | null;
+/** Opción del desplegable combinado de reparto: persona o actor, ambos con
+ *  kardex ABIERTO. */
+interface DestinatarioKardex {
+  tipo: DestinoFila;
+  id: string;
+  label: string;
+  buscar: string;
 }
+
+type DestinatarioControlValue = DestinatarioKardex | string | null;
 
 @Component({
   selector: 'app-recibo-form-dialog',
@@ -123,6 +128,7 @@ export class ReciboFormDialogComponent implements OnInit {
   private readonly dialogRef = inject(MatDialogRef<ReciboFormDialogComponent>);
   readonly data = inject<ReciboFormDialogData>(MAT_DIALOG_DATA);
   private readonly reciboService = inject(ReciboService);
+  private readonly kardexService = inject(KardexService);
   private readonly parametricasService = inject(ParametricasService);
   private readonly personaService = inject(PersonaService);
   private readonly snackBar = inject(MatSnackBar);
@@ -178,8 +184,10 @@ export class ReciboFormDialogComponent implements OnInit {
   }
 
   readonly form = new FormGroup({
-    fecha: new FormControl<Date | null>(new Date(), [Validators.required]),
-    montoTotal: new FormControl<number | null>(null, [
+    // En blanco: el usuario siempre elige la fecha a conciencia, no se le
+    // propone "hoy" por defecto (causó fechas erróneas sin querer).
+    fecha: new FormControl<Date | null>(null, [Validators.required]),
+    montoTotal: new FormControl<number | string | null>(null, [
       Validators.required,
       Validators.min(0.01),
     ]),
@@ -192,7 +200,9 @@ export class ReciboFormDialogComponent implements OnInit {
     // Solo aplican con forma de pago bancaria; validadores dinámicos.
     idCuentaBancaria: new FormControl<number | null>(null),
     nroComprobante: new FormControl<string | null>(null),
-    destinoGasto: new FormControl<DestinoGastoControlValue>(null),
+    // Destino del gasto de la porción EFECTIVO (el de cada fila de reparto va
+    // dentro de su propio FormGroup). Obligatorio solo si hay efectivo > 0.
+    destinoGastoEfectivo: new FormControl<DestinoGastoControlValue>(null),
     // Contraparte "Recibí de / Entregué a": una de las tres.
     contraparteTipo: new FormControl<ContraparteTipo>('PERSONA'),
     personaContraparte: new FormControl<PersonaControlValue>(null),
@@ -261,6 +271,17 @@ export class ReciboFormDialogComponent implements OnInit {
       actores: this.personaService.getAllActoresMineros(),
       entidadesFinancieras:
         this.parametricasService.obtenerEntidadesFinancieras(),
+      // Solo personas/actores con un kardex ABIERTO son elegibles en el recibo.
+      kardexPersonal: this.kardexService.listar({
+        tipo: 'PERSONAL',
+        estado: 'ABIERTO',
+        limit: 1000,
+      }),
+      kardexActor: this.kardexService.listar({
+        tipo: 'ACTOR',
+        estado: 'ABIERTO',
+        limit: 1000,
+      }),
     }).subscribe({
       next: ({
         formasPago,
@@ -268,13 +289,35 @@ export class ReciboFormDialogComponent implements OnInit {
         personas,
         actores,
         entidadesFinancieras,
+        kardexPersonal,
+        kardexActor,
       }) => {
         this.formasPago.set(formasPago.filter((f) => f.activo !== false));
         this.destinosGasto.set(
           destinosGasto.filter((d) => d.activo !== false),
         );
-        this.personas.set(personas.data ?? []);
-        this.actores.set(actores ?? []);
+
+        const idsPersonaConKardex = new Set(
+          (kardexPersonal.data ?? [])
+            .map((k) => String(k.idPersona ?? k.persona?.id ?? ''))
+            .filter(Boolean),
+        );
+        const idsActorConKardex = new Set(
+          (kardexActor.data ?? [])
+            .map((k) =>
+              String(k.idActorProductivoMinero ?? k.actorProductivoMinero?.id ?? ''),
+            )
+            .filter(Boolean),
+        );
+        this.personas.set(
+          (personas.data ?? []).filter((p) =>
+            idsPersonaConKardex.has(String(p.id)),
+          ),
+        );
+        this.actores.set(
+          (actores ?? []).filter((a) => idsActorConKardex.has(String(a.id))),
+        );
+
         this.entidadesFinancieras.set(
           (entidadesFinancieras ?? []).filter((e) => e.activo !== false),
         );
@@ -294,10 +337,6 @@ export class ReciboFormDialogComponent implements OnInit {
   /** Carga la cabecera del BORRADOR y bloquea los campos que no se pueden
    *  corregir al procesar (fecha, monto, concepto, contraparte). */
   private prefillDesdeBorrador(r: Recibo): void {
-    const destinoGasto =
-      r.destinoGasto ??
-      this.destinosGasto().find((d) => d.id === r.idDestinoGasto) ??
-      null;
     this.form.patchValue({
       fecha: this.parseFecha(r.fecha),
       montoTotal: Number(r.montoTotal),
@@ -305,7 +344,6 @@ export class ReciboFormDialogComponent implements OnInit {
       idFormaPago: r.idFormaPago ?? null,
       idCuentaBancaria: r.idCuentaBancaria ?? null,
       nroComprobante: r.nroComprobante ?? null,
-      destinoGasto,
     });
     for (const nombre of [
       'fecha',
@@ -344,10 +382,18 @@ export class ReciboFormDialogComponent implements OnInit {
     return Number.isFinite(n) ? n : 0;
   }
 
-  /** Destinos de gasto que aplican a este recibo: `esEgreso` según el tipo. */
+  /** Destinos de gasto de la porción de EFECTIVO: `esEgreso` según el tipo de
+   *  recibo (un egreso saca plata de caja; un ingreso la mete). */
   get destinosGastoFiltrados(): DestinoGasto[] {
     const quiero = this.data.tipo === 'EGRESO';
     return this.destinosGasto().filter((d) => d.esEgreso === quiero);
+  }
+
+  /** Destinos de gasto de las filas de reparto a kardex: siempre "de ingreso"
+   *  (`esEgreso === false`), porque esas porciones generan un INGRESO en caja
+   *  (valor recuperado), sin importar el tipo del recibo. */
+  private get destinosGastoIngreso(): DestinoGasto[] {
+    return this.destinosGasto().filter((d) => !d.esEgreso);
   }
 
   displayDestinoGasto = (v: DestinoGastoControlValue): string => {
@@ -355,15 +401,73 @@ export class ReciboFormDialogComponent implements OnInit {
     return typeof v === 'string' ? v : v.nombre;
   };
 
-  /** Opciones del autocomplete de destino de gasto según lo tecleado. */
-  destinosGastoAutocomplete(): DestinoGasto[] {
-    const v = this.f.destinoGasto.value;
-    const texto = (typeof v === 'string' ? v : v ? v.nombre : '')
+  private filtrarDestinosGasto(
+    lista: DestinoGasto[],
+    valor: DestinoGastoControlValue,
+  ): DestinoGasto[] {
+    const texto = (
+      typeof valor === 'string' ? valor : valor ? valor.nombre : ''
+    )
       .trim()
       .toLowerCase();
-    const lista = this.destinosGastoFiltrados;
-    if (!texto) return lista;
-    return lista.filter((d) => d.nombre.toLowerCase().includes(texto));
+    return texto
+      ? lista.filter((d) => d.nombre.toLowerCase().includes(texto))
+      : lista;
+  }
+
+  /** Opciones del destino de gasto de una fila de reparto (solo ingresos). */
+  destinoGastoFilaOpciones(fila: AbstractControl): DestinoGasto[] {
+    return this.filtrarDestinosGasto(
+      this.destinosGastoIngreso,
+      (fila as FormGroup).controls['destinoGasto'].value as DestinoGastoControlValue,
+    );
+  }
+
+  /** Opciones del destino de gasto de la porción de efectivo. */
+  destinoGastoEfectivoOpciones(): DestinoGasto[] {
+    return this.filtrarDestinosGasto(
+      this.destinosGastoFiltrados,
+      this.f.destinoGastoEfectivo.value,
+    );
+  }
+
+  // ---------- Desplegable combinado de reparto (persona / actor con kardex) ----------
+
+  /** Personas + actores con kardex ABIERTO, en una sola lista para el
+   *  autocomplete de cada fila de reparto. */
+  destinatariosKardex(): DestinatarioKardex[] {
+    const dePersonas: DestinatarioKardex[] = this.personas().map((p) => {
+      const nombre = this.nombreCompleto(p);
+      return {
+        tipo: 'PERSONAL',
+        id: String(p.id),
+        label: `${nombre} — ${p.numeroDocumento}`,
+        buscar: `${nombre} ${p.numeroDocumento}`.toLowerCase(),
+      };
+    });
+    const deActores: DestinatarioKardex[] = this.actores().map((a) => ({
+      tipo: 'ACTOR',
+      id: String(a.id),
+      label: `${a.nombre} · actor productivo`,
+      buscar: `${a.nombre} actor productivo`.toLowerCase(),
+    }));
+    return [...dePersonas, ...deActores];
+  }
+
+  displayDestinatario = (v: DestinatarioControlValue): string => {
+    if (!v) return '';
+    return typeof v === 'string' ? v : v.label;
+  };
+
+  destinatariosFiltrados(fila: AbstractControl): DestinatarioKardex[] {
+    const v = (fila as FormGroup).controls['destinatario']
+      .value as DestinatarioControlValue;
+    const texto = (typeof v === 'string' ? v : v ? v.label : '')
+      .trim()
+      .toLowerCase();
+    const lista = this.destinatariosKardex();
+    if (!texto) return lista.slice(0, 50);
+    return lista.filter((d) => d.buscar.includes(texto)).slice(0, 50);
   }
 
   // ---------- Forma de pago bancaria ----------
@@ -420,22 +524,18 @@ export class ReciboFormDialogComponent implements OnInit {
   // ---------- Filas de detalle ----------
 
   private crearFilaDetalle(): FormGroup {
-    const fila = new FormGroup({
-      destino: new FormControl<DestinoFila>('PERSONAL', [Validators.required]),
-      persona: new FormControl<PersonaControlValue>(null),
-      idActorProductivoMinero: new FormControl<string | null>(null),
+    return new FormGroup({
+      destinatario: new FormControl<DestinatarioControlValue>(null, [
+        Validators.required,
+      ]),
+      destinoGasto: new FormControl<DestinoGastoControlValue>(null, [
+        Validators.required,
+      ]),
       monto: new FormControl<number | null>(null, [
         Validators.required,
         Validators.min(0.01),
       ]),
     });
-    fila.controls.destino.valueChanges.subscribe(() => {
-      fila.controls.persona.setValue(null, { emitEvent: false });
-      fila.controls.idActorProductivoMinero.setValue(null, {
-        emitEvent: false,
-      });
-    });
-    return fila;
   }
 
   agregarFila(): void {
@@ -506,17 +606,37 @@ export class ReciboFormDialogComponent implements OnInit {
       .slice(0, 50);
   }
 
-  personasFiltradasFila(fila: AbstractControl): PersonaCI[] {
-    const valor = (fila as FormGroup).controls[
-      'persona'
-    ].value as PersonaControlValue;
-    return this.filtrarPersonas(valor, this.personas());
-  }
-
   // ---------- Guardar ----------
 
   cancelar(): void {
     this.dialogRef.close();
+  }
+
+  restringirEntradaNumerica(event: KeyboardEvent): void {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    if (event.ctrlKey || event.metaKey) return;
+    const teclasControl = [
+      'Backspace',
+      'Delete',
+      'Tab',
+      'Escape',
+      'Enter',
+      'ArrowLeft',
+      'ArrowRight',
+      'ArrowUp',
+      'ArrowDown',
+      'Home',
+      'End',
+    ];
+    if (teclasControl.includes(event.key)) return;
+    if (event.key === '.') {
+      if (target.value.includes('.')) event.preventDefault();
+      return;
+    }
+    if (!/^\d$/.test(event.key)) {
+      event.preventDefault();
+    }
   }
 
   /** Resuelve la contraparte del formulario o devuelve un mensaje de error. */
@@ -543,48 +663,95 @@ export class ReciboFormDialogComponent implements OnInit {
   }
 
   private validarDetalles(): string | null {
+    const dg = this.labelDestinoGasto.toLowerCase();
     for (const fila of this.filas) {
-      const v = fila.getRawValue() as FilaDetalleValue;
+      const v = fila.getRawValue() as {
+        destinatario: DestinatarioControlValue;
+        destinoGasto: DestinoGastoControlValue;
+        monto: number | null;
+      };
       if (!v.monto || v.monto <= 0) {
         return 'Cada fila de reparto necesita un monto mayor a 0';
       }
-      if (
-        v.destino === 'PERSONAL' &&
-        !(v.persona && typeof v.persona === 'object')
-      ) {
-        return 'Elige una persona registrada en cada fila con destino Persona';
+      if (!(v.destinatario && typeof v.destinatario === 'object')) {
+        return 'Elige el destinatario (persona o actor con kardex) en cada fila';
       }
-      if (v.destino === 'ACTOR' && !v.idActorProductivoMinero) {
-        return 'Elige un actor productivo en cada fila con destino Actor';
+      if (!(v.destinoGasto && typeof v.destinoGasto === 'object')) {
+        return `Elige ${dg} en cada fila de reparto`;
       }
     }
     if (this.excedeTotal()) {
       return 'El reparto a kardex supera el monto total';
     }
+    if (this.montoEfectivo() > 0) {
+      const e = this.f.destinoGastoEfectivo.value;
+      if (!(e && typeof e === 'object')) {
+        return `Elige ${dg} para la porción de efectivo`;
+      }
+    }
     return null;
   }
 
-  /** Filas de reparto + fila EFECTIVO por el resto (si > 0). */
-  private construirDetalles(): DetalleReciboRequest[] {
+  /** Contraparte registrada del recibo (persona o actor), para estampar en la
+   *  línea EFECTIVO: es a quién se le entrega / de quién se recibe el efectivo.
+   *  En borrador viene fija del recibo; en alta directa, del `contraparte` ya
+   *  resuelto. Vacío si la contraparte es texto libre. */
+  private contraparteEfectivo(contraparte?: ContraparteReciboRequest): {
+    idPersona?: string;
+    idActorProductivoMinero?: string;
+  } {
+    const src: ContraparteReciboRequest = this.esBorrador
+      ? {
+          idPersona: this.data.recibo!.idPersona ?? undefined,
+          idActorProductivoMinero:
+            this.data.recibo!.idActorProductivoMinero ?? undefined,
+        }
+      : (contraparte ?? {});
+    if (src.idPersona) return { idPersona: String(src.idPersona) };
+    if (src.idActorProductivoMinero) {
+      return { idActorProductivoMinero: String(src.idActorProductivoMinero) };
+    }
+    return {};
+  }
+
+  /** Filas de reparto + fila EFECTIVO por el resto (si > 0). El destino del
+   *  gasto viaja dentro de cada línea (`idDestinoGasto`); la línea EFECTIVO
+   *  además lleva la contraparte (a quién se le entrega el efectivo). */
+  private construirDetalles(
+    cpEfectivo: { idPersona?: string; idActorProductivoMinero?: string } = {},
+  ): DetalleReciboRequest[] {
     const detalles: DetalleReciboRequest[] = this.filas.map((fila) => {
-      const fv = fila.getRawValue() as FilaDetalleValue;
-      if (fv.destino === 'PERSONAL') {
-        return {
-          destino: 'PERSONAL',
-          idPersona: String((fv.persona as PersonaCI).id),
-          monto: this.redondear(Number(fv.monto)),
-        };
-      }
-      return {
-        destino: 'ACTOR',
-        idActorProductivoMinero: fv.idActorProductivoMinero!,
-        monto: this.redondear(Number(fv.monto)),
+      const fv = fila.getRawValue() as {
+        destinatario: DestinatarioKardex;
+        destinoGasto: DestinoGasto;
+        monto: number | null;
       };
+      const linea: DetalleReciboRequest = {
+        destino: fv.destinatario.tipo,
+        monto: this.redondear(Number(fv.monto)),
+        idDestinoGasto: fv.destinoGasto.id,
+      };
+      if (fv.destinatario.tipo === 'PERSONAL') linea.idPersona = fv.destinatario.id;
+      else linea.idActorProductivoMinero = fv.destinatario.id;
+      return linea;
     });
     const efectivo = this.montoEfectivo();
-    if (efectivo > 0) detalles.push({ destino: 'EFECTIVO', monto: efectivo });
+    if (efectivo > 0) {
+      const linea: DetalleReciboRequest = {
+        destino: 'EFECTIVO',
+        monto: efectivo,
+        ...cpEfectivo,
+      };
+      const e = this.f.destinoGastoEfectivo.value;
+      if (e && typeof e === 'object') linea.idDestinoGasto = e.id;
+      detalles.push(linea);
+    }
     return detalles;
   }
+
+
+
+
 
   guardar(): void {
     if (this.form.invalid) {
@@ -600,19 +767,17 @@ export class ReciboFormDialogComponent implements OnInit {
       }
     }
 
+
+    
+
     const v = this.form.getRawValue();
-    // Solo se envía el destino de gasto si se eligió una opción del catálogo
-    // (texto suelto que no coincide se ignora).
-    const idDestinoGasto =
-      v.destinoGasto && typeof v.destinoGasto === 'object'
-        ? v.destinoGasto.id
-        : undefined;
     let request: GenerarReciboRequest | ProcesarReciboRequest;
 
     if (this.esBorrador) {
-      const proc: ProcesarReciboRequest = { detalles: this.construirDetalles() };
+      const proc: ProcesarReciboRequest = {
+        detalles: this.construirDetalles(this.contraparteEfectivo()),
+      };
       if (v.idFormaPago) proc.idFormaPago = v.idFormaPago;
-      if (idDestinoGasto) proc.idDestinoGasto = idDestinoGasto;
       if (this.mostrarCamposBanco) {
         proc.idCuentaBancaria = v.idCuentaBancaria!;
         proc.nroComprobante = (v.nroComprobante ?? '').trim();
@@ -632,15 +797,30 @@ export class ReciboFormDialogComponent implements OnInit {
         idFormaPago: v.idFormaPago!,
         ...contraparte,
       };
-      if (idDestinoGasto) gen.idDestinoGasto = idDestinoGasto;
       if (this.mostrarCamposBanco) {
         gen.idCuentaBancaria = v.idCuentaBancaria!;
         gen.nroComprobante = (v.nroComprobante ?? '').trim();
       }
       // 'PROCESAR' directo → one-shot con detalles (queda PROCESADO).
-      if (this.pideDetalles) gen.detalles = this.construirDetalles();
+      if (this.pideDetalles) {
+        gen.detalles = this.construirDetalles(
+          this.contraparteEfectivo(contraparte),
+        );
+      }
       request = gen;
     }
+
+    // DEBUG: payload que se envía al backend en cada caso.
+    console.log('[recibo] guardar', {
+      modo: this.data.modo,
+      esBorrador: this.esBorrador,
+      pideDetalles: this.pideDetalles,
+      endpoint: this.esBorrador
+        ? `PATCH /contabilidad/recibo/${this.data.recibo!.id}/procesar`
+        : 'POST /contabilidad/recibo',
+      request,
+    });
+    console.log('[recibo] request JSON', JSON.stringify(request, null, 2));
 
     this.guardando.set(true);
     const envio = this.esBorrador

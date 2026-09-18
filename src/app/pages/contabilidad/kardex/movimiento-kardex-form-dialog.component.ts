@@ -26,12 +26,22 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { combineLatest, forkJoin, map, Observable, startWith } from 'rxjs';
+import {
+  catchError,
+  combineLatest,
+  forkJoin,
+  map,
+  Observable,
+  of,
+  startWith,
+} from 'rxjs';
 import { PersonaCI } from '../../configurations/models/persona.models';
 import {
+  CuentaFinanciera,
+  DestinoGasto,
+  EntidadFinanciera,
   FormaPago,
   KardexSubcuenta,
-  TipoMovimientoKardex,
 } from '../../configurations/parametricas/models/parametricas.models';
 import { PersonaService } from '../../configurations/services/persona.service';
 import { ParametricasService } from '../../configurations/services/parametricas.service';
@@ -60,6 +70,10 @@ export interface MovimientoKardexFormDialogData {
  *  cobrador anidado (subset) que ya venía en un movimiento al editar, texto
  *  suelto tecleado (se ignora al guardar), o nada. */
 type Cobrador = PersonaCI | PersonaEnMovimientoKardex | string | null;
+
+/** El autocomplete de destino de gasto guarda el objeto elegido, o el texto
+ *  suelto mientras se escribe (se ignora al guardar si no coincide). */
+type DestinoGastoControlValue = DestinoGasto | string | null;
 
 @Component({
   selector: 'app-movimiento-kardex-form-dialog',
@@ -101,8 +115,13 @@ export class MovimientoKardexFormDialogComponent implements OnInit {
 
   readonly subcuentas = signal<KardexSubcuenta[]>([]);
   readonly formasPago = signal<FormaPago[]>([]);
-  readonly tiposMovimiento = signal<TipoMovimientoKardex[]>([]);
+  readonly destinosGasto = signal<DestinoGasto[]>([]);
   readonly personas = signal<PersonaCI[]>([]);
+  readonly entidadesFinancieras = signal<EntidadFinanciera[]>([]);
+
+  /** Códigos de forma de pago que NO usan cuenta bancaria (efectivo). El resto
+   *  (transacción, QR, cheque, depósito…) exige cuenta + n° de comprobante. */
+  private readonly CODIGOS_SIN_BANCO = new Set(['EFECTIVO']);
 
   get esEdicion(): boolean {
     return !!this.data.movimiento;
@@ -122,14 +141,87 @@ export class MovimientoKardexFormDialogComponent implements OnInit {
       Validators.maxLength(255),
     ]),
     nroComprobante: new FormControl('', [Validators.maxLength(30)]),
+    facturaRecibo: new FormControl('', [Validators.maxLength(50)]),
     idSubcuenta: new FormControl<number | null>(null),
     idFormaPago: new FormControl<number | null>(null),
-    idTipoMovimiento: new FormControl<number | null>(null),
+    // Solo con forma de pago bancaria; validadores dinámicos.
+    idCuentaBancaria: new FormControl<number | null>(null),
+    destinoGasto: new FormControl<DestinoGastoControlValue>(null),
     cobrador: new FormControl<Cobrador>(null),
   });
 
   get f() {
     return this.form.controls;
+  }
+
+  /** Destinos de gasto según el signo de la línea: DEBE (anticipo, sale plata)
+   *  → `esEgreso === true`; HABER (pago/descuento, se recupera) → `false`.
+   *  Vacío hasta elegir DEBE/HABER. */
+  get destinosGastoFiltrados(): DestinoGasto[] {
+    if (this.f.tipo.value === 'DEBE') {
+      return this.destinosGasto().filter((d) => d.esEgreso);
+    }
+    if (this.f.tipo.value === 'HABER') {
+      return this.destinosGasto().filter((d) => !d.esEgreso);
+    }
+    return [];
+  }
+
+  displayDestinoGasto = (v: DestinoGastoControlValue): string => {
+    if (!v) return '';
+    return typeof v === 'string' ? v : v.nombre;
+  };
+
+  /** Opciones del autocomplete de destino de gasto según lo tecleado. */
+  destinosGastoOpciones(): DestinoGasto[] {
+    const v = this.f.destinoGasto.value;
+    const texto = (typeof v === 'string' ? v : v ? v.nombre : '')
+      .trim()
+      .toLowerCase();
+    const lista = this.destinosGastoFiltrados;
+    return texto
+      ? lista.filter((d) => d.nombre.toLowerCase().includes(texto))
+      : lista;
+  }
+
+  private formaPagoSeleccionada(): FormaPago | undefined {
+    const id = this.f.idFormaPago.value;
+    return id == null ? undefined : this.formasPago().find((fp) => fp.id === id);
+  }
+
+  /** true cuando la forma de pago elegida exige cuenta bancaria + comprobante. */
+  get requiereCuentaBancaria(): boolean {
+    const fp = this.formaPagoSeleccionada();
+    return (
+      !!fp &&
+      fp.afectaFondo !== false &&
+      !this.CODIGOS_SIN_BANCO.has((fp.codigo ?? '').toUpperCase())
+    );
+  }
+
+  cuentasDe(e: EntidadFinanciera): CuentaFinanciera[] {
+    return (e.cuentas ?? []).filter((c) => c.activo !== false);
+  }
+
+  etiquetaCuenta(c: CuentaFinanciera): string {
+    return `${c.numeroCuenta} · ${c.moneda}${c.alias ? ` · ${c.alias}` : ''}`;
+  }
+
+  private sincronizarCamposBanco(): void {
+    const { idCuentaBancaria, nroComprobante } = this.f;
+    if (this.requiereCuentaBancaria) {
+      idCuentaBancaria.setValidators([Validators.required]);
+      nroComprobante.setValidators([
+        Validators.required,
+        Validators.maxLength(30),
+      ]);
+    } else {
+      idCuentaBancaria.clearValidators();
+      nroComprobante.setValidators([Validators.maxLength(30)]);
+      idCuentaBancaria.setValue(null, { emitEvent: false });
+    }
+    idCuentaBancaria.updateValueAndValidity({ emitEvent: false });
+    nroComprobante.updateValueAndValidity({ emitEvent: false });
   }
 
   /** Lista filtrada del autocomplete de cobrador. */
@@ -144,26 +236,72 @@ export class MovimientoKardexFormDialogComponent implements OnInit {
       const up = v.toUpperCase();
       if (up !== v) this.f.detalle.setValue(up, { emitEvent: false });
     });
+    this.f.nroComprobante.valueChanges.subscribe((v) => {
+      if (typeof v !== 'string') return;
+      const up = v.toUpperCase();
+      if (up !== v) this.f.nroComprobante.setValue(up, { emitEvent: false });
+    });
+    this.f.facturaRecibo.valueChanges.subscribe((v) => {
+      if (typeof v !== 'string') return;
+      const up = v.toUpperCase();
+      if (up !== v) this.f.facturaRecibo.setValue(up, { emitEvent: false });
+    });
 
+    // Al cambiar DEBE/HABER cambia la lista de destino del gasto: se limpia el
+    // elegido si ya no aplica.
+    this.f.tipo.valueChanges.subscribe(() => {
+      const sel = this.f.destinoGasto.value;
+      if (
+        sel &&
+        typeof sel === 'object' &&
+        !this.destinosGastoFiltrados.some((d) => d.id === sel.id)
+      ) {
+        this.f.destinoGasto.setValue(null);
+      }
+    });
+    // Al cambiar la forma de pago se prende/apaga cuenta bancaria + comprobante.
+    this.f.idFormaPago.valueChanges.subscribe(() =>
+      this.sincronizarCamposBanco(),
+    );
+
+    // Cada catálogo con su propio catchError: si uno falla, los demás igual
+    // llenan sus listas (mismos GET que usa el diálogo de recibo).
     forkJoin({
-      subcuentas: this.parametricasService.obtenerKardexSubcuentas(),
-      formasPago: this.parametricasService.obtenerFormasPago(),
-      tiposMovimiento: this.parametricasService.obtenerTiposMovimientoKardex(),
-      personas: this.personaService.listarPersonas({
-        page: 1,
-        limit: 1000,
-        activo: true,
-      }),
+      subcuentas: this.parametricasService
+        .obtenerKardexSubcuentas()
+        .pipe(catchError(() => of([] as KardexSubcuenta[]))),
+      formasPago: this.parametricasService
+        .obtenerFormasPago()
+        .pipe(catchError(() => of([] as FormaPago[]))),
+      destinosGasto: this.parametricasService
+        .obtenerDestinosGasto()
+        .pipe(catchError(() => of([] as DestinoGasto[]))),
+      personas: this.personaService
+        .listarPersonas({ page: 1, limit: 1000, activo: true })
+        .pipe(catchError(() => of({ data: [] as PersonaCI[] }))),
+      entidadesFinancieras: this.parametricasService
+        .obtenerEntidadesFinancieras()
+        .pipe(catchError(() => of([] as EntidadFinanciera[]))),
     }).subscribe({
-      next: ({ subcuentas, formasPago, tiposMovimiento, personas }) => {
+      next: ({
+        subcuentas,
+        formasPago,
+        destinosGasto,
+        personas,
+        entidadesFinancieras,
+      }) => {
         this.subcuentas.set(subcuentas.filter((s) => s.activo !== false));
         this.formasPago.set(formasPago.filter((f) => f.activo !== false));
-        this.tiposMovimiento.set(
-          tiposMovimiento.filter((t) => t.activo !== false),
+        this.destinosGasto.set(
+          destinosGasto.filter((d) => d.activo !== false),
         );
         this.personas.set(personas.data ?? []);
+        this.entidadesFinancieras.set(
+          (entidadesFinancieras ?? []).filter((e) => e.activo !== false),
+        );
         this.cargandoCatalogos.set(false);
         this.precargarSiEdicion();
+        this.sincronizarCamposBanco();
       },
       error: () => {
         this.cargandoCatalogos.set(false);
@@ -179,15 +317,21 @@ export class MovimientoKardexFormDialogComponent implements OnInit {
     const m = this.data.movimiento;
     if (m) {
       const debe = Number(m.debe);
+      const destinoGasto =
+        m.destinoGasto ??
+        this.destinosGasto().find((d) => d.id === m.idDestinoGasto) ??
+        null;
       this.form.patchValue({
         fecha: this.parseFecha(m.fecha),
         tipo: debe > 0 ? 'DEBE' : 'HABER',
         monto: debe > 0 ? debe : Number(m.haber),
         detalle: m.detalle,
         nroComprobante: m.nroComprobante ?? '',
+        facturaRecibo: m.facturaRecibo ?? '',
         idSubcuenta: m.subcuenta?.id ?? m.idSubcuenta ?? null,
         idFormaPago: m.formaPago?.id ?? m.idFormaPago ?? null,
-        idTipoMovimiento: m.tipoMovimiento?.id ?? m.idTipoMovimiento ?? null,
+        idCuentaBancaria: m.cuentaBancaria?.id ?? m.idCuentaBancaria ?? null,
+        destinoGasto,
         cobrador: m.cobrador ?? null,
       });
     } else {
@@ -270,9 +414,16 @@ export class MovimientoKardexFormDialogComponent implements OnInit {
 
     const nroComprobante = (v.nroComprobante ?? '').trim();
     if (nroComprobante) request.nroComprobante = nroComprobante;
+    const facturaRecibo = (v.facturaRecibo ?? '').trim();
+    if (facturaRecibo) request.facturaRecibo = facturaRecibo;
     if (v.idSubcuenta) request.idSubcuenta = v.idSubcuenta;
     if (v.idFormaPago) request.idFormaPago = v.idFormaPago;
-    if (v.idTipoMovimiento) request.idTipoMovimiento = v.idTipoMovimiento;
+    if (this.requiereCuentaBancaria && v.idCuentaBancaria) {
+      request.idCuentaBancaria = v.idCuentaBancaria;
+    }
+    if (v.destinoGasto && typeof v.destinoGasto === 'object') {
+      request.idDestinoGasto = v.destinoGasto.id;
+    }
 
     const cobrador = v.cobrador;
     if (cobrador && typeof cobrador === 'object' && 'id' in cobrador) {

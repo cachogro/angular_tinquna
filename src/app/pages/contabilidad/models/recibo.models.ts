@@ -54,6 +54,8 @@ export interface DetalleReciboRequest {
   idPersona?: string;
   idActorProductivoMinero?: string;
   monto: number;
+  /** Categoría contable de ESTA porción (catálogo destino-gasto). */
+  idDestinoGasto?: number;
 }
 
 export interface DetalleRecibo {
@@ -64,6 +66,8 @@ export interface DetalleRecibo {
   idActorProductivoMinero?: string | null;
   actorProductivoMinero?: ActorEnRecibo | null;
   monto: string;
+  idDestinoGasto?: number | null;
+  destinoGasto?: DestinoGasto | null;
   /** Línea de kardex generada por esta porción; null si destino=EFECTIVO. */
   idMovimientoKardex?: string | null;
 }
@@ -86,9 +90,6 @@ export interface Recibo {
   cuentaBancaria?: CuentaBancariaEnRecibo | null;
   /** N° de comprobante / transacción del pago bancario. */
   nroComprobante?: string | null;
-  /** Destino del gasto (catálogo parametrica.destino_gasto). */
-  idDestinoGasto?: number | null;
-  destinoGasto?: DestinoGasto | null;
   /** Contraparte física del recibo ("Recibí de" / "Entregué a"): exactamente
    *  una de persona registrada, actor productivo, o texto libre. */
   idPersona?: string | null;
@@ -131,9 +132,8 @@ export interface GenerarReciboRequest extends ContraparteReciboRequest {
   idCuentaBancaria?: number;
   /** N° de comprobante / transacción; obligatorio con forma de pago bancaria. */
   nroComprobante?: string;
-  /** Categoría contable (catálogo destino-gasto; filtrado por `esEgreso`). */
-  idDestinoGasto?: number;
-  /** Si viene, el recibo se procesa en el acto (no pasa por BORRADOR). */
+  /** Si viene, el recibo se procesa en el acto (no pasa por BORRADOR).
+   *  El destino del gasto va por línea, en `detalles[].idDestinoGasto`. */
   detalles?: DetalleReciboRequest[];
 }
 
@@ -142,11 +142,11 @@ export interface GenerarReciboRequest extends ContraparteReciboRequest {
  *  lo que tuviera el borrador. NO permite corregir fecha, montoTotal, concepto
  *  ni la contraparte (quedan fijos desde que se creó el BORRADOR). */
 export interface ProcesarReciboRequest {
+  /** El destino del gasto va por línea, en `detalles[].idDestinoGasto`. */
   detalles: DetalleReciboRequest[];
   idFormaPago?: number;
   idCuentaBancaria?: number;
   nroComprobante?: string;
-  idDestinoGasto?: number;
 }
 
 export type OrdenRecibo = 'id' | 'fecha' | 'monto' | 'numero';

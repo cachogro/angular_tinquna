@@ -74,7 +74,7 @@ export class CajaFlujoComponent implements OnInit {
     'folio',
     'fecha',
     'nroComprobante',
-    'nombresApellidos',
+    'entregaFondosA',
     'concepto',
     'destinoGasto',
     'ingreso',
@@ -85,6 +85,7 @@ export class CajaFlujoComponent implements OnInit {
 
   readonly cargando = signal(false);
   readonly cargandoCajas = signal(true);
+  readonly descargandoExcel = signal(false);
 
   readonly cajasCargadas = signal<Caja[]>([]);
   readonly cajaSelId = signal<number | null>(null);
@@ -147,7 +148,13 @@ export class CajaFlujoComponent implements OnInit {
     );
   });
 
-  readonly movimientos = computed(() => this.resp()?.movimientos ?? []);
+  /** Últimos registrados primero: se invierte y, si hay folio, se ordena
+   *  descendente (el saldo de cada fila sigue siendo el de su momento). */
+  readonly movimientos = computed(() => {
+    const lista = [...(this.resp()?.movimientos ?? [])].reverse();
+    lista.sort((a, b) => (Number(b.folio) || 0) - (Number(a.folio) || 0));
+    return lista;
+  });
 
   readonly mesesFaltantesGestion = computed(() => {
     const g = this.gestionSel();
@@ -216,6 +223,7 @@ export class CajaFlujoComponent implements OnInit {
         if (autoSeleccionarGestion && periodos.length) {
           const nuevaGestion = Math.max(...periodos.map((p) => p.gestion));
           this.gestionSel.set(nuevaGestion);
+          this.autoSeleccionarMes(periodos, nuevaGestion);
           this.cargarCajaFlujo();
         }
       },
@@ -223,6 +231,26 @@ export class CajaFlujoComponent implements OnInit {
         this.periodos.set([]);
       },
     });
+  }
+
+  /** Al abrir la caja, deja seleccionado el mes actual si tiene período en la
+   *  gestión; si no, el último mes disponible. */
+  private autoSeleccionarMes(periodos: PeriodoCaja[], gestion: number): void {
+    const meses = periodos
+      .filter((p) => p.tipo === 'MENSUAL' && p.gestion === gestion)
+      .map((p) => p.mes)
+      .filter((m): m is number => m != null);
+    if (!meses.length) {
+      this.mesSel.set(null);
+      return;
+    }
+    const hoy = new Date();
+    const mesActual = hoy.getMonth() + 1;
+    this.mesSel.set(
+      gestion === hoy.getFullYear() && meses.includes(mesActual)
+        ? mesActual
+        : Math.max(...meses),
+    );
   }
 
   private cargarCajaFlujo(): void {
@@ -367,6 +395,38 @@ export class CajaFlujoComponent implements OnInit {
 
   // ---------- Períodos ----------
 
+  descargarExcel(): void {
+    const id = this.cajaSelId();
+    const gestion = this.gestionSel();
+    const mes = this.mesSel();
+    if (id == null || gestion == null || mes == null || this.descargandoExcel()) {
+      return;
+    }
+    this.descargandoExcel.set(true);
+    this.movimientoCajaService
+      .descargarExcel({ idCaja: id, moneda: this.monedaSel(), gestion, mes })
+      .subscribe({
+        next: (blob) => {
+          this.descargandoExcel.set(false);
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          const mesStr = String(mes).padStart(2, '0');
+          a.download = `caja-flujo-${id}-${this.monedaSel()}-${gestion}-${mesStr}.xlsx`;
+          a.click();
+          window.URL.revokeObjectURL(url);
+        },
+        error: (err) => {
+          this.descargandoExcel.set(false);
+          this.snackBar.open(
+            err?.error?.message ?? 'No se pudo generar el Excel de la caja',
+            'Cerrar',
+            { duration: 5000 },
+          );
+        },
+      });
+  }
+
   cerrarMes(): void {
     const p = this.periodoMesSel();
     const id = this.cajaSelId();
@@ -496,5 +556,13 @@ export class CajaFlujoComponent implements OnInit {
   num(v: string | null | undefined): number {
     const n = Number(v);
     return Number.isFinite(n) ? n : 0;
+  }
+
+  /** El destino del gasto puede venir como objeto del catálogo (movimiento de
+   *  recibo) o como texto libre (carga manual). */
+  destinoGastoLabel(m: MovimientoCaja): string {
+    const d = m.destinoGasto;
+    if (!d) return '—';
+    return typeof d === 'string' ? d : d.nombre || '—';
   }
 }

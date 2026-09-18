@@ -49,7 +49,7 @@
             <mat-form-field appearance="outline" class="cuenta-fila__moneda">
               <mat-label>Moneda</mat-label>
               <mat-select formControlName="moneda">
-                <mat-option *ngFor="let m of monedas" [value]="m">{{ m }}</mat-option>
+                <mat-option *ngFor="let m of monedas" [value]="m">{{ etiquetaMoneda(m) }}</mat-option>
               </mat-select>
               <mat-error *ngIf="fila.get('moneda')?.hasError('required')">
                 Obligatorio
@@ -127,7 +127,7 @@
                   <span class="chip-cuenta" *ngFor="let c of row.cuentas"
                     [class.chip-cuenta--inactiva]="c.activo === false"
                     [matTooltip]="c.activo === false ? 'Cuenta inactiva' : ''">
-                    {{ c.moneda }} · {{ c.numeroCuenta }}<ng-container *ngIf="c.alias"> ({{ c.alias }})</ng-container>
+                    {{ etiquetaMoneda(c.moneda) }} · {{ c.numeroCuenta }}<ng-container *ngIf="c.alias"> ({{ c.alias }})</ng-container>
                   </span>
                 </ng-container>
                 <ng-template #sinCuentas>—</ng-template>

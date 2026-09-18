@@ -29,11 +29,20 @@ export const navItems: NavItem[] = [
     displayName: 'Reportes',
     iconName: 'solar:file-text-line-duotone',
     route: '/ui-components/reportes',
-  },
-  {
-    displayName: 'Reportes Valorización',
-    iconName: 'solar:chart-2-line-duotone',
-    route: '/ui-components/reportes-valorizacion',
+    children: [
+      {
+        displayName: 'Recepción de Minerales',
+        subItemIcon: true,
+        iconName: 'solar:round-alt-arrow-right-line-duotone',
+        route: '/ui-components/reportes',
+      },
+      {
+        displayName: 'Valorización',
+        subItemIcon: true,
+        iconName: 'solar:round-alt-arrow-right-line-duotone',
+        route: '/ui-components/reportes-valorizacion',
+      },
+    ],
   },
   {
     navCap: 'Contabilidad',
@@ -84,6 +93,11 @@ export const navItems: NavItem[] = [
     navCap: 'Configuraciones',
   },
   {
+    displayName: 'Actores y Clientes',
+    iconName: 'solar:users-group-rounded-line-duotone',
+    route: '/configuraciones/actores-clientes',
+  },
+  {
     displayName: 'Configuraciones',
     iconName: 'solar:lock-keyhole-minimalistic-line-duotone',
     route: '/authentication',
@@ -110,10 +124,5 @@ export const navItems: NavItem[] = [
         roles: [RolCodigo.ADMINISTRADOR],
       },
     ],
-  },
-  {
-    displayName: 'Actores y Clientes',
-    iconName: 'solar:users-group-rounded-line-duotone',
-    route: '/configuraciones/actores-clientes',
   },
 ];

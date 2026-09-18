@@ -76,10 +76,17 @@ export class KardexDialogComponent implements OnInit {
 
   readonly cargando = signal(true);
   readonly guardando = signal(false);
+  readonly descargandoExcel = signal(false);
   readonly registros = signal<Kardex[]>([]);
 
   readonly cargandoMovimientos = signal(false);
   readonly movimientos = signal<MovimientoKardex[]>([]);
+
+  /** Más reciente primero (N° de línea descendente); el saldo de cada fila
+   *  sigue siendo el de su momento. */
+  readonly movimientosOrdenados = computed(() =>
+    [...this.movimientos()].sort((a, b) => b.numeroLinea - a.numeroLinea),
+  );
 
   readonly columnasMovimientos = [
     'numeroLinea',
@@ -136,7 +143,8 @@ export class KardexDialogComponent implements OnInit {
     fechaApertura: new FormControl<Date | null>(new Date(), [
       Validators.required,
     ]),
-    saldoInicial: new FormControl<number | null>(0, [
+    // Arranca en blanco: el usuario siempre escribe el dato, incluso si es 0.
+    saldoInicial: new FormControl<number | null>(null, [
       Validators.required,
       Validators.min(0),
     ]),
@@ -426,6 +434,34 @@ export class KardexDialogComponent implements OnInit {
             ),
         });
       });
+  }
+
+  descargarExcel(k: Kardex): void {
+    if (this.descargandoExcel()) return;
+    this.descargandoExcel.set(true);
+    this.kardexService.descargarExcel(k.id).subscribe({
+      next: (blob) => {
+        this.descargandoExcel.set(false);
+        const url = window.URL.createObjectURL(blob);
+        const nombre = this.data.nombreDestinatario
+          .toUpperCase()
+          .replace(/[^A-Z0-9]+/g, '_')
+          .replace(/^_+|_+$/g, '');
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `KARDEX_N${k.numero}_${nombre}.xlsx`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err) => {
+        this.descargandoExcel.set(false);
+        this.snackBar.open(
+          err?.error?.message ?? 'No se pudo generar el Excel del kardex',
+          'Cerrar',
+          { duration: 5000 },
+        );
+      },
+    });
   }
 
   cerrarDialogo(): void {

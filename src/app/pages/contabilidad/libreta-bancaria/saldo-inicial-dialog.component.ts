@@ -22,7 +22,10 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { MonedaCuenta } from '../../configurations/parametricas/models/parametricas.models';
+import {
+  MonedaCuenta,
+  etiquetaMonedaCuenta,
+} from '../../configurations/parametricas/models/parametricas.models';
 import { ParametricasService } from '../../configurations/services/parametricas.service';
 
 export interface SaldoInicialDialogData {
@@ -58,12 +61,19 @@ export interface SaldoInicialDialogData {
 
     <mat-dialog-content>
       <p class="si-cuenta">
-        {{ data.nombreEntidad }} · {{ data.numeroCuenta }} ({{ data.moneda }})
+        {{ data.nombreEntidad }} · {{ data.numeroCuenta }} ({{ etiquetaMoneda }})
       </p>
       <form [formGroup]="form" class="si-form">
         <mat-form-field appearance="outline">
-          <mat-label>Saldo inicial (Bs)</mat-label>
-          <input matInput type="number" step="0.01" formControlName="saldoInicial" />
+          <mat-label>Saldo inicial ({{ etiquetaMoneda }})</mat-label>
+          <input
+            matInput
+            type="text"
+            inputmode="decimal"
+            class="si-input-derecha"
+            formControlName="saldoInicial"
+            (keydown)="restringirEntradaNumerica($event)"
+          />
           @if (f.saldoInicial.hasError('required') && f.saldoInicial.touched) {
           <mat-error>Obligatorio</mat-error>
           }
@@ -72,7 +82,7 @@ export interface SaldoInicialDialogData {
         <mat-form-field appearance="outline">
           <mat-label>Fecha del saldo inicial</mat-label>
           <input matInput [matDatepicker]="picker" formControlName="fecha" readonly
-            (click)="picker.open()" />
+            class="si-input-derecha" (click)="picker.open()" />
           <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
           <mat-datepicker #picker></mat-datepicker>
           @if (f.fecha.hasError('required') && f.fecha.touched) {
@@ -116,6 +126,9 @@ export interface SaldoInicialDialogData {
       .si-form mat-form-field {
         width: 100%;
       }
+      .si-input-derecha {
+        text-align: right;
+      }
       .si-cuenta {
         font-weight: 600;
         margin: 0 0 12px;
@@ -150,7 +163,9 @@ export class SaldoInicialDialogComponent implements OnInit {
   readonly guardando = signal(false);
 
   readonly form = new FormGroup({
-    saldoInicial: new FormControl<number | null>(null, [Validators.required]),
+    saldoInicial: new FormControl<number | string | null>(null, [
+      Validators.required,
+    ]),
     fecha: new FormControl<Date | null>(null, [Validators.required]),
   });
 
@@ -158,16 +173,51 @@ export class SaldoInicialDialogComponent implements OnInit {
     return this.form.controls;
   }
 
+  get etiquetaMoneda(): string {
+    return etiquetaMonedaCuenta(this.data.moneda);
+  }
+
   ngOnInit(): void {
-    const saldo = Number(this.data.saldoInicialActual ?? 0);
+    // Sin fecha configurada = aún no se registró un saldo inicial real: el
+    // campo arranca en blanco (aunque el back ya traiga "0.00" por defecto),
+    // para que el usuario siempre sea quien lo escriba, incluso si es 0.
+    const yaConfigurado = !!this.data.fechaSaldoInicialActual;
+    const saldo = yaConfigurado ? Number(this.data.saldoInicialActual) : null;
     this.form.patchValue({
-      saldoInicial: Number.isFinite(saldo) ? saldo : 0,
+      saldoInicial: saldo != null && Number.isFinite(saldo) ? saldo : null,
       fecha: this.parseFecha(this.data.fechaSaldoInicialActual),
     });
   }
 
   cancelar(): void {
     this.dialogRef.close();
+  }
+
+  restringirEntradaNumerica(event: KeyboardEvent): void {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    if (event.ctrlKey || event.metaKey) return;
+    const teclasControl = [
+      'Backspace',
+      'Delete',
+      'Tab',
+      'Escape',
+      'Enter',
+      'ArrowLeft',
+      'ArrowRight',
+      'ArrowUp',
+      'ArrowDown',
+      'Home',
+      'End',
+    ];
+    if (teclasControl.includes(event.key)) return;
+    if (event.key === '.') {
+      if (target.value.includes('.')) event.preventDefault();
+      return;
+    }
+    if (!/^\d$/.test(event.key)) {
+      event.preventDefault();
+    }
   }
 
   guardar(): void {
@@ -196,9 +246,11 @@ export class SaldoInicialDialogComponent implements OnInit {
       .subscribe({
         next: () => {
           this.guardando.set(false);
-          this.snackBar.open('Saldo inicial guardado', 'Cerrar', {
-            duration: 3000,
-          });
+          this.snackBar.open(
+            `Saldo inicial en ${this.etiquetaMoneda} guardado`,
+            'Cerrar',
+            { duration: 3000 },
+          );
           this.dialogRef.close(true);
         },
         error: (err) => {

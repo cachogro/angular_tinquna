@@ -39,9 +39,16 @@ export class ReciboService {
     return this.http.get<Recibo>(`${this.baseUrl}/${id}`);
   }
 
-  /** PDF del recibo (disponible desde que existe, incluso en BORRADOR). */
+  /** PDF del recibo generado (disponible desde que existe, incluso en BORRADOR). */
   obtenerPdf(id: string): Observable<Blob> {
     return this.http.get(`${this.baseUrl}/${id}/pdf`, { responseType: 'blob' });
+  }
+
+  /** PDF del recibo procesado, con el detalle del reparto (kardex + caja). */
+  obtenerPdfDetallado(id: string): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/${id}/pdf-procesado`, {
+      responseType: 'blob',
+    });
   }
 
   /** POST — sin `detalles` crea un BORRADOR; con `detalles` crea y procesa

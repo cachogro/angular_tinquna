@@ -23,7 +23,7 @@
     <mat-form-field appearance="outline">
       <mat-label>Fecha de apertura</mat-label>
       <input matInput [matDatepicker]="pickerApertura" [max]="hoy" formControlName="fechaApertura"
-        readonly (click)="pickerApertura.open()" />
+        readonly class="kx-num" (click)="pickerApertura.open()" />
       <mat-datepicker-toggle matSuffix [for]="pickerApertura"></mat-datepicker-toggle>
       <mat-datepicker #pickerApertura></mat-datepicker>
       @if (f.fechaApertura.hasError('required') && f.fechaApertura.touched) {
@@ -34,7 +34,7 @@
 
     <mat-form-field appearance="outline">
       <mat-label>Saldo inicial (Bs)</mat-label>
-      <input matInput type="number" step="0.01" min="0" formControlName="saldoInicial" />
+      <input matInput type="number" step="0.01" min="0" class="kx-num" formControlName="saldoInicial" />
       @if (f.saldoInicial.hasError('required') && f.saldoInicial.touched) {
       <mat-error>Obligatorio</mat-error>
       }
@@ -64,6 +64,14 @@
       </div>
     </div>
     <div class="kx-resumen__acciones">
+      <button mat-stroked-button [disabled]="descargandoExcel()" (click)="descargarExcel(ka)">
+        @if (descargandoExcel()) {
+        <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
+        } @else {
+        <mat-icon>download</mat-icon>
+        }
+        Descargar Excel
+      </button>
       <button mat-stroked-button [disabled]="guardando()" (click)="cerrar(ka)">
         <mat-icon>lock</mat-icon> Cerrar N°{{ ka.numero }} (abre N°{{ ka.numero + 1 }})
       </button>
@@ -88,7 +96,7 @@
     <p class="kx-empty-note">Todavía no hay movimientos en este kardex.</p>
     } @else {
     <div class="kx-tabla-scroll">
-      <table mat-table [dataSource]="movimientos()" class="kx-tabla mat-elevation-z1">
+      <table mat-table [dataSource]="movimientosOrdenados()" class="kx-tabla mat-elevation-z1">
 
         <ng-container matColumnDef="numeroLinea">
           <th mat-header-cell *matHeaderCellDef>N°</th>

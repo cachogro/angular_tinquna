@@ -302,6 +302,11 @@ export interface GuardarLaboratorioRequest {
 
 export type MonedaCuenta = 'BOB' | 'USD';
 
+/** Etiqueta de moneda para mostrar al usuario: "Bs" en vez del código ISO "BOB". */
+export function etiquetaMonedaCuenta(moneda: MonedaCuenta): string {
+  return moneda === 'BOB' ? 'Bs' : moneda;
+}
+
 export interface CuentaFinanciera {
   id: number;
   idEntidadFinanciera?: number;

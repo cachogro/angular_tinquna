@@ -125,7 +125,23 @@
 .flex-layout {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  // 100% del drawer, no 100vh: el drawer (mat-drawer.sidebarNav) crece con el
+  // alto real de la página cuando el contenido de una bandeja es más largo
+  // que el viewport; con 100vh este layout se quedaba fijo al alto de
+  // pantalla y dejaba vacío el resto del drawer.
+  height: 100%;
+  min-height: 100vh;
+
+  .branding {
+    flex-shrink: 0;
+  }
+
+  // La rama de menús debe ocupar el alto restante (no el 100% del padre,
+  // que ya incluye el branding) para que el scroll llegue a todos los ítems.
+  .sidebar-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
 }
 
 .side-img {

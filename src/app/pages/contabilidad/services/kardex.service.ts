@@ -66,4 +66,11 @@ export class KardexService {
       activo,
     });
   }
+
+  /** Excel del kardex (cabecera + movimientos). */
+  descargarExcel(id: string): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/${id}/excel`, {
+      responseType: 'blob',
+    });
+  }
 }

@@ -1,0 +1,44 @@
+.curso-card {
+  border-radius: 16px;
+  overflow: hidden;
+  border: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  height: 85%;
+}
+
+.card-header {
+  height: 64px;
+  color: white;
+  font-size: 24px;
+  font-weight: 500;
+
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 10px;
+}
+
+.header-pink {
+  background: linear-gradient(135deg, #f06292, #f45c84);
+}
+
+.header-green {
+  background: linear-gradient(135deg, #66bb6a, #2e7d32);
+}
+
+.card-footer {
+  border-top: 1px solid #e0e0e0;
+  display: flex !important;
+  width: 100%;
+  padding: 10 !important;
+}
+
+.mat-mdc-card .mdc-card__actions {
+  padding: 11px !important;
+}
+
+.card-footer button {
+  width: 100% !important;
+  display: block;
+  border-radius: 0 0 12px 12px;
+}

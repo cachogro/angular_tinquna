@@ -32,6 +32,7 @@ import {
   EntidadFinanciera,
   GuardarCuentaFinancieraRequest,
   MonedaCuenta,
+  etiquetaMonedaCuenta,
 } from '../models/parametricas.models';
 import { ParametricasService } from '../../services/parametricas.service';
 
@@ -88,6 +89,8 @@ export class EntidadFinancieraFormDialogComponent implements OnInit {
   columnas = ['id', 'nombre', 'sigla', 'cuentas', 'estado', 'acciones'];
 
   readonly monedas: MonedaCuenta[] = ['BOB', 'USD'];
+
+  readonly etiquetaMoneda = etiquetaMonedaCuenta;
 
   // Estado propio del componente: permite pasar de "nuevo" a "edición"
   // sin depender de datos inyectados en el modal.

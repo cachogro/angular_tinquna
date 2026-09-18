@@ -274,10 +274,19 @@ export class ActorProductivoMineroFormDialogComponent implements OnInit {
     });
   }
 
+  /** Tipo reservado a la propia empresa (TINKURIQUINA): no se ofrece al
+   *  crear/editar otros actores productivos mineros. */
+  private static readonly ID_TIPO_EMPRESA = '1';
+
   private cargarTipos(): void {
     this.parametricasService.obtenerTiposActorProductivoMinero().subscribe({
       next: (data) => {
-        this.tipos = data.filter((t) => t.activo !== false);
+        this.tipos = data.filter(
+          (t) =>
+            t.activo !== false &&
+            String(t.id) !==
+              ActorProductivoMineroFormDialogComponent.ID_TIPO_EMPRESA,
+        );
       },
       error: () =>
         this.snackBar.open('Error al cargar los tipos', 'Cerrar', {

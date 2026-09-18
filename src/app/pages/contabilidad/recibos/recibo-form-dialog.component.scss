@@ -121,13 +121,17 @@
 
 .rf-fila {
   display: grid;
-  grid-template-columns: 150px 1fr 160px 40px;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.3fr) 130px 40px;
   gap: 10px;
   align-items: start;
 }
 
 .rf-monto-total ::ng-deep .mat-mdc-text-field-wrapper {
   font-size: 15px;
+}
+
+.rf-input-derecha {
+  text-align: right;
 }
 
 .rf-detalles__vacio {

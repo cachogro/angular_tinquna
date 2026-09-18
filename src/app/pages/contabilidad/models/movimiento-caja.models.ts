@@ -5,7 +5,10 @@
 // generar hasta dos movimientos acá (un INGRESO por lo aplicado a kardex y
 // un EGRESO por la porción EFECTIVO). El back devuelve los montos como
 // string ("3300.00").
-import { MonedaCuenta } from '../../configurations/parametricas/models/parametricas.models';
+import {
+  DestinoGasto,
+  MonedaCuenta,
+} from '../../configurations/parametricas/models/parametricas.models';
 import { PersonaMovimientoRef } from './libreta-banco.models';
 
 export type TipoMovimientoCaja = 'INGRESO' | 'EGRESO';
@@ -40,17 +43,24 @@ export interface MovimientoCaja {
   /** Correlativo por (caja, moneda, gestión). */
   folio?: number | null;
   fecha: string;
-  /** "FACTURA Y/O RECIBO" / "Nº CPTE" (ej. "REC:R-0009"). */
+  /** "Nº CPTE" — n° de transacción / comprobante del pago. */
   nroComprobante?: string | null;
+  /** "FACTURA Y/O RECIBO" — referencia del recibo que originó el movimiento
+   *  (ej. "R-0009"); presente cuando `idRecibo` no es null. */
+  facturaRecibo?: string | null;
   idFormaPago?: number | null;
-  /** Beneficiario / contraparte ("ENTREGA DE FONDOS A:"). */
-  nombresApellidos?: string | null;
-  /** Persona CI vinculada (null = solo texto libre en nombresApellidos). */
+  /** Beneficiario / contraparte ("ENTREGA DE FONDOS A:"). Columna
+   *  `entrega_fondos_a` (antes `nombres_apellidos`). */
+  entregaFondosA?: string | null;
+  /** Persona CI vinculada (null = solo texto libre en entregaFondosA). */
   idPersona?: string | null;
   persona?: PersonaMovimientoRef | null;
   concepto: string;
-  /** "DESTINO DEL GASTO" — texto libre. */
-  destinoGasto?: string | null;
+  /** "DESTINO DEL GASTO". Los movimientos que nacen de un recibo lo traen como
+   *  objeto del catálogo (`idDestinoGasto` + `destinoGasto`); los cargados a
+   *  mano pueden traerlo como texto libre. */
+  idDestinoGasto?: number | null;
+  destinoGasto?: DestinoGasto | string | null;
   /** Presente cuando el movimiento nace de generar un recibo. */
   idRecibo?: string | null;
   /** = entrada de efectivo. */
@@ -88,8 +98,9 @@ export interface GuardarMovimientoCajaRequest {
   fecha: string;
   nroComprobante?: string;
   idFormaPago?: number;
-  /** Texto del beneficiario. Con `idPersona` y sin esto, el back lo deriva de la persona. */
-  nombresApellidos?: string;
+  /** Texto del beneficiario ("entrega de fondos a"). Con `idPersona` y sin
+   *  esto, el back lo deriva de la persona. */
+  entregaFondosA?: string;
   /** Persona CI elegida de la lista. Sin `idPersona` = texto libre. */
   idPersona?: string;
   concepto: string;

@@ -2,7 +2,7 @@
   <mat-card-header>
     <div>
       <mat-card-title class="m-b-0">Libreta Bancaria</mat-card-title>
-      <mat-card-subtitle class="m-b-0">Contabilidad · el mayor de cada cuenta bancaria</mat-card-subtitle>
+      <mat-card-subtitle class="m-b-0">Contabilidad</mat-card-subtitle>
     </div>
     <div class="lb-header__actions">
       <button mat-flat-button color="primary" (click)="nuevoMovimiento()"
@@ -48,8 +48,7 @@
 
       <mat-form-field appearance="outline" class="lb-toolbar__sel" subscriptSizing="dynamic">
         <mat-label>Mes</mat-label>
-        <mat-select [ngModel]="mesSel()" (ngModelChange)="onMesChange($event)"
-          [disabled]="gestionSel() === null">
+        <mat-select [ngModel]="mesSel()" (ngModelChange)="onMesChange($event)" [disabled]="gestionSel() === null">
           <mat-option [value]="null">Todos</mat-option>
           @for (p of mesesDeGestion(); track p.id) {
           <mat-option [value]="p.mes">
@@ -72,7 +71,7 @@
     } @else {
     <div class="lb-aviso">
       <mat-icon>savings</mat-icon>
-      <span>Saldo inicial: <strong>Bs {{ num(c.saldoInicial) | number:'1.2-2' }}</strong>
+      <span>Saldo inicial: <strong>{{ etiquetaMonedaSel }} {{ num(c.saldoInicial) | number:'1.2-2' }}</strong>
         al {{ fechaFmt(c.fechaSaldoInicial) }}</span>
       <button mat-icon-button matTooltip="Editar saldo inicial" (click)="abrirSaldoInicial()">
         <mat-icon>edit</mat-icon>
@@ -93,20 +92,21 @@
       <div class="lb-tiles">
         <div class="lb-tile">
           <small>Saldo inicial</small>
-          <strong>Bs {{ num(p.saldoInicial) | number:'1.2-2' }}</strong>
+          <strong>{{ etiquetaMonedaSel }} {{ num(p.saldoInicial) | number:'1.2-2' }}</strong>
         </div>
         <div class="lb-tile">
           <small>Total DEBE (egresos)</small>
-          <strong class="lb-neg">Bs {{ num(p.totalDebe) | number:'1.2-2' }}</strong>
+          <strong class="lb-neg">{{ etiquetaMonedaSel }} {{ num(p.totalDebe) | number:'1.2-2' }}</strong>
         </div>
         <div class="lb-tile">
           <small>Total HABER (ingresos)</small>
-          <strong class="lb-pos">Bs {{ num(p.totalHaber) | number:'1.2-2' }}</strong>
+          <strong class="lb-pos">{{ etiquetaMonedaSel }} {{ num(p.totalHaber) | number:'1.2-2' }}</strong>
         </div>
         <div class="lb-tile">
           <small>{{ p.estado === 'CERRADO' ? 'Saldo final' : 'Saldo actual' }}</small>
-          <strong>Bs
-            {{ (p.estado === 'CERRADO' ? num(p.saldoFinal) : num(p.saldoInicial) + num(p.totalHaber) - num(p.totalDebe)) | number:'1.2-2' }}
+          <strong>{{ etiquetaMonedaSel }}
+            {{ (p.estado === 'CERRADO' ? num(p.saldoFinal) : num(p.saldoInicial) + num(p.totalHaber) - num(p.totalDebe))
+            | number:'1.2-2' }}
           </strong>
         </div>
       </div>
@@ -137,19 +137,19 @@
       <div class="lb-tiles">
         <div class="lb-tile">
           <small>Saldo inicial (enero)</small>
-          <strong>Bs {{ num(pg.saldoInicial) | number:'1.2-2' }}</strong>
+          <strong>{{ etiquetaMonedaSel }} {{ num(pg.saldoInicial) | number:'1.2-2' }}</strong>
         </div>
         <div class="lb-tile">
           <small>Total DEBE</small>
-          <strong class="lb-neg">Bs {{ num(pg.totalDebe) | number:'1.2-2' }}</strong>
+          <strong class="lb-neg">{{ etiquetaMonedaSel }} {{ num(pg.totalDebe) | number:'1.2-2' }}</strong>
         </div>
         <div class="lb-tile">
           <small>Total HABER</small>
-          <strong class="lb-pos">Bs {{ num(pg.totalHaber) | number:'1.2-2' }}</strong>
+          <strong class="lb-pos">{{ etiquetaMonedaSel }} {{ num(pg.totalHaber) | number:'1.2-2' }}</strong>
         </div>
         <div class="lb-tile">
           <small>Saldo final (diciembre)</small>
-          <strong>Bs {{ num(pg.saldoFinal) | number:'1.2-2' }}</strong>
+          <strong>{{ etiquetaMonedaSel }} {{ num(pg.saldoFinal) | number:'1.2-2' }}</strong>
         </div>
       </div>
       }
@@ -159,8 +159,7 @@
           <mat-icon>lock_open</mat-icon> Reabrir gestión {{ gestionSel() }}
         </button>
         } @else {
-        <button mat-stroked-button (click)="cerrarGestion()"
-          [disabled]="mesesFaltantesGestion().length > 0"
+        <button mat-stroked-button (click)="cerrarGestion()" [disabled]="mesesFaltantesGestion().length > 0"
           [matTooltip]="mesesFaltantesGestion().length > 0
             ? ('Faltan cerrar meses: ' + mesesFaltantesGestion().join(', '))
             : 'Cierra la gestión completa'">
@@ -253,8 +252,7 @@
           </ng-container>
 
           <tr mat-header-row *matHeaderRowDef="columnas"></tr>
-          <tr mat-row *matRowDef="let m; columns: columnas"
-            [class.lb-row-inactiva]="m.activo === false"></tr>
+          <tr mat-row *matRowDef="let m; columns: columnas" [class.lb-row-inactiva]="m.activo === false"></tr>
         </table>
       </div>
       }

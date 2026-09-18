@@ -11,6 +11,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
+import { Observable } from 'rxjs';
 import { DetalleRecibo, Recibo } from '../models/recibo.models';
 import { ReciboService } from '../services/recibo.service';
 
@@ -44,7 +45,7 @@ export class ReciboDetalleDialogComponent implements OnInit {
   readonly descargandoPdf = signal(false);
   readonly recibo = signal<Recibo | null>(null);
 
-  readonly columnas = ['destino', 'destinatario', 'monto'];
+  readonly columnas = ['destino', 'destinatario', 'destinoGasto', 'monto'];
 
   ngOnInit(): void {
     this.reciboService.obtener(this.data.id).subscribe({
@@ -126,9 +127,17 @@ export class ReciboDetalleDialogComponent implements OnInit {
   }
 
   verPdf(): void {
+    this.abrirPdf(this.reciboService.obtenerPdf(this.data.id));
+  }
+
+  verPdfDetallado(): void {
+    this.abrirPdf(this.reciboService.obtenerPdfDetallado(this.data.id));
+  }
+
+  private abrirPdf(obs: Observable<Blob>): void {
     if (this.descargandoPdf()) return;
     this.descargandoPdf.set(true);
-    this.reciboService.obtenerPdf(this.data.id).subscribe({
+    obs.subscribe({
       next: (blob) => {
         this.descargandoPdf.set(false);
         const url = window.URL.createObjectURL(blob);

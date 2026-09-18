@@ -79,4 +79,23 @@ export class MovimientoCajaService {
       body,
     );
   }
+
+  /** Excel de la caja de flujo de un mes puntual. `gestion` y `mes` son
+   *  obligatorios para este endpoint. */
+  descargarExcel(filtro: {
+    idCaja: number;
+    moneda: MonedaCuenta;
+    gestion: number;
+    mes: number;
+  }): Observable<Blob> {
+    const params = new HttpParams()
+      .set('idCaja', filtro.idCaja)
+      .set('moneda', filtro.moneda)
+      .set('gestion', filtro.gestion)
+      .set('mes', filtro.mes);
+    return this.http.get(`${this.baseUrl}/excel`, {
+      params,
+      responseType: 'blob',
+    });
+  }
 }

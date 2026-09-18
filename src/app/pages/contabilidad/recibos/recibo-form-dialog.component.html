@@ -38,8 +38,7 @@
     <div class="rf-form__row3">
       <mat-form-field appearance="outline">
         <mat-label>Fecha</mat-label>
-        <input matInput [matDatepicker]="picker" formControlName="fecha" readonly
-          (click)="picker.open()" />
+        <input matInput [matDatepicker]="picker" formControlName="fecha" readonly (click)="picker.open()" />
         <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
         <mat-datepicker #picker></mat-datepicker>
         @if (f.fecha.hasError('required') && f.fecha.touched) {
@@ -61,8 +60,8 @@
 
       <mat-form-field appearance="outline" class="rf-monto-total">
         <mat-label>Monto total (Bs)</mat-label>
-        <input matInput type="number" step="0.01" min="0.01" inputmode="decimal"
-          formControlName="montoTotal" placeholder="0.00" />
+        <input matInput type="text" inputmode="decimal" class="rf-input-derecha" formControlName="montoTotal"
+          placeholder="0.00" (keydown)="restringirEntradaNumerica($event)" />
         @if (f.montoTotal.hasError('required') && f.montoTotal.touched) {
         <mat-error>Obligatorio</mat-error>
         } @else if (f.montoTotal.hasError('min') && f.montoTotal.touched) {
@@ -73,8 +72,7 @@
 
     <mat-form-field appearance="outline" class="rf-form__full">
       <mat-label>Concepto</mat-label>
-      <input matInput formControlName="concepto" maxlength="255"
-        placeholder="Ej: A CUENTA PAGO DE DEUDA" />
+      <input matInput formControlName="concepto" maxlength="255" placeholder="Ej: A CUENTA PAGO DE DEUDA" />
       @if (f.concepto.hasError('required') && f.concepto.touched) {
       <mat-error>Obligatorio</mat-error>
       }
@@ -102,8 +100,7 @@
       @case ('TEXTO') {
       <mat-form-field appearance="outline" class="rf-form__full">
         <mat-label>Nombre / referencia</mat-label>
-        <input matInput formControlName="textoContraparte" maxlength="255"
-          placeholder="Ej: JUANITA PÉREZ" />
+        <input matInput formControlName="textoContraparte" maxlength="255" placeholder="Ej: JUANITA PÉREZ" />
       </mat-form-field>
       }
       @default {
@@ -164,8 +161,7 @@
 
       <mat-form-field appearance="outline">
         <mat-label>N° de comprobante</mat-label>
-        <input matInput formControlName="nroComprobante" maxlength="50"
-          placeholder="Ej: 4613159797" />
+        <input matInput formControlName="nroComprobante" maxlength="50" placeholder="Ej: 4613159797" />
         @if (f.nroComprobante.hasError('required') && f.nroComprobante.touched) {
         <mat-error>Obligatorio con forma de pago bancaria</mat-error>
         }
@@ -175,17 +171,18 @@
 
     @if (pideDetalles) {
     <mat-form-field appearance="outline" class="rf-form__full">
-      <mat-label>{{ labelDestinoGasto }} (opcional)</mat-label>
-      <input matInput formControlName="destinoGasto" [matAutocomplete]="autoDg"
-        #dgTrigger="matAutocompleteTrigger" (focus)="dgTrigger.openPanel()"
+      <mat-label>{{ labelDestinoGasto }}</mat-label>
+      <input matInput formControlName="destinoGastoEfectivo" [matAutocomplete]="autoDgEf"
+        #dgEfTrigger="matAutocompleteTrigger" (focus)="dgEfTrigger.openPanel()"
         placeholder="Escribe para buscar" />
-      <mat-autocomplete #autoDg="matAutocomplete" [displayWith]="displayDestinoGasto">
-        @for (dg of destinosGastoAutocomplete(); track dg.id) {
+      <mat-autocomplete #autoDgEf="matAutocomplete" [displayWith]="displayDestinoGasto">
+        @for (dg of destinoGastoEfectivoOpciones(); track dg.id) {
         <mat-option [value]="dg">{{ dg.nombre }}</mat-option>
         } @empty {
         <mat-option disabled>Sin coincidencias</mat-option>
         }
       </mat-autocomplete>
+      <mat-hint>Se aplica a la porción del monto que va a efectivo / caja.</mat-hint>
     </mat-form-field>
 
     <div class="rf-detalles">
@@ -204,48 +201,40 @@
 
       @for (fila of filas; track fila; let i = $index) {
       <div class="rf-fila" [formGroup]="fila">
-        <mat-form-field appearance="outline" class="rf-fila__destino">
-          <mat-label>Destino</mat-label>
-          <mat-select formControlName="destino">
-            <mat-option value="PERSONAL">Persona</mat-option>
-            <mat-option value="ACTOR">Actor productivo</mat-option>
-          </mat-select>
-        </mat-form-field>
-
-        @if (fila.value.destino === 'PERSONAL') {
         <mat-form-field appearance="outline" class="rf-fila__destinatario">
-          <mat-label>Persona</mat-label>
-          <input matInput formControlName="persona" [matAutocomplete]="autoFila"
-            #filaTrigger="matAutocompleteTrigger" (focus)="filaTrigger.openPanel()" />
-          <mat-autocomplete #autoFila="matAutocomplete" [displayWith]="displayPersona">
-            @for (p of personasFiltradasFila(fila); track p.id) {
-            <mat-option [value]="p">
-              <span>{{ nombreCompleto(p) }}</span>
-              <small class="rf-doc"> · {{ p.numeroDocumento }}</small>
-            </mat-option>
+          <mat-label>Persona / actor (con kardex)</mat-label>
+          <input matInput formControlName="destinatario" [matAutocomplete]="autoDest"
+            #destTrigger="matAutocompleteTrigger" (focus)="destTrigger.openPanel()"
+            placeholder="Escribe para buscar" />
+          <mat-autocomplete #autoDest="matAutocomplete" [displayWith]="displayDestinatario">
+            @for (d of destinatariosFiltrados(fila); track d.tipo + d.id) {
+            <mat-option [value]="d">{{ d.label }}</mat-option>
             } @empty {
             <mat-option disabled>Sin coincidencias</mat-option>
             }
           </mat-autocomplete>
         </mat-form-field>
-        } @else {
-        <mat-form-field appearance="outline" class="rf-fila__destinatario">
-          <mat-label>Actor productivo</mat-label>
-          <mat-select formControlName="idActorProductivoMinero">
-            @for (a of actores(); track a.id) {
-            <mat-option [value]="a.id">{{ a.nombre }}</mat-option>
+
+        <mat-form-field appearance="outline" class="rf-fila__destinogasto">
+          <mat-label>{{ labelDestinoGasto }}</mat-label>
+          <input matInput formControlName="destinoGasto" [matAutocomplete]="autoDgFila"
+            #dgFilaTrigger="matAutocompleteTrigger" (focus)="dgFilaTrigger.openPanel()"
+            placeholder="Escribe para buscar" />
+          <mat-autocomplete #autoDgFila="matAutocomplete" [displayWith]="displayDestinoGasto">
+            @for (dg of destinoGastoFilaOpciones(fila); track dg.id) {
+            <mat-option [value]="dg">{{ dg.nombre }}</mat-option>
+            } @empty {
+            <mat-option disabled>Sin coincidencias</mat-option>
             }
-          </mat-select>
+          </mat-autocomplete>
         </mat-form-field>
-        }
 
         <mat-form-field appearance="outline" class="rf-fila__monto">
           <mat-label>Monto (Bs)</mat-label>
           <input matInput type="number" step="0.01" min="0.01" formControlName="monto" />
         </mat-form-field>
 
-        <button mat-icon-button type="button" color="warn" matTooltip="Quitar fila"
-          (click)="quitarFila(i)">
+        <button mat-icon-button type="button" color="warn" matTooltip="Quitar fila" (click)="quitarFila(i)">
           <mat-icon>delete_outline</mat-icon>
         </button>
       </div>
@@ -280,13 +269,12 @@
   <button mat-stroked-button (click)="cancelar()" [disabled]="guardando()">
     Cancelar
   </button>
-  <button mat-flat-button color="primary" (click)="guardar()"
-    [disabled]="guardando() || cargandoCatalogos()">
+  <button mat-flat-button color="primary" (click)="guardar()" [disabled]="guardando() || cargandoCatalogos()">
     @if (guardando()) {
     <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
     <span>Guardando...</span>
     } @else {
-    <span>{{ esGenerar ? 'Generar recibo' : 'Procesar recibo' }}</span>
+    <span>{{ esGenerar ? 'Generar recibo' : 'Procesar recibo 222' }}</span>
     }
   </button>
 </mat-dialog-actions>

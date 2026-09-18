@@ -3,13 +3,13 @@
 //   DEBE  = anticipo entregado (sube la deuda del destinatario)
 //   HABER = pago / descuento (la baja)
 import {
+  DestinoGasto,
   FormaPago,
   KardexSubcuenta,
-  TipoMovimientoKardex,
 } from '../../configurations/parametricas/models/parametricas.models';
 import { Kardex } from './kardex.models';
 
-export type { FormaPago, KardexSubcuenta, TipoMovimientoKardex };
+export type { DestinoGasto, FormaPago, KardexSubcuenta };
 
 export type TipoMovimientoKardexLinea = 'DEBE' | 'HABER';
 
@@ -26,14 +26,27 @@ export interface MovimientoKardex {
   idKardex: string;
   numeroLinea: number;
   fecha: string;
+  /** N° real de la transacción bancaria (transferencia / QR / depósito). */
   nroComprobante?: string | null;
+  /** Documento que respalda la línea (ej. "REC:C-406", "DET. ADJ."). */
+  facturaRecibo?: string | null;
   detalle: string;
   idSubcuenta?: number | null;
   subcuenta?: KardexSubcuenta | null;
   idFormaPago?: number | null;
   formaPago?: FormaPago | null;
-  idTipoMovimiento?: number | null;
-  tipoMovimiento?: TipoMovimientoKardex | null;
+  /** Cuenta bancaria usada (solo formas de pago bancarias / transacción). */
+  idCuentaBancaria?: number | null;
+  cuentaBancaria?: {
+    id: number;
+    numeroCuenta: string;
+    moneda?: string;
+    alias?: string | null;
+    entidadFinanciera?: { id: number; nombre: string; sigla: string } | null;
+  } | null;
+  /** Categoría contable (catálogo destino-gasto). */
+  idDestinoGasto?: number | null;
+  destinoGasto?: DestinoGasto | null;
   idCobrador?: string | null;
   cobrador?: PersonaEnMovimientoKardex | null;
   idValorizacion?: string | null;
@@ -53,11 +66,16 @@ export interface GuardarMovimientoKardexRequest {
   id?: string | number;
   idKardex: string;
   fecha: string;
+  /** N° real de la transacción bancaria. */
   nroComprobante?: string;
+  /** Documento que respalda la línea (ej. "REC:C-406", "DET. ADJ."). */
+  facturaRecibo?: string;
   detalle: string;
   idSubcuenta?: number;
   idFormaPago?: number;
-  idTipoMovimiento?: number;
+  /** Obligatorio cuando la forma de pago es bancaria (transacción, QR, cheque…). */
+  idCuentaBancaria?: number;
+  idDestinoGasto?: number;
   idCobrador?: string;
   idValorizacion?: string;
   tipo: TipoMovimientoKardexLinea;

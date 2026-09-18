@@ -57,10 +57,20 @@
       }
     </mat-form-field>
 
-    <div class="mk-form__row2">
+    <div class="mk-form__row3">
       <mat-form-field appearance="outline">
-        <mat-label>N° de comprobante (opcional)</mat-label>
-        <input matInput formControlName="nroComprobante" maxlength="30" />
+        <mat-label>N° de comprobante{{ requiereCuentaBancaria ? '' : ' (opcional)' }}</mat-label>
+        <input matInput formControlName="nroComprobante" maxlength="30"
+          placeholder="N° transferencia / QR" />
+        @if (f.nroComprobante.hasError('required') && f.nroComprobante.touched) {
+        <mat-error>Obligatorio con forma de pago bancaria</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Factura / recibo (opcional)</mat-label>
+        <input matInput formControlName="facturaRecibo" maxlength="50"
+          placeholder="Ej: REC:C-406, DET. ADJ." />
       </mat-form-field>
 
       <mat-form-field appearance="outline">
@@ -86,15 +96,40 @@
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>Tipo de movimiento (opcional)</mat-label>
-        <mat-select formControlName="idTipoMovimiento">
-          <mat-option [value]="null">— Sin especificar —</mat-option>
-          @for (tm of tiposMovimiento(); track tm.id) {
-          <mat-option [value]="tm.id">{{ tm.nombre }}</mat-option>
+        <mat-label>Destino del gasto (opcional)</mat-label>
+        <input matInput formControlName="destinoGasto" [matAutocomplete]="autoDg"
+          #dgTrigger="matAutocompleteTrigger" (focus)="dgTrigger.openPanel()"
+          placeholder="Escribe para buscar" />
+        <mat-autocomplete #autoDg="matAutocomplete" [displayWith]="displayDestinoGasto">
+          @for (dg of destinosGastoOpciones(); track dg.id) {
+          <mat-option [value]="dg">{{ dg.nombre }}</mat-option>
+          } @empty {
+          <mat-option disabled>{{ f.tipo.value ? 'Sin coincidencias' : 'Elige primero DEBE o HABER' }}</mat-option>
           }
-        </mat-select>
+        </mat-autocomplete>
+        @if (!f.tipo.value) {
+        <mat-hint>Elige primero DEBE o HABER</mat-hint>
+        }
       </mat-form-field>
     </div>
+
+    @if (requiereCuentaBancaria) {
+    <mat-form-field appearance="outline" class="mk-form__full">
+      <mat-label>Cuenta bancaria</mat-label>
+      <mat-select formControlName="idCuentaBancaria" panelClass="mk-cuenta-panel">
+        @for (e of entidadesFinancieras(); track e.id) {
+        <mat-optgroup [label]="e.sigla ? e.nombre + ' (' + e.sigla + ')' : e.nombre">
+          @for (c of cuentasDe(e); track c.id) {
+          <mat-option [value]="c.id">{{ etiquetaCuenta(c) }}</mat-option>
+          }
+        </mat-optgroup>
+        }
+      </mat-select>
+      @if (f.idCuentaBancaria.hasError('required') && f.idCuentaBancaria.touched) {
+      <mat-error>Obligatorio con forma de pago bancaria</mat-error>
+      }
+    </mat-form-field>
+    }
 
     <mat-form-field appearance="outline" class="mk-form__full">
       <mat-label>Cobrador (opcional)</mat-label>

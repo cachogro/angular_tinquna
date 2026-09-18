@@ -13,7 +13,10 @@ import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Observable } from 'rxjs';
 import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog/confirm-dialog.component';
-import { MonedaCuenta } from '../../configurations/parametricas/models/parametricas.models';
+import {
+  MonedaCuenta,
+  etiquetaMonedaCuenta,
+} from '../../configurations/parametricas/models/parametricas.models';
 import { ParametricasService } from '../../configurations/services/parametricas.service';
 import {
   LibretaBancoResponse,
@@ -146,7 +149,13 @@ export class LibretaBancariaComponent implements OnInit {
     );
   });
 
-  readonly movimientos = computed(() => this.resp()?.movimientos ?? []);
+  /** Último generado primero: se invierte y se ordena por folio descendente
+   *  (el saldo de cada fila sigue siendo el de su momento). */
+  readonly movimientos = computed(() => {
+    const lista = [...(this.resp()?.movimientos ?? [])].reverse();
+    lista.sort((a, b) => (Number(b.folio) || 0) - (Number(a.folio) || 0));
+    return lista;
+  });
 
   readonly mesesFaltantesGestion = computed(() => {
     const g = this.gestionSel();
@@ -240,6 +249,7 @@ export class LibretaBancariaComponent implements OnInit {
         if (autoSeleccionarGestion && periodos.length) {
           const nuevaGestion = Math.max(...periodos.map((p) => p.gestion));
           this.gestionSel.set(nuevaGestion);
+          this.autoSeleccionarMes(periodos, nuevaGestion);
           this.cargarLibreta();
         }
       },
@@ -247,6 +257,26 @@ export class LibretaBancariaComponent implements OnInit {
         this.periodos.set([]);
       },
     });
+  }
+
+  /** Al abrir la cuenta, deja seleccionado el mes actual si tiene período en
+   *  la gestión; si no, el último mes disponible. */
+  private autoSeleccionarMes(periodos: PeriodoBanco[], gestion: number): void {
+    const meses = periodos
+      .filter((p) => p.tipo === 'MENSUAL' && p.gestion === gestion)
+      .map((p) => p.mes)
+      .filter((m): m is number => m != null);
+    if (!meses.length) {
+      this.mesSel.set(null);
+      return;
+    }
+    const hoy = new Date();
+    const mesActual = hoy.getMonth() + 1;
+    this.mesSel.set(
+      gestion === hoy.getFullYear() && meses.includes(mesActual)
+        ? mesActual
+        : Math.max(...meses),
+    );
   }
 
   private cargarLibreta(): void {
@@ -539,7 +569,7 @@ export class LibretaBancariaComponent implements OnInit {
   }
 
   etiquetaCuenta(c: CuentaOpcion): string {
-    return `${c.nombreEntidad} · ${c.numeroCuenta} (${c.moneda})`;
+    return `${c.nombreEntidad} · ${c.numeroCuenta} (${etiquetaMonedaCuenta(c.moneda)})`;
   }
 
   fechaFmt(iso: string | null | undefined): string {
@@ -555,5 +585,9 @@ export class LibretaBancariaComponent implements OnInit {
 
   get saldoInicialConfigurado(): boolean {
     return !!this.cuentaSel()?.fechaSaldoInicial;
+  }
+
+  get etiquetaMonedaSel(): string {
+    return etiquetaMonedaCuenta(this.cuentaSel()?.moneda ?? 'BOB');
   }
 }

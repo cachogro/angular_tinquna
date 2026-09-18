@@ -158,10 +158,19 @@
                 <mat-icon>block</mat-icon>
               </button>
               }
-              <button mat-icon-button matTooltip="PDF" (click)="verPdf(r)"
+              <button mat-icon-button matTooltip="PDF" [matMenuTriggerFor]="menuPdf"
                 [disabled]="descargandoPdf() === r.id">
                 <mat-icon>picture_as_pdf</mat-icon>
               </button>
+              <mat-menu #menuPdf="matMenu">
+                <button mat-menu-item (click)="verPdf(r)">
+                  <mat-icon>receipt_long</mat-icon> Recibo generado
+                </button>
+                <button mat-menu-item (click)="verPdfDetallado(r)"
+                  [disabled]="r.estado !== 'PROCESADO'">
+                  <mat-icon>fact_check</mat-icon> Recibo detallado (procesado)
+                </button>
+              </mat-menu>
               <button mat-icon-button matTooltip="Ver detalle" (click)="verDetalle(r)">
                 <mat-icon>visibility</mat-icon>
               </button>

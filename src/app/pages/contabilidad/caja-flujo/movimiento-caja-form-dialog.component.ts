@@ -185,10 +185,13 @@ export class MovimientoCajaFormDialogComponent implements OnInit {
         tipo: ingreso > 0 ? 'INGRESO' : 'EGRESO',
         monto: ingreso > 0 ? ingreso : Number(m.egreso),
         concepto: m.concepto,
-        destinoGasto: m.destinoGasto ?? '',
+        destinoGasto:
+          typeof m.destinoGasto === 'string'
+            ? m.destinoGasto
+            : (m.destinoGasto?.nombre ?? ''),
         nroComprobante: m.nroComprobante ?? '',
         idFormaPago: m.idFormaPago ?? null,
-        beneficiario: m.persona ?? m.nombresApellidos ?? '',
+        beneficiario: m.persona ?? m.entregaFondosA ?? '',
       });
     } else if (this.data.fechaSugerida) {
       this.form.controls.fecha.setValue(this.parseFecha(this.data.fechaSugerida));
@@ -265,10 +268,10 @@ export class MovimientoCajaFormDialogComponent implements OnInit {
     if (b && typeof b === 'object' && 'id' in b) {
       // Persona elegida de la lista: se manda su id y su nombre compuesto.
       request.idPersona = String(b.id);
-      request.nombresApellidos = this.nombreCompleto(b);
+      request.entregaFondosA = this.nombreCompleto(b);
     } else {
       const texto = (typeof b === 'string' ? b : '').trim();
-      if (texto) request.nombresApellidos = texto;
+      if (texto) request.entregaFondosA = texto;
     }
 
     this.movimientoCajaService.guardarMovimiento(request).subscribe({
