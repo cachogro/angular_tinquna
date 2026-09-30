@@ -1,0 +1,64 @@
+.fx-loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 32px;
+  justify-content: center;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.fx-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 460px;
+}
+
+.fx-form mat-form-field {
+  width: 100%;
+}
+
+.fx-form__row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.fx-form__full {
+  width: 100%;
+}
+
+.fx-doc {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+/* Bloque: toggle + campos dependientes */
+.fx-bloque {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 4px 0 2px;
+}
+
+.fx-bloque__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.fx-bloque__tipo {
+  align-self: flex-start;
+}
+
+.btn-spinner {
+  display: inline-block;
+}
+
+@media (max-width: 560px) {
+  .fx-form {
+    min-width: 0;
+  }
+  .fx-form__row2 {
+    grid-template-columns: 1fr;
+  }
+}

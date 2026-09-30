@@ -1,0 +1,178 @@
+<h2 mat-dialog-title>Nueva boleta de pago</h2>
+
+<mat-dialog-content class="bf-content">
+  <form [formGroup]="form">
+    <div class="bf-grid">
+      <mat-form-field appearance="outline" class="bf-span2">
+        <mat-label>Persona (personal interno)</mat-label>
+        <mat-select formControlName="idPersona">
+          @for (p of personal(); track p.id) {
+          <mat-option [value]="p.id">{{ nombre(p) }} · {{ p.numeroDocumento }}</mat-option>
+          }
+        </mat-select>
+        @if (f.idPersona.hasError('required') && f.idPersona.touched) {
+        <mat-error>Obligatorio</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Días trabajados (opcional)</mat-label>
+        <input matInput type="text" inputmode="numeric" maxlength="2" class="input-monto" formControlName="diasTrabajados" (keydown)="soloDigitos($event)" />
+        @if (f.diasTrabajados.invalid && f.diasTrabajados.touched) {
+        <mat-error>Entre 0 y 31</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Periodo desde</mat-label>
+        <input matInput [matDatepicker]="pDesde" formControlName="fechaDesde" />
+        <mat-datepicker-toggle matSuffix [for]="pDesde"></mat-datepicker-toggle>
+        <mat-datepicker #pDesde></mat-datepicker>
+        @if (f.fechaDesde.hasError('required') && f.fechaDesde.touched) { <mat-error>Obligatorio</mat-error> }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Periodo hasta</mat-label>
+        <input matInput [matDatepicker]="pHasta" formControlName="fechaHasta" />
+        <mat-datepicker-toggle matSuffix [for]="pHasta"></mat-datepicker-toggle>
+        <mat-datepicker #pHasta></mat-datepicker>
+        @if (f.fechaHasta.hasError('required') && f.fechaHasta.touched) { <mat-error>Obligatorio</mat-error> }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha de pago</mat-label>
+        <input matInput [matDatepicker]="pPago" formControlName="fechaPago" />
+        <mat-datepicker-toggle matSuffix [for]="pPago"></mat-datepicker-toggle>
+        <mat-datepicker #pPago></mat-datepicker>
+        @if (f.fechaPago.hasError('required') && f.fechaPago.touched) { <mat-error>Obligatorio</mat-error> }
+      </mat-form-field>
+    </div>
+
+    @if (preparando()) {
+    <div class="bf-loading"><mat-spinner diameter="24"></mat-spinner><span>Cargando salario y préstamos...</span></div>
+    }
+
+    @if (prep(); as pr) {
+    @if (!pr.kardex) {
+    <p class="bf-aviso"><mat-icon>warning</mat-icon> No tiene kardex PERSONAL abierto: se puede pagar el sueldo, pero no descontar préstamos.</p>
+    }
+
+    <div class="bf-cols">
+      <div>
+        <h3>Ingresos</h3>
+        <mat-form-field appearance="outline" class="bf-full">
+          <mat-label>Salario base (Bs)</mat-label>
+          <input matInput appMonto formControlName="salarioBase" />
+          <!-- <mat-hint>Registrado: {{ pr.persona.salarioMensual != null ? (pr.persona.salarioMensual | number: '1.2-2') : 'sin salario' }}</mat-hint> -->
+          @if (f.salarioBase.hasError('required') && f.salarioBase.touched) { <mat-error>Obligatorio</mat-error> }
+          @if (f.salarioBase.hasError('min') && f.salarioBase.touched) { <mat-error>Debe ser mayor a 0</mat-error> }
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="bf-full">
+          <mat-label>Bono de antigüedad (Bs)</mat-label>
+          <input matInput appMonto formControlName="bonoAntiguedad" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="bf-full">
+          <mat-label>Otros ingresos (Bs)</mat-label>
+          <input matInput appMonto formControlName="otrosIngresos" />
+        </mat-form-field>
+      </div>
+
+      <div>
+        <h3>Descuentos de ley (opcionales)</h3>
+        <mat-form-field appearance="outline" class="bf-full">
+          <mat-label>Aporte laboral (Bs)</mat-label>
+          <input matInput appMonto formControlName="aporteLaboral" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="bf-full">
+          <mat-label>RC-IVA (Bs)</mat-label>
+          <input matInput appMonto formControlName="rcIva" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="bf-full">
+          <mat-label>Otros descuentos de ley (Bs)</mat-label>
+          <input matInput appMonto formControlName="otrosDescuentosLey" />
+        </mat-form-field>
+      </div>
+    </div>
+
+    <h3>Descuento de préstamos</h3>
+    @if (pr.prestamos.length === 0) {
+    <p class="bf-nota">No tiene préstamos vigentes.</p>
+    } @else {
+    <table class="bf-prestamos">
+      <thead>
+        <tr>
+          <th>N°</th>
+          <th>A cuenta de</th>
+          <th class="bf-num">Saldo</th>
+          <th class="bf-num">Cuota</th>
+          <th class="bf-num">Descontar (Bs)</th>
+        </tr>
+      </thead>
+      <tbody formArrayName="descuentos">
+        @for (p of pr.prestamos; track p.id; let i = $index) {
+        <tr>
+          <td>{{ p.numero }}</td>
+          <td class="bf-truncar" [title]="p.descripcion">{{ p.descripcion }}</td>
+          <td class="bf-num">{{ p.saldo | number: '1.2-2' }}</td>
+          <td class="bf-num">
+            <button type="button" mat-button class="bf-link" (click)="usarSugerido(i, p)" title="Usar la cuota pactada">
+              {{ p.cuotaMensual | number: '1.2-2' }}
+            </button>
+          </td>
+          <td class="bf-num">
+            <input appMonto class="bf-input" [formControlName]="i"
+              [class.bf-input--error]="controlDescuento(i).invalid" />
+          </td>
+        </tr>
+        }
+      </tbody>
+    </table>
+    <p class="bf-nota">Puede ser mayor, menor o 0 respecto a la cuota (máximo el saldo de cada préstamo).</p>
+    }
+
+    <div class="bf-resumen">
+      <div><small>Total ganado</small><strong>{{ resumen().totalGanado | number: '1.2-2' }}</strong></div>
+      <div><small>Desc. de ley</small><strong>− {{ resumen().totalDescuentosLey | number: '1.2-2' }}</strong></div>
+      <div><small>Líquido pagable</small><strong>{{ resumen().liquidoPagable | number: '1.2-2' }}</strong></div>
+      <div><small>Desc. préstamos</small><strong>− {{ resumen().totalDescuentoPrestamos | number: '1.2-2' }}</strong></div>
+      <div class="bf-resumen__neto"><small>Neto a pagar (recibo)</small><strong>Bs {{ resumen().montoPagado | number: '1.2-2' }}</strong></div>
+    </div>
+    @if (errorResumen(); as err) {
+    <p class="bf-error"><mat-icon>error_outline</mat-icon> {{ err }}</p>
+    } @else if (resumen().montoPagado <= 0) {
+    <p class="bf-nota">Todo el sueldo va a la deuda: no se generará recibo.</p>
+    }
+
+    <div class="bf-grid">
+      <mat-form-field appearance="outline" class="bf-span3">
+        <mat-label>Concepto</mat-label>
+        <input matInput formControlName="concepto" maxlength="255" />
+        <mat-hint>Se arma solo con el periodo</mat-hint>
+        <mat-hint align="end">{{ f.concepto.value?.length ?? 0 }}/255</mat-hint>
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="bf-span3">
+        <mat-label>Observaciones (opcional)</mat-label>
+        <input matInput formControlName="observaciones" maxlength="255" />
+      </mat-form-field>
+    </div>
+    }
+  </form>
+
+  @if (prep()) {
+  <h3>Datos de pago del neto</h3>
+  <!-- 45 = "SUELDOS Y SALARIOS PERSONAL" (parametrica.destino_gasto). -->
+  <app-datos-pago-fields [form]="pago" [esEgreso]="true" [idDestinoPorDefecto]="45" />
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-stroked-button (click)="cancelar()" [disabled]="guardando()">Cancelar</button>
+  <button mat-flat-button color="primary" (click)="guardar()" [disabled]="guardando() || !prep() || !!errorResumen()">
+    @if (guardando()) {
+    <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
+    <span>Emitiendo...</span>
+    } @else {
+    <span>Emitir y pagar</span>
+    }
+  </button>
+</mat-dialog-actions>

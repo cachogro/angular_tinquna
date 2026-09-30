@@ -38,6 +38,45 @@ export const UiComponentsRoutes: Routes = [
       },
 
       {
+        path: 'promedios',
+        canActivate: [roleGuard],
+        data: { roles: [RolCodigo.ADMINISTRADOR, RolCodigo.OPERADOR] },
+        children: [
+          {
+            path: '',
+            loadComponent: () =>
+              import('./promedios/promedio-list.component').then(
+                (m) => m.PromedioListComponent,
+              ),
+          },
+          {
+            path: 'nuevo',
+            loadComponent: () =>
+              import('./promedios/promedio-form/promedio-form.component').then(
+                (m) => m.PromedioFormComponent,
+              ),
+          },
+          {
+            path: 'editar/:id',
+            loadComponent: () =>
+              import('./promedios/promedio-form/promedio-form.component').then(
+                (m) => m.PromedioFormComponent,
+              ),
+          },
+        ],
+      },
+
+      {
+        path: 'ventas-lote',
+        canActivate: [roleGuard],
+        data: { roles: [RolCodigo.ADMINISTRADOR, RolCodigo.OPERADOR] },
+        loadComponent: () =>
+          import('./ventas-lote/venta-lote-list.component').then(
+            (m) => m.VentaLoteListComponent,
+          ),
+      },
+
+      {
         path: 'reportes',
         loadComponent: () =>
           import('./reportes/reporte-recepcion-mineral.component').then(

@@ -1,0 +1,168 @@
+.fl-loading,
+.fl-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 40px 16px;
+  color: rgba(0, 0, 0, 0.45);
+  text-align: center;
+}
+
+.fl-empty mat-icon {
+  font-size: 40px;
+  width: 40px;
+  height: 40px;
+}
+
+.fl-loading {
+  flex-direction: row;
+}
+
+/* ===== Acciones ===== */
+.fl-acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+/* ===== Toolbar ===== */
+.fl-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: flex-start;
+  margin: 8px 0 16px;
+}
+
+.fl-toolbar__sel {
+  flex: 0 0 180px;
+}
+
+
+.fl-toolbar__clear {
+  margin-left: auto;
+}
+
+/* ===== Tabla ===== */
+.fl-tabla-scroll {
+  overflow: auto;
+  max-height: 560px;
+}
+
+.fl-tabla {
+  width: 100%;
+  min-width: 960px;
+}
+
+.fl-tabla .mat-mdc-header-row {
+  background: #0d6efd !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  letter-spacing: .2px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  height: 28px;
+}
+
+.fl-tabla .mat-mdc-header-cell {
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  font-weight: 600;
+  font-size: 10.5px;
+  letter-spacing: .2px;
+  padding: 2px 8px !important;
+}
+
+.fl-tabla .mat-mdc-row {
+  height: 30px;
+}
+
+.fl-tabla .mat-mdc-cell {
+  padding: 2px 8px !important;
+  font-size: 11.5px;
+}
+
+.fl-tabla .mat-mdc-row:hover {
+  background: color-mix(in srgb, var(--mat-sys-primary) 8%, transparent);
+  transition: background-color .2s ease;
+}
+
+.fl-tabla ::ng-deep .mat-mdc-icon-button {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  line-height: 28px;
+}
+
+.fl-tabla ::ng-deep .mat-mdc-icon-button .mat-mdc-button-touch-target {
+  width: 28px;
+  height: 28px;
+}
+
+.fl-tabla ::ng-deep .mat-mdc-icon-button .mat-icon {
+  font-size: 17px;
+  width: 17px;
+  height: 17px;
+  line-height: 17px;
+}
+
+.fl-num {
+  text-align: right;
+}
+
+.fl-neg {
+  color: #c62828;
+  font-weight: 600;
+}
+
+.fl-estado {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.fl-estado--pendiente {
+  background: color-mix(in srgb, #f9a825 18%, transparent);
+  color: #a06a00;
+}
+
+.fl-estado--rendido_parcial {
+  background: color-mix(in srgb, #1565c0 15%, transparent);
+  color: #1565c0;
+}
+
+.fl-estado--rendido_total {
+  background: color-mix(in srgb, #2e7d32 15%, transparent);
+  color: #2e7d32;
+}
+
+.fl-estado--rendido_en_exceso {
+  background: color-mix(in srgb, #ef6c00 18%, transparent);
+  color: #e65100;
+}
+
+.fl-reponer {
+  color: #e65100;
+  font-weight: 600;
+}
+
+.fl-estado--cerrado_con_deuda {
+  background: color-mix(in srgb, #c62828 15%, transparent);
+  color: #c62828;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 700px) {
+  .fl-toolbar__clear {
+    margin-left: 0;
+  }
+  .fl-acciones {
+    flex-wrap: wrap;
+  }
+}

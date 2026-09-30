@@ -21,7 +21,9 @@
 
         <mat-form-field appearance="outline">
           <mat-label>Vigencia desde</mat-label>
-          <input matInput type="date" formControlName="fechaVigenciaInicial" [min]="fechaMinima" />
+          <input matInput [matDatepicker]="pickerInicial" formControlName="fechaVigenciaInicial" [min]="fechaMinima" />
+          <mat-datepicker-toggle matSuffix [for]="pickerInicial"></mat-datepicker-toggle>
+          <mat-datepicker #pickerInicial></mat-datepicker>
           <mat-error *ngIf="form.get('fechaVigenciaInicial')?.hasError('required')">
             La fecha de inicio es obligatoria
           </mat-error>
@@ -29,7 +31,9 @@
 
         <mat-form-field appearance="outline">
           <mat-label>Vigencia hasta</mat-label>
-          <input matInput type="date" formControlName="fechaVigenciaFinal" [min]="fechaMinima" />
+          <input matInput [matDatepicker]="pickerFinal" formControlName="fechaVigenciaFinal" [min]="fechaMinima" />
+          <mat-datepicker-toggle matSuffix [for]="pickerFinal"></mat-datepicker-toggle>
+          <mat-datepicker #pickerFinal></mat-datepicker>
           <mat-error *ngIf="form.get('fechaVigenciaFinal')?.hasError('required')">
             La fecha final es obligatoria
           </mat-error>
@@ -123,7 +127,7 @@
     <!-- ==================== TABLA VIGENTE / HISTORIAL ==================== -->
     <mat-card class="tabla-card" *ngIf="form.get('idMineral')?.value">
       <mat-card-title>
-        {{ modoHistorico ? 'Tabla vigente el ' + formatearFecha(fechaConsultaControl.value) : 'Tabla vigente ahora' }}
+        {{ modoHistorico ? 'Tabla vigente el ' + (fechaConsultaControl.value | date: 'dd/MM/yyyy') : 'Tabla vigente ahora' }}
       </mat-card-title>
 
       <mat-card-content>
@@ -131,7 +135,9 @@
         <div class="filtro-historial">
           <mat-form-field appearance="outline" subscriptSizing="dynamic">
             <mat-label>Ver tabla vigente en fecha</mat-label>
-            <input matInput type="date" [formControl]="fechaConsultaControl" [max]="fechaMinima" />
+            <input matInput [matDatepicker]="pickerConsulta" [formControl]="fechaConsultaControl" [max]="fechaMinima" />
+            <mat-datepicker-toggle matSuffix [for]="pickerConsulta"></mat-datepicker-toggle>
+            <mat-datepicker #pickerConsulta></mat-datepicker>
           </mat-form-field>
           <button mat-stroked-button type="button" *ngIf="modoHistorico" (click)="limpiarFechaConsulta()">
             <mat-icon>today</mat-icon> Ver vigente ahora

@@ -1,0 +1,16 @@
+.dp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 14px;
+}
+.dp-grid mat-form-field {
+  width: 100%;
+}
+.dp-full {
+  grid-column: 1 / -1;
+}
+@media (max-width: 620px) {
+  .dp-grid {
+    grid-template-columns: 1fr;
+  }
+}

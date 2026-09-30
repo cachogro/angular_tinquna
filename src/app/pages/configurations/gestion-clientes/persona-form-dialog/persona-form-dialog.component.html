@@ -150,6 +150,21 @@
         }
       </mat-form-field>
 
+      <mat-form-field appearance="outline">
+        <mat-label>Salario mensual (Bs)</mat-label>
+        <input matInput appMonto formControlName="salarioMensual" />
+        <mat-hint>Base de su boleta de pago</mat-hint>
+        @if (f.salarioMensual.hasError('required') && f.salarioMensual.touched) {
+        <mat-error>Obligatorio</mat-error>
+        }
+        @if (f.salarioMensual.hasError('pattern') && f.salarioMensual.touched) {
+        <mat-error>Número con hasta 2 decimales</mat-error>
+        }
+        @if (f.salarioMensual.hasError('min') && f.salarioMensual.touched) {
+        <mat-error>Debe ser mayor a 0</mat-error>
+        }
+      </mat-form-field>
+
       <mat-form-field appearance="outline" class="persona-form__full">
         <mat-label>Dirección</mat-label>
         <input matInput formControlName="direccion" placeholder="Ej: Calle Sucre N° 120, Potosí" />

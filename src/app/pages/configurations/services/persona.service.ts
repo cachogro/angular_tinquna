@@ -124,4 +124,11 @@ export class PersonaService {
     }
     return this.actoresMinero$;
   }
+
+  /** Personas habilitadas para figurar como "autorizó" en un recibo. Sin
+   *  caché: quién está autorizado puede cambiar y se necesita fresco cada
+   *  vez que se abre el diálogo de recibo. */
+  listarPersonasAutorizadas(): Observable<PersonaCI[]> {
+    return this.http.get<PersonaCI[]>(`${this.baseUrl}/persona_ci/autorizadas`);
+  }
 }

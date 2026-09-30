@@ -39,7 +39,7 @@
       <mat-form-field appearance="outline" class="cf-toolbar__sel" subscriptSizing="dynamic">
         <mat-label>Moneda</mat-label>
         <mat-select [ngModel]="monedaSel()" (ngModelChange)="onMonedaChange($event)">
-          <mat-option value="BOB">Bs (BOB)</mat-option>
+          <mat-option value="BS">Bs</mat-option>
           <mat-option value="USD">$us (USD)</mat-option>
         </mat-select>
       </mat-form-field>
@@ -120,6 +120,15 @@
           <mat-icon>download</mat-icon>
           }
           Descargar Excel
+        </button>
+        <button mat-stroked-button [disabled]="descargandoExcelCompleto()" (click)="descargarExcelCompleto()"
+          matTooltip="Caja en Bs, caja en $us y todas las cuentas bancarias del mes">
+          @if (descargandoExcelCompleto()) {
+          <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
+          } @else {
+          <mat-icon>download</mat-icon>
+          }
+          Descargar Excel completo
         </button>
         @if (p.estado === 'ABIERTO') {
         <button mat-stroked-button (click)="cerrarMes()">
@@ -205,13 +214,13 @@
           </ng-container>
 
           <ng-container matColumnDef="fecha">
-            <th mat-header-cell *matHeaderCellDef>Fecha</th>
-            <td mat-cell *matCellDef="let m">{{ fechaFmt(m.fecha) }}</td>
+            <th mat-header-cell *matHeaderCellDef class="col-fecha">Fecha</th>
+            <td mat-cell *matCellDef="let m" class="col-fecha">{{ fechaFmt(m.fecha) }}</td>
           </ng-container>
 
           <ng-container matColumnDef="nroComprobante">
-            <th mat-header-cell *matHeaderCellDef>N° comprobante</th>
-            <td mat-cell *matCellDef="let m">
+            <th mat-header-cell *matHeaderCellDef class="nro-cpte">N° comprobante</th>
+            <td mat-cell *matCellDef="let m" class="nro-cpte">
               @if (m.facturaRecibo) {
               <span>{{ m.facturaRecibo }}</span>
               }
@@ -230,6 +239,9 @@
               }
               @if (m.idRecibo) {
               <mat-icon class="cf-recibo-ico" matTooltip="Generado desde un recibo">receipt</mat-icon>
+              }
+              @if (m.idTraspaso) {
+              <mat-icon class="cf-traspaso-ico" matTooltip="Generado desde un traspaso">sync_alt</mat-icon>
               }
               {{ m.entregaFondosA || '—' }}
             </td>

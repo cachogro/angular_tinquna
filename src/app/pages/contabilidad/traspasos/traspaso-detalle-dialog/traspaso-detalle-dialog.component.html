@@ -1,0 +1,103 @@
+<h2 mat-dialog-title>
+  @if (traspaso(); as t) {
+  <mat-icon [class.td-icono--deposito]="t.tipo === 'DEPOSITO'" [class.td-icono--retiro]="t.tipo === 'RETIRO'">
+    {{ t.tipo === 'DEPOSITO' ? 'call_made' : 'call_received' }}
+  </mat-icon>
+  {{ tipoLabel(t) }}
+  } @else {
+  Detalle del traspaso
+  }
+</h2>
+
+<mat-dialog-content class="td-content">
+  @if (cargando()) {
+  <div class="td-loading">
+    <mat-spinner diameter="32"></mat-spinner>
+    <span>Cargando traspaso...</span>
+  </div>
+  } @else if (traspaso(); as t) {
+  <div class="td-tiles">
+    <div class="td-tile">
+      <small>Estado</small>
+      <strong [class.td-anulado]="t.activo === false">{{ t.activo === false ? 'Anulado' : 'Vigente' }}</strong>
+    </div>
+    <div class="td-tile">
+      <small>Fecha</small>
+      <strong>{{ fechaFmt(t.fecha) }}</strong>
+    </div>
+    <div class="td-tile">
+      <small>Registrado</small>
+      <strong>{{ fechaHoraFmt(t.fechaRegistro) }}</strong>
+      @if (t.usuarioRegistro) {
+      <small>por {{ t.usuarioRegistro }}</small>
+      }
+    </div>
+    <div class="td-tile">
+      <small>Autorizó</small>
+      <strong>{{ nombreAutorizo(t) }}</strong>
+    </div>
+    <div class="td-tile">
+      <small>Origen</small>
+      <strong>{{ origen(t) }}</strong>
+    </div>
+    <div class="td-tile">
+      <small>Destino</small>
+      <strong>{{ destino(t) }}</strong>
+    </div>
+    <div class="td-tile">
+      <small>Destino del gasto</small>
+      <strong>{{ t.destinoGasto?.nombre || '—' }}</strong>
+    </div>
+    <div class="td-tile td-tile--destacado">
+      <small>Monto</small>
+      <strong>{{ moneda(t) }} {{ num(t.monto) | number:'1.2-2' }}</strong>
+    </div>
+  </div>
+
+  <p class="td-linea"><strong>Concepto:</strong> {{ t.concepto }}</p>
+  <p class="td-linea"><strong>N° comprobante:</strong> <span class="nro-cpte">{{ t.nroComprobante || '—' }}</span></p>
+
+  @if (t.movimientosCaja.length) {
+  <h3>Movimiento en la caja de flujo</h3>
+  <div class="td-mov-lista">
+    @for (mc of t.movimientosCaja; track mc.id) {
+    <div class="td-mov" [class.td-mov--inactivo]="mc.activo === false">
+      <span class="td-chip" [class.td-chip--egreso]="num(mc.egreso) > 0">
+        {{ num(mc.ingreso) > 0 ? 'INGRESO' : 'EGRESO' }}
+      </span>
+      <span>
+        @if (mc.folio) { Folio {{ mc.folio }} · }
+        {{ fechaFmt(mc.fecha) }} ·
+        {{ mc.moneda }} {{ (num(mc.ingreso) > 0 ? num(mc.ingreso) : num(mc.egreso)) | number:'1.2-2' }}
+        · Saldo {{ num(mc.saldo) | number:'1.2-2' }}
+      </span>
+      @if (mc.activo === false) { <small>(anulado)</small> }
+    </div>
+    }
+  </div>
+  }
+
+  @if (t.movimientosBanco.length) {
+  <h3>Movimiento en la libreta bancaria</h3>
+  <div class="td-mov-lista">
+    @for (mb of t.movimientosBanco; track mb.id) {
+    <div class="td-mov" [class.td-mov--inactivo]="mb.activo === false">
+      <span class="td-chip" [class.td-chip--egreso]="num(mb.debe) > 0">
+        {{ num(mb.haber) > 0 ? 'HABER' : 'DEBE' }}
+      </span>
+      <span>
+        Folio {{ mb.folio }} · {{ fechaFmt(mb.fecha) }} ·
+        {{ moneda(t) }} {{ (num(mb.haber) > 0 ? num(mb.haber) : num(mb.debe)) | number:'1.2-2' }}
+        · Saldo {{ num(mb.saldo) | number:'1.2-2' }}
+      </span>
+      @if (mb.activo === false) { <small>(anulado)</small> }
+    </div>
+    }
+  </div>
+  }
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-flat-button color="primary" (click)="cerrar()">Cerrar</button>
+</mat-dialog-actions>

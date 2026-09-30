@@ -10,12 +10,10 @@ import {
   ValidationErrors,
   Validators,
 } from '@angular/forms';
+import { montoDosDecimales } from '../../../../shared/utils/numero.util';
+import { MontoInputDirective } from '../../../../shared/directives/monto-input.directive';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
-import {
-  MAT_DATE_LOCALE,
-  provideNativeDateAdapter,
-} from '@angular/material/core';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import {
   MAT_DIALOG_DATA,
@@ -41,7 +39,8 @@ import {
 } from '../../models/persona.models';
 import { PersonaService } from '../../services/persona.service';
 import { ActorProductivoMineroFormDialogComponent } from '../../parametricas/actor-productivo-minero/actor-productivo-minero-form-dialog.component';
-import { PersonaTipoFormDialogComponent } from './persona-tipo-form-dialog.component';
+import { PersonaTipoFormDialogComponent } from './persona-tipo-form-dialog/persona-tipo-form-dialog.component';
+import { FechaInputDirective } from '../../../../shared/directives/fecha-input.directive';
 
 export interface PersonaFormDialogData {
   persona: PersonaCI | null; // null = crear, con valor = editar
@@ -53,6 +52,8 @@ export interface PersonaFormDialogData {
 @Component({
   selector: 'app-persona-form-dialog',
   imports: [
+    FechaInputDirective,
+    MontoInputDirective,
     CommonModule,
     ReactiveFormsModule,
     MatDialogModule,
@@ -65,10 +66,6 @@ export interface PersonaFormDialogData {
     MatAutocompleteModule,
     MatTooltipModule,
     MatDatepickerModule,
-  ],
-  providers: [
-    provideNativeDateAdapter(),
-    { provide: MAT_DATE_LOCALE, useValue: 'es-BO' },
   ],
   templateUrl: './persona-form-dialog.component.html',
   styleUrl: './persona-form-dialog.component.scss',
@@ -133,6 +130,8 @@ export class PersonaFormDialogComponent implements OnInit {
     fechaNacimiento: new FormControl<Date | null>(null),
     fechaInicioLaboral: new FormControl<Date | null>(null),
     direccion: new FormControl(''),
+    // Salario mensual (Bs): base de la boleta de pago del personal.
+    salarioMensual: new FormControl<number | string | null>(null),
   });
 
   /** Lista filtrada que se muestra en el autocomplete: al enfocar (valor vacío) muestra todo el catálogo */
@@ -188,21 +187,29 @@ export class PersonaFormDialogComponent implements OnInit {
   private aplicarValidadoresRegistroEmpresa(esEmpresa: boolean): void {
     this.esRegistroPersonalEmpresa.set(esEmpresa);
     const validadores = esEmpresa ? [Validators.required] : [];
-    const { fechaNacimiento, fechaInicioLaboral, direccion } = this.form.controls;
+    const { fechaNacimiento, fechaInicioLaboral, direccion, salarioMensual } =
+      this.form.controls;
 
     fechaNacimiento.setValidators(validadores);
     fechaInicioLaboral.setValidators(validadores);
     direccion.setValidators(validadores);
+    salarioMensual.setValidators(
+      esEmpresa
+        ? [Validators.required, montoDosDecimales, Validators.min(0.01)]
+        : [],
+    );
 
     if (!esEmpresa) {
       fechaNacimiento.reset(null, { emitEvent: false });
       fechaInicioLaboral.reset(null, { emitEvent: false });
       direccion.reset('', { emitEvent: false });
+      salarioMensual.reset(null, { emitEvent: false });
     }
 
     fechaNacimiento.updateValueAndValidity({ emitEvent: false });
     fechaInicioLaboral.updateValueAndValidity({ emitEvent: false });
     direccion.updateValueAndValidity({ emitEvent: false });
+    salarioMensual.updateValueAndValidity({ emitEvent: false });
   }
 
   private filtrarActores(
@@ -390,6 +397,10 @@ export class PersonaFormDialogComponent implements OnInit {
         fechaNacimiento: this.parseFecha(p.fechaNacimiento),
         fechaInicioLaboral: this.parseFecha(p.fechaInicioLaboral),
         direccion: p.direccion ?? '',
+        salarioMensual:
+          p.salarioMensual != null && p.salarioMensual !== ''
+            ? Number(p.salarioMensual)
+            : null,
       });
       // Si el actor patcheado es la propia empresa, activa ya sus validadores
       // (el valueChanges de patchValue lo dispara, pero lo forzamos por si
@@ -476,6 +487,7 @@ export class PersonaFormDialogComponent implements OnInit {
       request.fechaNacimiento = this.formatFecha(v.fechaNacimiento!);
       request.fechaInicioLaboral = this.formatFecha(v.fechaInicioLaboral!);
       request.direccion = (v.direccion ?? '').trim();
+      request.salarioMensual = Number(v.salarioMensual);
     }
 
     this.personaService.guardarPersona(request).subscribe({

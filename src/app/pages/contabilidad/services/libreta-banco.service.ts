@@ -7,6 +7,7 @@ import {
   GuardarMovimientoBancoRequest,
   LibretaBancoResponse,
   MovimientoBanco,
+  MovimientoBancoDetalle,
   PeriodoBanco,
   PeriodoBancoAccionRequest,
 } from '../models/libreta-banco.models';
@@ -27,6 +28,29 @@ export class LibretaBancoService {
     if (gestion != null) params = params.set('gestion', gestion);
     if (mes != null) params = params.set('mes', mes);
     return this.http.get<LibretaBancoResponse>(this.baseUrl, { params });
+  }
+
+  /** Excel de la libreta. Sin `gestion` sale toda la historia de la cuenta;
+   *  `mes` requiere `gestion`. */
+  descargarExcel(
+    idCuentaBancaria: number,
+    gestion?: number | null,
+    mes?: number | null,
+  ): Observable<Blob> {
+    let params = new HttpParams().set('idCuentaBancaria', idCuentaBancaria);
+    if (gestion != null) {
+      params = params.set('gestion', gestion);
+      if (mes != null) params = params.set('mes', mes);
+    }
+    return this.http.get(`${this.baseUrl}/excel`, {
+      params,
+      responseType: 'blob',
+    });
+  }
+
+  /** Movimiento completo para el visor (la bandeja trae solo lo necesario). */
+  obtener(id: string): Observable<MovimientoBancoDetalle> {
+    return this.http.get<MovimientoBancoDetalle>(`${this.baseUrl}/detalle/${id}`);
   }
 
   /** Todos los períodos de una cuenta (mensuales y de gestión), año más nuevo primero. */

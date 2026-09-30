@@ -1,0 +1,17 @@
+.tipo-rol-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 380px;
+}
+.btn-spinner {
+  display: inline-block;
+}
+.btn-spinner ::ng-deep circle {
+  stroke: currentColor;
+}
+@media (max-width: 480px) {
+  .tipo-rol-form {
+    min-width: 0;
+  }
+}

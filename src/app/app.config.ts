@@ -28,6 +28,8 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 // auth interceptors <-- NUEVO
 import { authInterceptor } from './core/auth/interceptors/auth.interceptor';
 import { errorInterceptor } from './core/auth/interceptors/error.interceptor';
+import { loadingInterceptor } from './core/loading/loading.interceptor';
+import { provideFechaDdMmAaaa } from './shared/utils/fecha-date-adapter';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -42,10 +44,12 @@ export const appConfig: ApplicationConfig = {
     ),
     provideHttpClient(
       withInterceptorsFromDi(),
-      withInterceptors([authInterceptor, errorInterceptor]), // <-- NUEVO (el orden importa: auth primero, error después)
+      withInterceptors([loadingInterceptor, authInterceptor, errorInterceptor]), // el orden importa: loading primero, luego auth y error
     ),
     provideClientHydration(),
     provideAnimationsAsync(),
+    // Fechas dd/mm/aaaa en todos los datepicker del sistema.
+    provideFechaDdMmAaaa(),
     importProvidersFrom(
       FormsModule,
       ReactiveFormsModule,

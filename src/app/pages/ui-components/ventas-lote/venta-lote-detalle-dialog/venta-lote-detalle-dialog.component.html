@@ -1,0 +1,156 @@
+<h2 mat-dialog-title>
+  @if (venta(); as v) {
+  Venta del lote {{ v.codigoLote }} — {{ v.cliente?.nombre }}
+  } @else {
+  Venta de lote
+  }
+</h2>
+
+<mat-dialog-content>
+  @if (cargando() && !venta()) {
+  <div class="vd-loading">
+    <mat-spinner diameter="28"></mat-spinner>
+    <span>Cargando venta...</span>
+  </div>
+  } @else if (venta(); as v) {
+  <div class="vd-cabecera">
+    <span>Promedio <strong>{{ v.promedioMineral?.codigo }}</strong></span>
+    <span>Vendido el <strong>{{ fechaFmt(v.fechaVenta) }}</strong></span>
+    <span>Moneda <strong>{{ v.moneda === 'USD' ? '$us (exportación)' : 'Bs' }}</strong>
+      @if (v.moneda === 'USD' && v.tipoCambio) { · T.C. {{ v.tipoCambio | number:'1.2-4' }} }
+    </span>
+    <span class="vd-estado" [class.vd-estado--liq]="v.estado === 'LIQUIDADA'"
+      [class.vd-estado--pagada]="v.pagada" [class.vd-estado--anulada]="v.estado === 'ANULADA'">
+      {{ v.pagada ? 'PAGADA' : v.estado }}
+    </span>
+  </div>
+
+  <div class="vd-tiles">
+    <div class="vd-tile">
+      <small>Efectivo invertido</small>
+      <strong>Bs {{ v.totalEfectivoInvertido | number:'1.2-2' }}</strong>
+    </div>
+    <div class="vd-tile">
+      <small>Cobrado ({{ v.cantidadCobros }} {{ v.cantidadCobros === 1 ? 'recibo' : 'recibos' }})</small>
+      <strong>Bs {{ v.cobradoBolivianos | number:'1.2-2' }}</strong>
+      @if (v.cobradoUsd > 0) {
+      <small>incluye $us {{ v.cobradoUsd | number:'1.2-2' }}</small>
+      }
+    </div>
+    <div class="vd-tile">
+      <small>Venta (liquidación neta)</small>
+      @if (v.montoVentaBolivianos != null) {
+      <strong>Bs {{ v.montoVentaBolivianos | number:'1.2-2' }}</strong>
+      @if (v.moneda === 'USD') {
+      <small>$us {{ v.montoVenta | number:'1.2-2' }} · {{ fechaFmt(v.fechaLiquidacion) }}</small>
+      } @else {
+      <small>{{ fechaFmt(v.fechaLiquidacion) }}</small>
+      }
+      } @else {
+      <strong class="vd-apagado">Sin liquidar</strong>
+      }
+    </div>
+    <div class="vd-tile">
+      <small>{{ (v.porCobrarBolivianos ?? 0) < 0 ? 'Saldo a favor del cliente' : 'Por cobrar' }}</small>
+      @if (v.porCobrarBolivianos != null) {
+      <strong [class.vd-negativo]="v.porCobrarBolivianos < 0">
+        Bs {{ (v.porCobrarBolivianos < 0 ? -v.porCobrarBolivianos : v.porCobrarBolivianos) | number:'1.2-2' }}
+      </strong>
+      } @else {
+      <strong class="vd-apagado">—</strong>
+      }
+    </div>
+    <div class="vd-tile">
+      <small>Utilidad</small>
+      @if (v.utilidadBolivianos != null) {
+      <strong [class.vd-negativo]="v.utilidadBolivianos < 0" [class.vd-positivo]="v.utilidadBolivianos >= 0">
+        Bs {{ v.utilidadBolivianos | number:'1.2-2' }}
+      </strong>
+      } @else {
+      <strong class="vd-apagado">—</strong>
+      }
+    </div>
+  </div>
+
+  <div class="vd-avance">
+    <small>
+      Cobrado {{ avance(v) | number:'1.0-1' }}% de
+      {{ v.estado === 'LIQUIDADA' ? 'la venta' : 'lo invertido' }}
+    </small>
+    <mat-progress-bar mode="determinate" [value]="avance(v)"></mat-progress-bar>
+    @if (v.pendienteBolivianos > 0) {
+    <small class="vd-apagado">+ Bs {{ v.pendienteBolivianos | number:'1.2-2' }} en recibos borrador (aún sin cobrar)</small>
+    }
+  </div>
+
+  <div class="vd-acciones">
+    @if (puedeCobrar(v)) {
+    <button mat-flat-button color="primary" (click)="registrarCobro(v)">
+      <mat-icon>call_received</mat-icon>
+      {{ v.estado === 'LIQUIDADA' ? 'Registrar pago' : 'Registrar anticipo' }}
+    </button>
+    }
+    @if (v.estado === 'ABIERTA') {
+    <button mat-stroked-button (click)="liquidar(v)">
+      <mat-icon>gavel</mat-icon> Registrar liquidación
+    </button>
+    }
+    @if (v.estado === 'LIQUIDADA') {
+    <button mat-stroked-button (click)="reabrir(v)">
+      <mat-icon>lock_open</mat-icon> Reabrir liquidación
+    </button>
+    }
+  </div>
+
+  <h3 class="vd-sub">Cobros del lote</h3>
+  @if (!(v.recibos?.length)) {
+  <p class="vd-apagado">Todavía no hay anticipos ni pagos registrados.</p>
+  } @else {
+  <div class="vd-scroll">
+    <table class="vd-tabla">
+      <thead>
+        <tr>
+          <th>Recibo</th>
+          <th>Fecha</th>
+          <th>Forma de pago</th>
+          <th>Concepto</th>
+          <th class="vd-num">Monto</th>
+          <th class="vd-num">En Bs</th>
+          <th>Estado</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (r of v.recibos; track r.id) {
+        <tr [class.vd-anulado]="r.estado === 'ANULADO'">
+          <td><strong>{{ codigoRecibo(r) }}</strong></td>
+          <td>{{ fechaFmt(r.fecha) }}</td>
+          <td>
+            {{ r.formaPago?.nombre ?? '—' }}
+            @if (r.cuentaBancaria) { <small class="vd-apagado"> · {{ r.cuentaBancaria.numeroCuenta }}</small> }
+          </td>
+          <td>{{ r.concepto }}</td>
+          <td class="vd-num">{{ r.moneda === 'USD' ? '$us' : 'Bs' }} {{ r.montoTotal | number:'1.2-2' }}</td>
+          <td class="vd-num">{{ montoBs(r) | number:'1.2-2' }}</td>
+          <td>{{ r.estado }}</td>
+          <td>
+            <button mat-icon-button matTooltip="Ver PDF" (click)="verPdf(r)">
+              <mat-icon>picture_as_pdf</mat-icon>
+            </button>
+          </td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  }
+
+  @if (v.observaciones) {
+  <p class="vd-obs"><small>Observaciones:</small> {{ v.observaciones }}</p>
+  }
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-stroked-button (click)="cerrar()">Cerrar</button>
+</mat-dialog-actions>

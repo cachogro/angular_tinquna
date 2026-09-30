@@ -1,5 +1,10 @@
 // src/app/pages/ui-components/models/valorizacion-mineral.models.ts
-import { LeyUnidad, RegistroMineral } from './registro-mineral.models';
+import {
+  CodificacionCatalogo,
+  LeyUnidad,
+  ReciboAnticipoResumen,
+  RegistroMineral,
+} from './registro-mineral.models';
 import {
   DetalleAporte,
   EntidadAporte,
@@ -50,6 +55,12 @@ export interface ValorizacionMineral {
   uuid: string;
   idRecepcionMineral: string;
   recepcionMineral?: RegistroMineral;
+  /** Tipo con el que se valoriza cuando difiere del de la recepción (ej. una
+   *  recepción ICC que en laboratorio salió con más minerales y se valoriza
+   *  como BCL). null = se valoriza con la codificación de la recepción. El
+   *  código de operación (ICC-xxx) no cambia. Ver codificacionEfectiva. */
+  idCodificacionValorizacion?: string | null;
+  codificacionValorizacion?: CodificacionCatalogo | null;
   idLaboratorio?: string | null;
   laboratorio?: unknown | null; // TODO: tipar cuando exista catálogo de laboratorios
   idEstadoValorizacion: number;
@@ -87,6 +98,21 @@ export interface ValorizacionMineral {
   calculoAportes: CalculoAporteValorizacion[];
   /** Solo BCL: Gastos de Tratamiento y Penalidades ya guardados. */
   calculos?: CalculoValorizacion[];
+  /** Recibo del pago del saldo (Líquido Pagable): el back devuelve solo el
+   *  vigente (BORRADOR o PROCESADO). Vacío + VALORIZADO + saldo > 0 = falta
+   *  generarlo (ver recibo-valorizacion.util). */
+  recibos?: ReciboAnticipoResumen[];
+}
+
+/** Codificación con la que realmente se valoriza: la elegida en la
+ *  valorización si hay una, si no la de la recepción. Decide fórmulas,
+ *  minerales esperados, formato del PDF y en qué lista de promedios cae. */
+export function codificacionEfectiva(
+  v: ValorizacionMineral | null | undefined,
+): CodificacionCatalogo | null {
+  return (
+    v?.codificacionValorizacion ?? v?.recepcionMineral?.codificacion ?? null
+  );
 }
 
 /** Body para crear el borrador de valorización a partir de una recepción de mineral. */
@@ -202,6 +228,10 @@ export interface CalculoValorizacionRequest {
 
 export interface ActualizarValorizacionRequest {
   idLaboratorio?: number;
+  /** Cambia el tipo con el que se valoriza (ver codificacionEfectiva). null
+   *  o el mismo id de la recepción vuelve a la original. El back lo rechaza
+   *  si la valorización ya está en un promedio. */
+  idCodificacionValorizacion?: string | null;
   idEstadoValorizacion?: number;
   fechaValorizacion?: string; // 'YYYY-MM-DD'
   pesoBrutoHumedoKilogramos?: number;

@@ -197,6 +197,18 @@
             }
           </mat-form-field>
 
+          <mat-form-field appearance="outline">
+            <mat-label>Lugar de acopio</mat-label>
+            <mat-select formControlName="lugarAcopio">
+              @for (lugar of lugaresAcopio(); track lugar.id) {
+              <mat-option [value]="lugar.descripcion">{{ lugar.descripcion }}</mat-option>
+              }
+            </mat-select>
+            @if (f.lugarAcopio.hasError('required') && f.lugarAcopio.touched) {
+            <mat-error>Selecciona un lugar de acopio</mat-error>
+            }
+          </mat-form-field>
+
         </div>
 
         <!-- Sección 4: Observaciones -->

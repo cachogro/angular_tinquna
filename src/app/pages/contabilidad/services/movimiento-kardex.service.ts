@@ -14,12 +14,18 @@ export class MovimientoKardexService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${APP_CONFIG.apiUrl}/contabilidad/movimiento-kardex`;
 
-  /** Movimientos de un kardex puntual, ordenados por fecha, + el kardex
-   *  (con su `saldoActual` = "TOTAL ANTICIPOS POR COBRAR"). */
-  listar(idKardex: string): Observable<MovimientosKardexResponse> {
-    return this.http.get<MovimientosKardexResponse>(this.baseUrl, {
-      params: new HttpParams().set('idKardex', idKardex),
-    });
+  /** Movimientos de un kardex puntual, paginados y con la última línea
+   *  primero, + el kardex (con su `saldoActual` = "TOTAL ANTICIPOS POR COBRAR"). */
+  listar(
+    idKardex: string,
+    page = 1,
+    limit = 10,
+  ): Observable<MovimientosKardexResponse> {
+    const params = new HttpParams()
+      .set('idKardex', idKardex)
+      .set('page', page)
+      .set('limit', limit);
+    return this.http.get<MovimientosKardexResponse>(this.baseUrl, { params });
   }
 
   /** Sin `id` crea, con `id` edita. Recalcula el saldo del kardex entero.

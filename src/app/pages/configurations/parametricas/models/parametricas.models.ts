@@ -278,6 +278,73 @@ export interface ActoresProductivosMinerosPaginados {
   limit: number;
 }
 
+// ==========================================================
+// CLIENTE (compradores del mineral)
+// ==========================================================
+
+export interface Cliente {
+  id: string;
+  nombre: string;
+  direccion?: string | null;
+  telefono?: string | null;
+  idMunicipio?: number | null;
+  municipio?: Municipio;
+  /** Reutiliza el mismo catálogo que ActorProductivoMinero — es solo una
+   *  etiqueta, opcional, no lo convierte en proveedor. */
+  idTipoActorProductivoMinero?: number | string | null;
+  tipoActorProductivoMinero?: TipoActorProductivoMinero;
+  nit?: string | null;
+  observaciones?: string | null;
+  /** Fecha de inicio de operaciones del cliente con la empresa, "YYYY-MM-DD".
+   *  Obligatoria en el back (columna NOT NULL); si no se manda, el back la
+   *  completa con la fecha actual — pero para migrar el histórico del Excel
+   *  hay que mandar la fecha real, por eso el front la exige siempre. */
+  fechaInicioOperaciones: string;
+  activo?: boolean;
+  usuarioUltimaModificacion?: string | null;
+  fechaUltimaModificacion?: string | null;
+  fechaRegistro?: string;
+}
+
+/** POST /parametricas/cliente — sin `id` crea, con `id` actualiza. A diferencia
+ *  de otras entidades de este módulo, el back NO hace upsert parcial: `nombre`
+ *  y `direccion` son siempre obligatorios (incluso al editar) y el resto de
+ *  campos se sobreescriben completos con lo que venga en el request (si no
+ *  se manda uno, queda vacío) — por eso el diálogo siempre reenvía el
+ *  formulario completo, no solo lo que cambió. */
+export interface GuardarClienteRequest {
+  id?: string;
+  nombre: string;
+  direccion: string;
+  telefono?: string;
+  idMunicipio?: number;
+  idTipoActorProductivoMinero?: number | string;
+  nit?: string;
+  observaciones?: string;
+  /** "YYYY-MM-DD". Obligatoria en el front aunque el back la trate como
+   *  opcional (default: hoy) — necesaria para migrar el histórico del Excel. */
+  fechaInicioOperaciones: string;
+}
+
+export interface FiltrosCliente {
+  page: number;
+  limit: number;
+  busqueda?: string;
+  activo?: boolean;
+  /** Campo por el que se ordena. Por defecto 'id' */
+  orderBy?: 'id' | 'nombre';
+  /** Por defecto 'DESC' (más nuevos primero) */
+  orderDirection?: 'ASC' | 'DESC';
+}
+
+export interface ClientesPaginados {
+  data: Cliente[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages?: number;
+}
+
 export interface Laboratorio {
   id: string;
   nombre: string;
@@ -300,18 +367,29 @@ export interface GuardarLaboratorioRequest {
 // ENTIDAD FINANCIERA (banco / entidad + sus cuentas)
 // ==========================================================
 
-export type MonedaCuenta = 'BOB' | 'USD';
+/** Moneda en todo el sistema (cuentas, caja, recibo, kardex, traspasos):
+ *  "BS" o "USD". Desde la migración 067 el back ya no acepta "BOB" (400). */
+export type MonedaCuenta = 'BS' | 'USD';
 
-/** Etiqueta de moneda para mostrar al usuario: "Bs" en vez del código ISO "BOB". */
+/** Alias histórico: las cuentas bancarias ya usaban "BS"/"USD". */
+export type MonedaCuentaBancaria = MonedaCuenta;
+
+export const SIMBOLO_MONEDA: Record<MonedaCuenta, string> = {
+  BS: 'Bs',
+  USD: '$us',
+};
+
+/** Etiqueta de moneda para mostrar al usuario: "Bs" o "$us". */
 export function etiquetaMonedaCuenta(moneda: MonedaCuenta): string {
-  return moneda === 'BOB' ? 'Bs' : moneda;
+  return SIMBOLO_MONEDA[moneda] ?? moneda;
 }
 
 export interface CuentaFinanciera {
   id: number;
   idEntidadFinanciera?: number;
+  /** Máx. 40 caracteres; único dentro del banco (409 si se repite). */
   numeroCuenta: string;
-  moneda: MonedaCuenta;
+  moneda: MonedaCuentaBancaria;
   alias?: string | null;
   /** Saldo de apertura de la cuenta para la libreta de bancos (string tipo "0.00"). */
   saldoInicial?: string | null;
@@ -341,7 +419,7 @@ export interface EntidadFinanciera {
 export interface GuardarCuentaFinancieraRequest {
   id?: number;
   numeroCuenta: string;
-  moneda: MonedaCuenta;
+  moneda: MonedaCuentaBancaria;
   alias?: string;
   /** Solo se manda cuando se configura/edita el saldo de apertura. */
   saldoInicial?: number;
@@ -483,6 +561,13 @@ export interface FormaPago {
   activo?: boolean;
 }
 
+/** parametrica.lugar_acopio (solo lectura) */
+export interface LugarAcopio {
+  id: number;
+  descripcion: string;
+  activo: boolean;
+}
+
 /** parametrica.tipo_movimiento_kardex */
 export interface TipoMovimientoKardex {
   id: number;
@@ -505,9 +590,45 @@ export interface KardexSubcuenta {
  *  `esEgreso: true` → se ofrece en recibos de EGRESO; `false` → en INGRESO. */
 export interface DestinoGasto {
   id: number;
+  /** Único (sin distinguir mayúsculas); repetido -> 409. */
   nombre: string;
   esEgreso: boolean;
   activo?: boolean;
+  usuarioRegistro?: string | null;
+  usuarioUltimaModificacion?: string | null;
+  fechaRegistro?: string | null;
+  fechaUltimaModificacion?: string | null;
+}
+
+export interface GuardarDestinoGastoRequest {
+  id?: number;
+  nombre: string;
+  esEgreso: boolean;
+}
+
+// ==========================================================
+// CODIFICACIÓN DE LOTE (Comercio interno — promedios)
+// ==========================================================
+
+export interface CodificacionLoteParam {
+  /** bigint: llega como string. */
+  id: string;
+  /** Único (sin distinguir mayúsculas); el back lo guarda en MAYÚSCULAS. */
+  codigo: string;
+  nombre: string;
+  /** bigint: llega como string. Arranca en "0"; editar no lo toca. */
+  ultimoCorrelativo: string;
+  activo: boolean;
+  usuarioRegistro?: string | null;
+  usuarioUltimaModificacion?: string | null;
+  fechaRegistro?: string | null;
+  fechaUltimaModificacion?: string | null;
+}
+
+export interface GuardarCodificacionLoteRequest {
+  id?: string | number;
+  codigo: string;
+  nombre: string;
 }
 
 // ==========================================================
@@ -520,9 +641,9 @@ export interface Caja {
   /** Se guarda en MAYÚSCULAS. Único (case-insensitive). */
   nombre: string;
   /** String tipo "0.00": saldo con el que arranca la caja en bolivianos. */
-  saldoInicialBob: string;
-  /** "YYYY-MM-DD"; null mientras no se aperturó la caja en BOB. */
-  fechaSaldoInicialBob: string | null;
+  saldoInicialBs: string;
+  /** "YYYY-MM-DD"; null mientras no se aperturó la caja en BS. */
+  fechaSaldoInicialBs: string | null;
   saldoInicialUsd: string;
   fechaSaldoInicialUsd: string | null;
   activo?: boolean;
@@ -535,8 +656,8 @@ export interface Caja {
 export interface GuardarCajaRequest {
   id?: number;
   nombre: string;
-  saldoInicialBob?: number;
-  fechaSaldoInicialBob?: string;
+  saldoInicialBs?: number;
+  fechaSaldoInicialBs?: string;
   saldoInicialUsd?: number;
   fechaSaldoInicialUsd?: string;
 }

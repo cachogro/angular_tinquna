@@ -1,0 +1,172 @@
+<h2 mat-dialog-title>
+  {{ esEdicion ? 'Editar movimiento' : 'Nuevo movimiento' }}
+</h2>
+
+<mat-dialog-content>
+  <form [formGroup]="form" class="mov-form">
+    <div class="mov-form__row">
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha</mat-label>
+        <input matInput class="input-fecha" [matDatepicker]="picker" formControlName="fecha" />
+        <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+        <mat-datepicker #picker></mat-datepicker>
+        @if (f.fecha.hasError('required') && f.fecha.touched) {
+        <mat-error>Obligatorio</mat-error>
+        }
+        <mat-hint>Define el mes y la gestión</mat-hint>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Tipo</mat-label>
+        <mat-select formControlName="tipo">
+          <mat-option value="DEBE">DEBE — Egreso / salida</mat-option>
+          <mat-option value="HABER">HABER — Ingreso / entrada</mat-option>
+        </mat-select>
+        @if (f.tipo.hasError('required') && f.tipo.touched) {
+        <mat-error>Obligatorio</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Monto (Bs)</mat-label>
+        <input
+          matInput
+          type="text"
+          inputmode="decimal"
+          class="mov-input-derecha"
+          formControlName="monto"
+          (keydown)="restringirEntradaNumerica($event)"
+        />
+        @if (f.monto.hasError('required') && f.monto.touched) {
+        <mat-error>Obligatorio</mat-error>
+        }
+        @if (f.monto.hasError('pattern') && f.monto.touched) {
+        <mat-error>Máximo 2 decimales</mat-error>
+        }
+        @if (f.monto.hasError('min') && f.monto.touched) {
+        <mat-error>Debe ser mayor a 0</mat-error>
+        }
+      </mat-form-field>
+    </div>
+
+    <mat-form-field appearance="outline" class="mov-form__full">
+      <mat-label>Concepto</mat-label>
+      <input matInput formControlName="concepto" maxlength="255"
+        [matAutocomplete]="autoConcepto" #conceptoTrigger="matAutocompleteTrigger"
+        (focus)="conceptoTrigger.openPanel()" />
+      <mat-autocomplete #autoConcepto="matAutocomplete">
+        @for (s of conceptoSugerido$ | async; track s) {
+        <mat-option [value]="s">{{ s }}</mat-option>
+        }
+      </mat-autocomplete>
+      @if (f.concepto.hasError('required') && f.concepto.touched) {
+      <mat-error>Obligatorio</mat-error>
+      }
+    </mat-form-field>
+
+    <div class="mov-form__row2">
+      <mat-form-field appearance="outline">
+        <mat-label>Tipo de transacción</mat-label>
+        <mat-select formControlName="tipoTransaccion">
+          @for (fp of tiposTransaccion(); track fp.id) {
+          <mat-option [value]="fp.nombre">{{ fp.nombre }}</mat-option>
+          }
+        </mat-select>
+        @if (f.tipoTransaccion.hasError('required') && f.tipoTransaccion.touched) {
+        <mat-error>Obligatorio</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>N° de transacción (opcional)</mat-label>
+        <input matInput formControlName="nroTransaccion" maxlength="30" class="nro-cpte" />
+      </mat-form-field>
+    </div>
+
+    <mat-form-field appearance="outline" class="mov-form__full">
+      <mat-label>Factura y/o recibo (opcional)</mat-label>
+      <input matInput formControlName="facturaRecibo" maxlength="30"
+        placeholder="Ej: FACT-001234 o R-0009" />
+      <mat-hint align="end">{{ f.facturaRecibo.value?.length ?? 0 }}/30</mat-hint>
+    </mat-form-field>
+
+    <div class="mov-contraparte">
+      <span class="mov-contraparte__label">Nombres y apellidos (opcional)</span>
+      <mat-button-toggle-group formControlName="contraparteTipo" class="mov-contraparte__tipo">
+        <mat-button-toggle value="PERSONA">Persona CI</mat-button-toggle>
+        <mat-button-toggle value="ACTOR">Actor productivo</mat-button-toggle>
+        <mat-button-toggle value="CLIENTE">Cliente</mat-button-toggle>
+        <mat-button-toggle value="TEXTO">Otro (Externo)</mat-button-toggle>
+      </mat-button-toggle-group>
+
+      @switch (contraparteTipo) {
+      @case ('ACTOR') {
+      <mat-form-field appearance="outline" class="mov-form__full">
+        <mat-label>Actor productivo</mat-label>
+        <mat-select formControlName="idActorContraparte">
+          <mat-option [value]="null">— Ninguno —</mat-option>
+          @for (a of actores(); track a.id) {
+          <mat-option [value]="a.id">{{ a.nombre }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      }
+      @case ('CLIENTE') {
+      <mat-form-field appearance="outline" class="mov-form__full">
+        <mat-label>Cliente</mat-label>
+        <mat-select formControlName="idClienteContraparte">
+          <mat-option [value]="null">— Ninguno —</mat-option>
+          @for (c of clientes(); track c.id) {
+          <mat-option [value]="c.id">{{ c.nombre }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      }
+      @case ('TEXTO') {
+      <mat-form-field appearance="outline" class="mov-form__full">
+        <mat-label>Nombre / referencia</mat-label>
+        <input matInput formControlName="textoContraparte" maxlength="255" placeholder="Ej: JUANITA PÉREZ" />
+      </mat-form-field>
+      }
+      @default {
+      <mat-form-field appearance="outline" class="mov-form__full">
+        <mat-label>Persona registrada</mat-label>
+        <input matInput formControlName="personaContraparte"
+          [matAutocomplete]="autoBenef" #benefTrigger="matAutocompleteTrigger"
+          (focus)="benefTrigger.openPanel()"
+          placeholder="Buscar por nombre o documento" />
+        <mat-autocomplete #autoBenef="matAutocomplete" [displayWith]="displayBeneficiario">
+          @for (p of personasFiltradas$ | async; track p.id) {
+          <mat-option [value]="p">
+            <span>{{ nombreCompleto(p) }}</span>
+            <small class="benef-doc"> · {{ p.numeroDocumento }}</small>
+          </mat-option>
+          } @empty {
+          <mat-option disabled>Sin coincidencias — usa "Otro (Externo)"</mat-option>
+          }
+        </mat-autocomplete>
+      </mat-form-field>
+      }
+      }
+    </div>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-stroked-button (click)="cancelar()" [disabled]="guardando()">
+    Cancelar
+  </button>
+  <button
+    mat-flat-button
+    color="primary"
+    (click)="guardar()"
+    [disabled]="guardando()"
+  >
+    @if (guardando()) {
+    <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
+    <span>Guardando...</span>
+    } @else {
+    <span>{{ esEdicion ? 'Guardar cambios' : 'Registrar' }}</span>
+    }
+  </button>
+</mat-dialog-actions>

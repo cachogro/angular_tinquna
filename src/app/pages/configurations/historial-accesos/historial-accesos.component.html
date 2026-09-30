@@ -50,19 +50,7 @@
       </div>
 
       <div class="bitacora-toolbar">
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label>Desde</mat-label>
-          <input matInput [matDatepicker]="pickerDesde" [max]="hoy" [formControl]="fechaDesdeControl" />
-          <mat-datepicker-toggle matSuffix [for]="pickerDesde"></mat-datepicker-toggle>
-          <mat-datepicker #pickerDesde></mat-datepicker>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label>Hasta</mat-label>
-          <input matInput [matDatepicker]="pickerHasta" [max]="hoy" [formControl]="fechaHastaControl" />
-          <mat-datepicker-toggle matSuffix [for]="pickerHasta"></mat-datepicker-toggle>
-          <mat-datepicker #pickerHasta></mat-datepicker>
-        </mat-form-field>
+        <app-rango-fechas [desde]="fechaDesdeControl" [hasta]="fechaHastaControl" [max]="hoy" />
       </div>
 
       <br>

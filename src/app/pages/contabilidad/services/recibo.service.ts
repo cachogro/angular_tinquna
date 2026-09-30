@@ -4,6 +4,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { APP_CONFIG } from 'src/app/config';
 import {
+  FiltroLibroRecibos,
   FiltrosRecibo,
   GenerarReciboRequest,
   ProcesarReciboRequest,
@@ -24,6 +25,7 @@ export class ReciboService {
     if (filtros.tipo) params = params.set('tipo', filtros.tipo);
     if (filtros.estado) params = params.set('estado', filtros.estado);
     if (filtros.idPersona) params = params.set('idPersona', filtros.idPersona);
+    if (filtros.idCliente) params = params.set('idCliente', filtros.idCliente);
     if (filtros.fechaDesde)
       params = params.set('fechaDesde', filtros.fechaDesde);
     if (filtros.fechaHasta)
@@ -41,12 +43,14 @@ export class ReciboService {
 
   /** PDF del recibo generado (disponible desde que existe, incluso en BORRADOR). */
   obtenerPdf(id: string): Observable<Blob> {
-    return this.http.get(`${this.baseUrl}/${id}/pdf`, { responseType: 'blob' });
+    return this.http.get(`${this.baseUrl}2/${id}/pdf`, {
+      responseType: 'blob',
+    });
   }
 
   /** PDF del recibo procesado, con el detalle del reparto (kardex + caja). */
   obtenerPdfDetallado(id: string): Observable<Blob> {
-    return this.http.get(`${this.baseUrl}/${id}/pdf-procesado`, {
+    return this.http.get(`${this.baseUrl}2/${id}/pdf-procesado`, {
       responseType: 'blob',
     });
   }
@@ -60,6 +64,22 @@ export class ReciboService {
   /** PATCH /:id/procesar — procesa un BORRADOR: puebla kardex + caja de flujo. */
   procesar(id: string, data: ProcesarReciboRequest): Observable<Recibo> {
     return this.http.patch<Recibo>(`${this.baseUrl}/${id}/procesar`, data);
+  }
+
+  /** Excel "Libro de recibos": todos los recibos que cumplen los filtros,
+   *  sin paginar (procesados, borradores y anulados). */
+  descargarLibroExcel(filtro: FiltroLibroRecibos): Observable<Blob> {
+    let params = new HttpParams();
+    if (filtro.tipo) params = params.set('tipo', filtro.tipo);
+    if (filtro.estado) params = params.set('estado', filtro.estado);
+    if (filtro.idPersona) params = params.set('idPersona', filtro.idPersona);
+    if (filtro.fechaDesde) params = params.set('fechaDesde', filtro.fechaDesde);
+    if (filtro.fechaHasta) params = params.set('fechaHasta', filtro.fechaHasta);
+    if (filtro.busqueda) params = params.set('busqueda', filtro.busqueda);
+    return this.http.get(`${this.baseUrl}/reporte/excel`, {
+      params,
+      responseType: 'blob',
+    });
   }
 
   /** PATCH /:id/anular — solo si el recibo sigue en BORRADOR. */

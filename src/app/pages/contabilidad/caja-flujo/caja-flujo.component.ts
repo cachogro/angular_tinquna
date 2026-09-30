@@ -28,7 +28,8 @@ import { MovimientoCajaService } from '../services/movimiento-caja.service';
 import {
   MovimientoCajaFormDialogComponent,
   MovimientoCajaFormDialogData,
-} from './movimiento-caja-form-dialog.component';
+} from './movimiento-caja-form-dialog/movimiento-caja-form-dialog.component';
+import { mensajeErrorBlob } from '../../../shared/utils/descarga-archivo.util';
 
 const MESES = [
   'Enero',
@@ -86,10 +87,11 @@ export class CajaFlujoComponent implements OnInit {
   readonly cargando = signal(false);
   readonly cargandoCajas = signal(true);
   readonly descargandoExcel = signal(false);
+  readonly descargandoExcelCompleto = signal(false);
 
   readonly cajasCargadas = signal<Caja[]>([]);
   readonly cajaSelId = signal<number | null>(null);
-  readonly monedaSel = signal<MonedaCuenta>('BOB');
+  readonly monedaSel = signal<MonedaCuenta>('BS');
 
   readonly periodos = signal<PeriodoCaja[]>([]);
   readonly gestionSel = signal<number | null>(null);
@@ -110,8 +112,8 @@ export class CajaFlujoComponent implements OnInit {
   readonly saldoInicialConfigurado = computed(() => {
     const c = this.cajaSel();
     if (!c) return false;
-    return this.monedaSel() === 'BOB'
-      ? !!c.fechaSaldoInicialBob
+    return this.monedaSel() === 'BS'
+      ? !!c.fechaSaldoInicialBs
       : !!c.fechaSaldoInicialUsd;
   });
 
@@ -416,10 +418,42 @@ export class CajaFlujoComponent implements OnInit {
           a.click();
           window.URL.revokeObjectURL(url);
         },
-        error: (err) => {
+        error: async (err) => {
           this.descargandoExcel.set(false);
           this.snackBar.open(
-            err?.error?.message ?? 'No se pudo generar el Excel de la caja',
+            (await mensajeErrorBlob(err)) ?? 'No se pudo generar el Excel de la caja',
+            'Cerrar',
+            { duration: 5000 },
+          );
+        },
+      });
+  }
+
+  descargarExcelCompleto(): void {
+    const id = this.cajaSelId();
+    const gestion = this.gestionSel();
+    const mes = this.mesSel();
+    if (id == null || gestion == null || mes == null || this.descargandoExcelCompleto()) {
+      return;
+    }
+    this.descargandoExcelCompleto.set(true);
+    this.movimientoCajaService
+      .descargarExcelCompleto({ idCaja: id, gestion, mes })
+      .subscribe({
+        next: (blob) => {
+          this.descargandoExcelCompleto.set(false);
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          const mesStr = String(mes).padStart(2, '0');
+          a.download = `caja-flujo-completa-${gestion}-${mesStr}.xlsx`;
+          a.click();
+          window.URL.revokeObjectURL(url);
+        },
+        error: async (err) => {
+          this.descargandoExcelCompleto.set(false);
+          this.snackBar.open(
+            (await mensajeErrorBlob(err)) ?? 'No se pudo generar el Excel completo de la caja',
             'Cerrar',
             { duration: 5000 },
           );

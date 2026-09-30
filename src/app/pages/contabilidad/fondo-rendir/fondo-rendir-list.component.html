@@ -1,0 +1,140 @@
+<mat-card class="cardWithShadow theme-card">
+  <mat-card-header>
+    <div>
+      <mat-card-title class="m-b-0">Fondo a Rendir Cuentas</mat-card-title>
+      <mat-card-subtitle class="m-b-0">Contabilidad · adelantos de dinero a justificar con comprobantes</mat-card-subtitle>
+    </div>
+  </mat-card-header>
+
+  <mat-card-content class="b-t-1">
+
+    <div class="fl-acciones">
+      <button mat-stroked-button color="primary" (click)="exportarExcel()">
+        <mat-icon>download</mat-icon> Exportar Excel
+      </button>
+      <button mat-flat-button color="primary" (click)="entregarFondo()">
+        <mat-icon>payments</mat-icon> Entregar fondo
+      </button>
+    </div>
+
+    <div class="fl-toolbar">
+      <mat-form-field appearance="outline" class="fl-toolbar__sel" subscriptSizing="dynamic">
+        <mat-select [formControl]="estadoControl" placeholder="Estado">
+          <mat-option [value]="null">Todos</mat-option>
+          <mat-option value="PENDIENTE">Pendiente</mat-option>
+          <mat-option value="RENDIDO_PARCIAL">Rendido parcial</mat-option>
+          <mat-option value="RENDIDO_TOTAL">Rendido total</mat-option>
+          <mat-option value="RENDIDO_EN_EXCESO">Rendido en exceso</mat-option>
+          <mat-option value="CERRADO_CON_DEUDA">Cerrado con deuda</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <app-rango-fechas [desde]="fechaDesdeControl" [hasta]="fechaHastaControl" />
+
+      <button mat-button (click)="limpiarFiltros()" class="fl-toolbar__clear">
+        <mat-icon>filter_alt_off</mat-icon>
+        Limpiar
+      </button>
+    </div>
+
+    <div class="fl-tabla-wrap">
+      @if (cargando()) {
+      <div class="fl-loading">
+        <mat-spinner diameter="32"></mat-spinner>
+        <span>Cargando fondos...</span>
+      </div>
+      } @else if (registros().length === 0) {
+      <div class="fl-empty">
+        <mat-icon>payments</mat-icon>
+        <p>No se encontraron fondos con estos filtros</p>
+      </div>
+      } @else {
+      <div class="fl-tabla-scroll">
+        <table mat-table [dataSource]="registros()" class="fl-tabla mat-elevation-z1">
+
+          <ng-container matColumnDef="destinatario">
+            <th mat-header-cell *matHeaderCellDef>Destinatario</th>
+            <td mat-cell *matCellDef="let f">{{ nombreDestinatario(f) }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="fecha">
+            <th mat-header-cell *matHeaderCellDef class="col-fecha">Fecha</th>
+            <td mat-cell *matCellDef="let f" class="col-fecha">{{ fechaFmt(f.fecha) }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="concepto">
+            <th mat-header-cell *matHeaderCellDef>Concepto</th>
+            <td mat-cell *matCellDef="let f">{{ f.concepto }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="entregado">
+            <th mat-header-cell *matHeaderCellDef class="fl-num">Entregado</th>
+            <td mat-cell *matCellDef="let f" class="fl-num">{{ num(f.montoEntregado) | number:'1.2-2' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="justificado">
+            <th mat-header-cell *matHeaderCellDef class="fl-num">Justificado</th>
+            <td mat-cell *matCellDef="let f" class="fl-num">{{ num(f.montoJustificado) | number:'1.2-2' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="pendiente">
+            <th mat-header-cell *matHeaderCellDef class="fl-num">Pendiente / Por reponer</th>
+            <td mat-cell *matCellDef="let f" class="fl-num">
+              @if (num(f.montoPorReponer) > 0) {
+              <span class="fl-reponer" [matTooltip]="'Por reponer a ' + nombreDestinatario(f)">
+                Reponer {{ num(f.montoPorReponer) | number:'1.2-2' }}
+              </span>
+              } @else {
+              <span [class.fl-neg]="f.saldoPendiente > 0">{{ num(f.saldoPendiente) | number:'1.2-2' }}</span>
+              }
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="estado">
+            <th mat-header-cell *matHeaderCellDef>Estado</th>
+            <td mat-cell *matCellDef="let f">
+              <span class="fl-estado" [class]="'fl-estado--' + f.estado.toLowerCase()">
+                {{ estadoLabel(f.estado) }}
+              </span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="usuarioRegistro">
+            <th mat-header-cell *matHeaderCellDef>Generó</th>
+            <td mat-cell *matCellDef="let f">{{ f.usuarioRegistro || '—' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="acciones">
+            <th mat-header-cell *matHeaderCellDef>Acciones</th>
+            <td mat-cell *matCellDef="let f">
+              <button mat-icon-button matTooltip="Ver detalle" (click)="verDetalle(f)">
+                <mat-icon>visibility</mat-icon>
+              </button>
+              @if (f.idRecibo) {
+              <button mat-icon-button [matTooltip]="'Imprimir recibo ' + codigoRecibo(f)" [matMenuTriggerFor]="menuPdf"
+                [disabled]="descargandoPdf() === f.id">
+                <mat-icon>picture_as_pdf</mat-icon>
+              </button>
+              <mat-menu #menuPdf="matMenu">
+                <button mat-menu-item (click)="verPdfRecibo(f)">
+                  <mat-icon>receipt_long</mat-icon> Recibo generado
+                </button>
+                <button mat-menu-item (click)="verPdfReciboDetallado(f)" [disabled]="f.recibo?.estado !== 'PROCESADO'">
+                  <mat-icon>fact_check</mat-icon> Recibo detallado (procesado)
+                </button>
+              </mat-menu>
+              }
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+          <tr mat-row *matRowDef="let f; columns: columnas"></tr>
+        </table>
+      </div>
+
+      <mat-paginator [length]="total()" [pageSize]="pageSize" [pageIndex]="pageIndex" [pageSizeOptions]="[10, 25, 50]"
+        (page)="onPageChange($event)"></mat-paginator>
+      }
+    </div>
+  </mat-card-content>
+</mat-card>

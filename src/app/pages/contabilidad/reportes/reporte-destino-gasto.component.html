@@ -1,0 +1,211 @@
+<mat-card class="cardWithShadow theme-card">
+  <mat-card-header>
+    <div>
+      <mat-card-title class="m-b-0">Reporte por destino del gasto</mat-card-title>
+      <mat-card-subtitle class="m-b-0">Contabilidad · lo ganado y lo gastado agrupado por destino</mat-card-subtitle>
+    </div>
+  </mat-card-header>
+
+  <mat-card-content class="b-t-1">
+
+    <!-- ===== Filtros ===== -->
+    <div class="rd-toolbar">
+      <mat-form-field appearance="outline" class="rd-toolbar__sel" subscriptSizing="dynamic">
+        <mat-label>Moneda</mat-label>
+        <mat-select [ngModel]="monedaSel()" (ngModelChange)="monedaSel.set($event)">
+          <mat-option value="BS">Bs</mat-option>
+          <mat-option value="USD">$us (USD)</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="rd-toolbar__caja" subscriptSizing="dynamic">
+        <mat-label>Caja</mat-label>
+        <mat-select [ngModel]="cajaSelId()" (ngModelChange)="cajaSelId.set($event)">
+          <mat-option [value]="null">Todas las cajas</mat-option>
+          @for (c of cajasActivas(); track c.id) {
+          <mat-option [value]="c.id">{{ c.nombre }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <app-rango-fechas [desde]="fechaDesdeControl" [hasta]="fechaHastaControl" />
+
+      <button mat-flat-button color="primary" class="rd-toolbar__gen" [disabled]="cargando()" (click)="generar()">
+        <mat-icon>bar_chart</mat-icon> Generar
+      </button>
+    </div>
+
+    @if (error()) {
+    <div class="rd-aviso rd-aviso--error" role="alert">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ error() }}</span>
+    </div>
+    }
+
+    @if (cargando()) {
+    <div class="rd-loading">
+      <mat-spinner diameter="32"></mat-spinner>
+      <span>Generando reporte...</span>
+    </div>
+    } @else if (resumen(); as r) {
+
+    <!-- ===== Totales generales ===== -->
+    <div class="rd-tiles">
+      <div class="rd-tile">
+        <small>Ganado (ingresos)</small>
+        <strong class="rd-pos">{{ r.totales.totalIngreso | number:'1.2-2' }}</strong>
+      </div>
+      <div class="rd-tile">
+        <small>Gastado (egresos)</small>
+        <strong class="rd-neg">{{ r.totales.totalEgreso | number:'1.2-2' }}</strong>
+      </div>
+      <div class="rd-tile">
+        <small>Neto</small>
+        <strong [class.rd-pos]="r.totales.neto >= 0" [class.rd-neg]="r.totales.neto < 0">
+          {{ r.totales.neto | number:'1.2-2' }}
+        </strong>
+      </div>
+    </div>
+
+    <!-- ===== Resumen por destino ===== -->
+    @if (r.destinos.length === 0) {
+    <div class="rd-empty">
+      <mat-icon>insights</mat-icon>
+      <p>Sin movimientos para el filtro seleccionado.</p>
+    </div>
+    } @else {
+    <div class="rd-tabla-scroll">
+      <table mat-table [dataSource]="r.destinos" class="rd-tabla mat-elevation-z1">
+
+        <ng-container matColumnDef="destino">
+          <th mat-header-cell *matHeaderCellDef>Destino</th>
+          <td mat-cell *matCellDef="let d">{{ d.nombre }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="movimientos">
+          <th mat-header-cell *matHeaderCellDef class="rd-num">Mov.</th>
+          <td mat-cell *matCellDef="let d" class="rd-num">{{ d.cantidadMovimientos }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="ingreso">
+          <th mat-header-cell *matHeaderCellDef class="rd-num">Ganado</th>
+          <td mat-cell *matCellDef="let d" class="rd-num">{{ d.totalIngreso | number:'1.2-2' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="egreso">
+          <th mat-header-cell *matHeaderCellDef class="rd-num">Gastado</th>
+          <td mat-cell *matCellDef="let d" class="rd-num">{{ d.totalEgreso | number:'1.2-2' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="neto">
+          <th mat-header-cell *matHeaderCellDef class="rd-num">Neto</th>
+          <td mat-cell *matCellDef="let d" class="rd-num" [class.rd-pos]="d.neto >= 0" [class.rd-neg]="d.neto < 0">
+            {{ d.neto | number:'1.2-2' }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="acciones">
+          <th mat-header-cell *matHeaderCellDef>Acciones</th>
+          <td mat-cell *matCellDef="let d">
+            <!-- "SIN DESTINO" no tiene id: no hay detalle. -->
+            @if (d.idDestinoGasto !== null) {
+            <button mat-stroked-button class="rd-btn-detalle" (click)="verDetalle(d)">
+              Ver detalle
+            </button>
+            }
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columnasResumen"></tr>
+        <tr mat-row *matRowDef="let d; columns: columnasResumen"
+          [class.rd-row-sel]="d.idDestinoGasto !== null && d.idDestinoGasto === destinoDetalleId()"></tr>
+      </table>
+    </div>
+    }
+    }
+
+    <!-- ===== Detalle del destino elegido ===== -->
+    @if (cargandoDetalle()) {
+    <div class="rd-loading">
+      <mat-spinner diameter="28"></mat-spinner>
+      <span>Cargando detalle...</span>
+    </div>
+    } @else if (detalle(); as d) {
+    <div class="rd-detalle">
+      <div class="rd-detalle__titulo">
+        <h3 class="m-0">
+          {{ d.destino.nombre }}
+          <small>({{ d.totales.cantidadMovimientos }} movimientos)</small>
+        </h3>
+        <button mat-button (click)="cerrarDetalle()">
+          <mat-icon>close</mat-icon> Cerrar detalle
+        </button>
+      </div>
+      <p class="rd-detalle__totales">
+        Ganado <strong class="rd-pos">{{ d.totales.totalIngreso | number:'1.2-2' }}</strong> ·
+        Gastado <strong class="rd-neg">{{ d.totales.totalEgreso | number:'1.2-2' }}</strong> ·
+        Neto <strong [class.rd-pos]="d.totales.neto >= 0" [class.rd-neg]="d.totales.neto < 0">
+          {{ d.totales.neto | number:'1.2-2' }}
+        </strong>
+      </p>
+
+      <div class="rd-tabla-scroll">
+        <table mat-table [dataSource]="d.movimientos" class="rd-tabla mat-elevation-z1">
+
+          <ng-container matColumnDef="fecha">
+            <th mat-header-cell *matHeaderCellDef class="col-fecha">Fecha</th>
+            <td mat-cell *matCellDef="let m" class="col-fecha">{{ fechaFmt(m.fecha) }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="caja">
+            <th mat-header-cell *matHeaderCellDef>Caja</th>
+            <td mat-cell *matCellDef="let m">{{ m.caja || '—' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="concepto">
+            <th mat-header-cell *matHeaderCellDef>Concepto</th>
+            <td mat-cell *matCellDef="let m">{{ m.concepto }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="entregaFondosA">
+            <th mat-header-cell *matHeaderCellDef>Entrega a</th>
+            <td mat-cell *matCellDef="let m">{{ m.entregaFondosA || '—' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="facturaRecibo">
+            <th mat-header-cell *matHeaderCellDef class="nro-cpte">Recibo / Factura</th>
+            <td mat-cell *matCellDef="let m" class="nro-cpte">
+              {{ m.facturaRecibo || '—' }}
+              @if (m.nroComprobante) {
+              <small class="rd-cpte-nro">{{ m.nroComprobante }}</small>
+              }
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="formaPago">
+            <th mat-header-cell *matHeaderCellDef>Forma de pago</th>
+            <td mat-cell *matCellDef="let m">{{ m.formaPago || '—' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="ingreso">
+            <th mat-header-cell *matHeaderCellDef class="rd-num">Ingreso</th>
+            <td mat-cell *matCellDef="let m" class="rd-num rd-pos">
+              {{ m.ingreso ? (m.ingreso | number:'1.2-2') : '' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="egreso">
+            <th mat-header-cell *matHeaderCellDef class="rd-num">Egreso</th>
+            <td mat-cell *matCellDef="let m" class="rd-num rd-neg">
+              {{ m.egreso ? (m.egreso | number:'1.2-2') : '' }}
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columnasDetalle"></tr>
+          <tr mat-row *matRowDef="let m; columns: columnasDetalle"></tr>
+        </table>
+      </div>
+    </div>
+    }
+  </mat-card-content>
+</mat-card>

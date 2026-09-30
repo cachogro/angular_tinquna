@@ -43,16 +43,6 @@
           </mat-select>
         </mat-form-field>
 
-        <mat-form-field appearance="outline" class="recepcion-toolbar__fechas" subscriptSizing="dynamic">
-          <mat-label>Rango de fechas</mat-label>
-          <mat-date-range-input [rangePicker]="pickerRango" [max]="hoy">
-            <input matStartDate placeholder="Desde" [formControl]="fechaDesdeControl" />
-            <input matEndDate placeholder="Hasta" [formControl]="fechaHastaControl" />
-          </mat-date-range-input>
-          <mat-datepicker-toggle matSuffix [for]="pickerRango"></mat-datepicker-toggle>
-          <mat-date-range-picker #pickerRango></mat-date-range-picker>
-        </mat-form-field>
-
         <mat-form-field appearance="outline" class="recepcion-toolbar__orden" subscriptSizing="dynamic">
           <mat-select [formControl]="orderByControl" placeholder="Ordenar por">
             @for (opcion of opcionesOrden; track opcion.value) {
@@ -71,6 +61,9 @@
           Limpiar
         </button>
       </div>
+
+      <!-- Período: en su propio renglón, debajo de la barra compacta de filtros. -->
+      <app-rango-fechas [desde]="fechaDesdeControl" [hasta]="fechaHastaControl" [max]="hoy" />
 
       <div class="recepcion-table-wrapper">
         @if (loading()) {
@@ -148,6 +141,17 @@
                 [matTooltip]="puedeEditar(r) ? 'Editar' : 'No se puede editar: el registro ya fue procesado'">
                 <mat-icon>edit</mat-icon>
               </a>
+
+              @if (puedeGenerarReciboAnticipo(r)) {
+              <button mat-icon-button (click)="generarReciboAnticipo(r)" matTooltip="Generar recibo de anticipo">
+                <mat-icon>receipt_long</mat-icon>
+              </button>
+              } @else if (tieneReciboAnticipo(r)) {
+              <button mat-icon-button (click)="verPdfReciboAnticipo(r)"
+                [matTooltip]="'Ver recibo de anticipo (' + r.recibos?.[0]?.estado + ')'">
+                <mat-icon>receipt</mat-icon>
+              </button>
+              }
 
               @if (puedeValorizar(r)) {
               <button mat-icon-button (click)="valorizar(r)" [disabled]="valorizando(r)"

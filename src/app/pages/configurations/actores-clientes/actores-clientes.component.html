@@ -9,15 +9,27 @@
   <mat-card-content class="b-t-1">
     <mat-tab-group animationDuration="200ms" mat-stretch-tabs="false">
 
-      <mat-tab label="Actores productivos">
+      <mat-tab label="Personal interno">
+        <div class="tab-body">
+          <app-personal-interno></app-personal-interno>
+        </div>
+      </mat-tab>
+
+      <mat-tab label="Compras (Actores productivos)">
         <div class="tab-body">
           <app-actores-productivos></app-actores-productivos>
         </div>
       </mat-tab>
 
-      <mat-tab label="Personal y clientes">
+      <mat-tab label="Compras (Asociados)">
         <div class="tab-body">
           <app-gestion-clientes></app-gestion-clientes>
+        </div>
+      </mat-tab>
+
+      <mat-tab label="Ventas (Clientes)">
+        <div class="tab-body">
+          <app-clientes-compradores></app-clientes-compradores>
         </div>
       </mat-tab>
 

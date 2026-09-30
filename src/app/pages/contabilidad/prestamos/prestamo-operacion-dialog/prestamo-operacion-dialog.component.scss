@@ -1,0 +1,30 @@
+.po-resumen {
+  font-size: 13px;
+  margin: 0 0 12px;
+  line-height: 1.6;
+}
+.po-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 14px;
+  min-width: 520px;
+}
+.po-form mat-form-field {
+  width: 100%;
+}
+.po-sub {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.6);
+  margin: 8px 0;
+}
+.btn-spinner {
+  display: inline-block;
+  margin-right: 6px;
+}
+@media (max-width: 620px) {
+  .po-form {
+    grid-template-columns: 1fr;
+    min-width: 0;
+  }
+}

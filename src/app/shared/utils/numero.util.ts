@@ -1,3 +1,5 @@
+import { ValidatorFn, Validators } from '@angular/forms';
+
 /**
  * Formatea un número (o string numérico, como los que devuelve el backend
  * para campos decimales) mostrando solo los decimales significativos:
@@ -32,3 +34,21 @@ export function formatNumeroConMiles(
     maximumFractionDigits: decimales,
   });
 }
+
+/**
+ * Validador para montos que van al backend como numeric(16,2): número con
+ * punto decimal, sin separador de miles y hasta 2 decimales. El signo lo
+ * controla cada formulario con Validators.min. Error: `pattern`.
+ * Ej. válidos: 2800, 2800.5, 2800.50 · inválidos: 2800.555, 2.800,50.
+ */
+export const montoDosDecimales: ValidatorFn = Validators.pattern(
+  /^-?\d+(\.\d{1,2})?$/,
+);
+
+/**
+ * Tipo de cambio (Bs por 1 USD) de recibos y movimientos de kardex en USD:
+ * número positivo con hasta 4 decimales (ej. 6.96, 6.9650). Error: `pattern`.
+ */
+export const tipoCambioCuatroDecimales: ValidatorFn = Validators.pattern(
+  /^\d+(\.\d{1,4})?$/,
+);

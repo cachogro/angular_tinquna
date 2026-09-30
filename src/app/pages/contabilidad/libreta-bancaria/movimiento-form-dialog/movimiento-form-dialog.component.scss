@@ -1,0 +1,58 @@
+.mov-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 520px;
+}
+.mov-form__row {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr;
+  gap: 14px;
+}
+.mov-form__row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.mov-form__full {
+  width: 100%;
+}
+.mov-form mat-form-field {
+  width: 100%;
+}
+.mov-input-derecha {
+  text-align: right;
+}
+.benef-doc {
+  color: rgba(0, 0, 0, 0.5);
+}
+.mov-contraparte {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 4px 0 2px;
+}
+.mov-contraparte__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.6);
+}
+.mov-contraparte__tipo {
+  align-self: flex-start;
+  flex-wrap: wrap;
+}
+.btn-spinner {
+  display: inline-block;
+}
+.btn-spinner ::ng-deep circle {
+  stroke: currentColor;
+}
+@media (max-width: 620px) {
+  .mov-form {
+    min-width: 0;
+  }
+  .mov-form__row,
+  .mov-form__row2 {
+    grid-template-columns: 1fr;
+  }
+}

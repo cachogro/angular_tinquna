@@ -1,5 +1,5 @@
 <div class="tab-body">
-
+<br>
     <div class="row">
       <div class="col-lg-4 col-sm-6">
         <mat-card class="b-1 curso-card">
@@ -142,6 +142,24 @@
             <button matButton style="width: 100%; font-weight: bold;" matTooltip="registrar penalidad"
               (click)="abrirNuevaPenalidad()">
               Nueva Penalidad
+            </button>
+          </mat-card-actions>
+        </mat-card>
+      </div>
+      <div class="col-lg-4 col-sm-6">
+        <mat-card class="b-1 curso-card">
+          <mat-card-header class="card-header header-teal">
+            <mat-card-title>Codificación de Lote</mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="b-t-1" style="display: flex; justify-content: flex-start;">
+            <p>
+              Panel de Registro de Codificaciones de Lote (prefijo y correlativo de los promedios)
+            </p>
+          </mat-card-content>
+          <mat-card-actions class="card-footer">
+            <button matButton style="width: 100%; font-weight: bold;" matTooltip="registrar nueva codificación de lote"
+              (click)="abrirNuevaCodificacionLote()">
+              Nueva Codificación de Lote
             </button>
           </mat-card-actions>
         </mat-card>

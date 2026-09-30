@@ -13,10 +13,6 @@ import {
   MatAutocompleteSelectedEvent,
 } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
-import {
-  MAT_DATE_LOCALE,
-  provideNativeDateAdapter,
-} from '@angular/material/core';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import {
   MAT_DIALOG_DATA,
@@ -41,6 +37,7 @@ import {
   TipoActorProductivoMinero,
 } from '../models/parametricas.models';
 import { ParametricasService } from '../../services/parametricas.service';
+import { FechaInputDirective } from '../../../../shared/directives/fecha-input.directive';
 
 export interface ActorProductivoMineroDialogData {
   actorProductivoMinero?: ActorProductivoMinero;
@@ -80,6 +77,7 @@ const CARACTERES_INVALIDOS_SECCION = /[^A-Z0-9_\- ]/g;
   selector: 'app-actor-productivo-minero-form-dialog',
   standalone: true,
   imports: [
+    FechaInputDirective,
     CommonModule,
     ReactiveFormsModule,
     MatAutocompleteModule,
@@ -93,10 +91,6 @@ const CARACTERES_INVALIDOS_SECCION = /[^A-Z0-9_\- ]/g;
     MatIconModule,
     MatTooltipModule,
     ParametricaDialogShellComponent,
-  ],
-  providers: [
-    provideNativeDateAdapter(),
-    { provide: MAT_DATE_LOCALE, useValue: 'es-BO' },
   ],
   templateUrl: './actor-productivo-minero-form-dialog.component.html',
   styleUrl: './actor-productivo-minero-form-dialog.component.scss',

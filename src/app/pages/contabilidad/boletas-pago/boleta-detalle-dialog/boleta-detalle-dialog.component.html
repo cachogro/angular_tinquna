@@ -1,0 +1,81 @@
+<h2 mat-dialog-title>
+  @if (boleta(); as b) { Boleta de pago N° {{ b.numero }} · {{ nombre(b.persona) }} } @else { Boleta de pago }
+</h2>
+
+<mat-dialog-content class="bd-content">
+  @if (cargando()) {
+  <div class="bd-loading"><mat-spinner diameter="32"></mat-spinner><span>Cargando boleta...</span></div>
+  } @else if (boleta(); as b) {
+  <div class="bd-tiles">
+    <div class="bd-tile"><small>Estado</small><strong [class.bd-anulada]="b.estado === 'ANULADA'">{{ b.estado }}</strong></div>
+    <div class="bd-tile"><small>Periodo</small><strong>{{ fechaFmt(b.fechaDesde) }} al {{ fechaFmt(b.fechaHasta) }}</strong></div>
+    <div class="bd-tile"><small>Fecha de pago</small><strong>{{ fechaFmt(b.fechaPago) }}</strong></div>
+    <div class="bd-tile"><small>Días trabajados</small><strong>{{ b.diasTrabajados ?? '—' }}</strong></div>
+  </div>
+  <p class="bd-linea"><strong>Concepto:</strong> {{ b.concepto }}</p>
+  <p class="bd-linea"><strong>Autorizó:</strong> {{ nombre(b.personaAutorizo) }}</p>
+
+  <div class="bd-cols">
+    <table class="bd-tabla">
+      <tr><th colspan="2">Ingresos</th></tr>
+      <tr><td>Salario base</td><td class="bd-num">{{ num(b.salarioBase) | number: '1.2-2' }}</td></tr>
+      <tr><td>Bono de antigüedad</td><td class="bd-num">{{ num(b.bonoAntiguedad) | number: '1.2-2' }}</td></tr>
+      <tr><td>Otros ingresos</td><td class="bd-num">{{ num(b.otrosIngresos) | number: '1.2-2' }}</td></tr>
+      <tr class="bd-total"><td>Total ganado</td><td class="bd-num">{{ num(b.totalGanado) | number: '1.2-2' }}</td></tr>
+    </table>
+    <table class="bd-tabla">
+      <tr><th colspan="2">Descuentos de ley</th></tr>
+      <tr><td>Aporte laboral</td><td class="bd-num">{{ num(b.aporteLaboral) | number: '1.2-2' }}</td></tr>
+      <tr><td>RC-IVA</td><td class="bd-num">{{ num(b.rcIva) | number: '1.2-2' }}</td></tr>
+      <tr><td>Otros descuentos</td><td class="bd-num">{{ num(b.otrosDescuentosLey) | number: '1.2-2' }}</td></tr>
+      <tr class="bd-total"><td>Total descuentos</td><td class="bd-num">{{ num(b.totalDescuentosLey) | number: '1.2-2' }}</td></tr>
+    </table>
+  </div>
+
+  <h3>Descuento de préstamos</h3>
+  @if (!b.descuentosPrestamo?.length) {
+  <p class="bd-nota">Sin descuentos de préstamos en esta boleta.</p>
+  } @else {
+  <table class="bd-tabla">
+    <tr><th>Préstamo</th><th class="bd-num">Descontado</th><th class="bd-num">Saldo tras el descuento</th></tr>
+    @for (d of b.descuentosPrestamo; track d.id) {
+    <tr>
+      <td>N° {{ d.prestamo?.numero }} · {{ d.prestamo?.descripcion }}</td>
+      <td class="bd-num">{{ num(d.haber) | number: '1.2-2' }}</td>
+      <td class="bd-num">{{ num(d.saldo) | number: '1.2-2' }}</td>
+    </tr>
+    }
+  </table>
+  }
+
+  <div class="bd-resumen">
+    <div><small>Líquido pagable</small><strong>{{ num(b.liquidoPagable) | number: '1.2-2' }}</strong></div>
+    <div><small>Desc. préstamos</small><strong>− {{ num(b.totalDescuentoPrestamos) | number: '1.2-2' }}</strong></div>
+    <div class="bd-resumen__neto"><small>Neto pagado</small><strong>Bs {{ num(b.montoPagado) | number: '1.2-2' }}</strong></div>
+    <div>
+      <small>Recibo</small>
+      @if (b.recibo) {
+      <button mat-button color="primary" class="bd-link" (click)="verRecibo(b.recibo.id)">{{ codigoRecibo(b) }}</button>
+      } @else {
+      <strong>Sin recibo</strong>
+      }
+    </div>
+  </div>
+  @if (b.observaciones) {
+  <p class="bd-linea"><strong>Observaciones:</strong> {{ b.observaciones }}</p>
+  }
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  @if (boleta()) {
+  <button mat-stroked-button [matMenuTriggerFor]="menuPdf" [disabled]="descargandoPdf()">
+    <mat-icon>picture_as_pdf</mat-icon> {{ descargandoPdf() ? 'Generando...' : 'PDF boleta' }}
+  </button>
+  <mat-menu #menuPdf="matMenu">
+    <button mat-menu-item (click)="verPdf(true)"><mat-icon>badge</mat-icon> Boleta interna (con préstamos)</button>
+    <button mat-menu-item (click)="verPdf(false)"><mat-icon>gavel</mat-icon> Boleta de ley (sin préstamos)</button>
+  </mat-menu>
+  }
+  <button mat-flat-button color="primary" (click)="cerrar()">Cerrar</button>
+</mat-dialog-actions>

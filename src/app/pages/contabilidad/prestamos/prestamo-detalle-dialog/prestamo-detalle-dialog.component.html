@@ -1,0 +1,79 @@
+<h2 mat-dialog-title>
+  @if (prestamo(); as p) { Préstamo N° {{ p.numero }} · {{ nombre(p.persona) }} } @else { Préstamo }
+</h2>
+
+<mat-dialog-content class="pd-content">
+  @if (cargando()) {
+  <div class="pd-loading"><mat-spinner diameter="32"></mat-spinner><span>Cargando préstamo...</span></div>
+  } @else if (prestamo(); as p) {
+  <div class="pd-tiles">
+    <div class="pd-tile">
+      <small>Estado</small>
+      <strong [class.pd-cancelado]="p.estado === 'CANCELADO'">{{ p.estado }}</strong>
+    </div>
+    <div class="pd-tile"><small>Fecha</small><strong>{{ fechaFmt(p.fecha) }}</strong></div>
+    <div class="pd-tile"><small>Monto prestado</small><strong>Bs {{ num(p.monto) | number: '1.2-2' }}</strong></div>
+    <div class="pd-tile"><small>Cuota mensual</small><strong>Bs {{ num(p.cuotaMensual) | number: '1.2-2' }}</strong></div>
+    <div class="pd-tile pd-tile--destacado"><small>Saldo</small><strong>Bs {{ num(p.saldo) | number: '1.2-2' }}</strong></div>
+  </div>
+  <p class="pd-linea"><strong>A cuenta de:</strong> {{ p.descripcion }}</p>
+  <p class="pd-linea"><strong>Autorizó:</strong> {{ nombre(p.personaAutorizo) }}</p>
+  @if (p.observaciones) {
+  <p class="pd-linea"><strong>Observaciones:</strong> {{ p.observaciones }}</p>
+  }
+
+  <h3>Sub-libro del préstamo</h3>
+  <div class="pd-tabla-scroll">
+    <table mat-table [dataSource]="p.movimientos ?? []" class="pd-tabla mat-elevation-z1">
+      <ng-container matColumnDef="numeroLinea">
+        <th mat-header-cell *matHeaderCellDef>N°</th>
+        <td mat-cell *matCellDef="let m">{{ m.numeroLinea }}</td>
+      </ng-container>
+      <ng-container matColumnDef="fecha">
+        <th mat-header-cell *matHeaderCellDef class="col-fecha">Fecha</th>
+        <td mat-cell *matCellDef="let m" class="col-fecha">{{ fechaFmt(m.fecha) }}</td>
+      </ng-container>
+      <ng-container matColumnDef="tipo">
+        <th mat-header-cell *matHeaderCellDef>Tipo</th>
+        <td mat-cell *matCellDef="let m"><span class="pd-chip" [class]="'pd-chip pd-chip--' + m.tipo.toLowerCase()">{{ tipoLabel(m.tipo) }}</span></td>
+      </ng-container>
+      <ng-container matColumnDef="detalle">
+        <th mat-header-cell *matHeaderCellDef>Detalle</th>
+        <td mat-cell *matCellDef="let m"><span class="pd-truncar" [title]="m.detalle">{{ m.detalle }}</span></td>
+      </ng-container>
+      <ng-container matColumnDef="origen">
+        <th mat-header-cell *matHeaderCellDef>Origen</th>
+        <td mat-cell *matCellDef="let m">
+          @if (m.recibo) {
+          <button mat-button class="pd-link" (click)="verRecibo(m.recibo.id)" matTooltip="Ver recibo">{{ codigoRecibo(m) }}</button>
+          } @else if (m.boletaPago) {
+          Boleta N° {{ m.boletaPago.numero }}
+          } @else { — }
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="debe">
+        <th mat-header-cell *matHeaderCellDef class="pd-num">DEBE</th>
+        <td mat-cell *matCellDef="let m" class="pd-num">{{ num(m.debe) ? (num(m.debe) | number: '1.2-2') : '' }}</td>
+      </ng-container>
+      <ng-container matColumnDef="haber">
+        <th mat-header-cell *matHeaderCellDef class="pd-num">HABER</th>
+        <td mat-cell *matCellDef="let m" class="pd-num">{{ num(m.haber) ? (num(m.haber) | number: '1.2-2') : '' }}</td>
+      </ng-container>
+      <ng-container matColumnDef="saldo">
+        <th mat-header-cell *matHeaderCellDef class="pd-num">SALDO</th>
+        <td mat-cell *matCellDef="let m" class="pd-num">{{ num(m.saldo) | number: '1.2-2' }}</td>
+      </ng-container>
+      <tr mat-header-row *matHeaderRowDef="columnas; sticky: true"></tr>
+      <tr mat-row *matRowDef="let m; columns: columnas"></tr>
+    </table>
+  </div>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  @if (prestamo()?.estado === 'VIGENTE') {
+  <button mat-stroked-button (click)="operar('CUOTA')"><mat-icon>tune</mat-icon> Cambiar cuota</button>
+  <button mat-stroked-button color="primary" (click)="operar('ABONO')"><mat-icon>payments</mat-icon> Abonar</button>
+  }
+  <button mat-flat-button color="primary" (click)="cerrar()">Cerrar</button>
+</mat-dialog-actions>

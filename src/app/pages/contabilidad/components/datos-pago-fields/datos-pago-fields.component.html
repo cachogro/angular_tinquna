@@ -1,0 +1,65 @@
+<div class="dp-grid" [formGroup]="form">
+  <mat-form-field appearance="outline">
+    <mat-label>Forma de pago</mat-label>
+    <mat-select formControlName="idFormaPago">
+      @for (fp of formasPago(); track fp.id) {
+      <mat-option [value]="fp.id">{{ fp.nombre }}</mat-option>
+      }
+    </mat-select>
+    @if (form.controls.idFormaPago.hasError('required') && form.controls.idFormaPago.touched) {
+    <mat-error>Obligatorio</mat-error>
+    }
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Autorizó</mat-label>
+    <mat-select formControlName="idPersonaAutorizo">
+      @for (p of personasAutorizadas(); track p.id) {
+      <mat-option [value]="p.id">{{ nombreCompleto(p) }}</mat-option>
+      }
+    </mat-select>
+    @if (form.controls.idPersonaAutorizo.hasError('required') && form.controls.idPersonaAutorizo.touched) {
+    <mat-error>Obligatorio</mat-error>
+    }
+  </mat-form-field>
+
+  @if (form.controls.usaBanco.value) {
+  <mat-form-field appearance="outline">
+    <mat-label>Cuenta bancaria</mat-label>
+    <mat-select formControlName="idCuentaBancaria">
+      @for (c of cuentas(); track c.idCuenta) {
+      <mat-option [value]="c.idCuenta">{{ etiquetaCuenta(c) }}</mat-option>
+      }
+    </mat-select>
+    @if (form.controls.idCuentaBancaria.hasError('required') && form.controls.idCuentaBancaria.touched) {
+    <mat-error>Obligatoria para pagos bancarios</mat-error>
+    }
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>N° de comprobante</mat-label>
+    <input matInput class="nro-cpte" formControlName="nroComprobante" maxlength="30" />
+    @if (form.controls.nroComprobante.hasError('required') && form.controls.nroComprobante.touched) {
+    <mat-error>Obligatorio para pagos bancarios</mat-error>
+    }
+  </mat-form-field>
+  }
+
+  <mat-form-field appearance="outline" class="dp-full">
+    <mat-label>{{ esEgreso ? 'Destino del gasto' : 'Origen del ingreso' }} (opcional)</mat-label>
+    <input matInput formControlName="destinoGasto" [matAutocomplete]="autoDg"
+      #dgTrigger="matAutocompleteTrigger" (focus)="dgTrigger.openPanel()"
+      placeholder="Escribe para buscar" />
+    <mat-autocomplete #autoDg="matAutocomplete" [displayWith]="displayDestinoGasto">
+      @for (d of destinosFiltrados(); track d.id) {
+      <mat-option [value]="d">{{ d.nombre }}</mat-option>
+      } @empty {
+      <mat-option disabled>Sin coincidencias</mat-option>
+      }
+    </mat-autocomplete>
+    @if (form.controls.destinoGasto.hasError('noSeleccionado') && form.controls.destinoGasto.touched) {
+    <mat-error>Elige una opción de la lista (o déjalo vacío)</mat-error>
+    }
+    <mat-hint>{{ form.controls.usaBanco.value ? 'Sale/entra por la libreta de la cuenta elegida' : 'Sale/entra en efectivo por la caja de flujo' }}</mat-hint>
+  </mat-form-field>
+</div>

@@ -4,7 +4,6 @@ import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatNativeDateModule } from '@angular/material/core';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -37,9 +36,16 @@ import {
   FiltrosValorizacionMineral,
   OrdenDireccionValorizacion,
   ValorizacionMineral,
+  codificacionEfectiva,
 } from '../models/valorizacion-mineral.models';
 import { ValorizacionMineralService } from '../services/valorizacion-mineral.service';
+import { ReciboService } from '../../contabilidad/services/recibo.service';
+import {
+  abrirReciboValorizacion,
+  faltaReciboValorizacion,
+} from './recibo-valorizacion.util';
 import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog/confirm-dialog.component';
+import { RangoFechasComponent } from '../../../shared/components/rango-fechas/rango-fechas.component';
 
 interface OpcionOrden {
   value: string;
@@ -49,6 +55,7 @@ interface OpcionOrden {
 @Component({
   selector: 'app-valorizacion',
   imports: [
+    RangoFechasComponent,
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
@@ -65,7 +72,6 @@ interface OpcionOrden {
     MatTooltipModule,
     MatProgressSpinnerModule,
     MatDatepickerModule,
-    MatNativeDateModule,
   ],
   templateUrl: './valorizacion.component.html',
   styleUrl: './valorizacion.component.scss',
@@ -78,6 +84,7 @@ export class ValorizacionComponent implements OnInit {
   private readonly snackBar = inject(MatSnackBar);
   private readonly authService = inject(AuthService);
   private readonly dialog = inject(MatDialog);
+  private readonly reciboService = inject(ReciboService);
 
   /** Catálogos usados solo para resolver nombres al armar el visualizador
    *  (ver visualizar()): símbolo del mineral y descripción de la entidad de aporte. */
@@ -268,7 +275,33 @@ export class ValorizacionComponent implements OnInit {
   detalleTexto(v: ValorizacionMineral): string {
     const r = v.recepcionMineral;
     if (!r) return '—';
-    return `${r.codificacion?.codigo ?? '—'} · ${formatNumeroConMiles(r.numeroSacos ?? 0)} sacos · ${formatNumeroConMiles(r.balanzaL)} kg`;
+    const leyes = this.leyesTexto(v);
+    return `${leyes ? leyes + ' · ' : ''}${formatNumeroConMiles(r.balanzaL)} kg`;
+  }
+
+  /** Leyes de la valorización (las laboratoriadas); si aún no tiene, las de la recepción. */
+  private leyesTexto(v: ValorizacionMineral): string {
+    const propias = (v.detalles ?? []).filter((d) => d['ley'] != null);
+    if (propias.length) {
+      return propias
+        .map((d) => {
+          const idMineral = Number(d['idMineral']);
+          const mineral = this.mineralesCatalogo().find(
+            (m) => Number(m.id) === idMineral,
+          );
+          const simbolo =
+            mineral?.simbolo ?? mineral?.descripcion ?? `Mineral #${idMineral}`;
+          const unidad = (d['leyUnidad'] as string) ?? '%';
+          return `${simbolo} ${formatNumeroConMiles(d['ley'] as number | string)}${unidad}`;
+        })
+        .join(' · ');
+    }
+    return (v.recepcionMineral?.detalles ?? [])
+      .map(
+        (d) =>
+          `${d.mineral?.simbolo ?? 'Mineral ' + d.idMineral} ${formatNumeroConMiles(d.ley)}${d.leyUnidad ?? '%'}`,
+      )
+      .join(' · ');
   }
 
   /** En BORRADOR y PRE-VALORIZADO se puede seguir editando; VALORIZADO queda cerrado. */
@@ -411,12 +444,41 @@ export class ValorizacionComponent implements OnInit {
 
   /** Pide al backend el PDF ya generado (con el liquidador resuelto del
    *  usuario autenticado) y lo abre en una pestaña nueva. */
+  /** VALORIZADO con saldo a pagar y sin recibo vigente. */
+  puedeGenerarRecibo(v: ValorizacionMineral): boolean {
+    return faltaReciboValorizacion(v);
+  }
+
+  generarRecibo(v: ValorizacionMineral): void {
+    abrirReciboValorizacion(this.dialog, v).subscribe((recibo) => {
+      if (recibo) this.cargarRegistros();
+    });
+  }
+
+  verPdfRecibo(v: ValorizacionMineral): void {
+    const recibo = v.recibos?.[0];
+    if (!recibo) return;
+    this.reciboService.obtenerPdf(recibo.id).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+      },
+      error: (err) =>
+        this.snackBar.open(
+          err?.error?.message ?? 'No se pudo generar el PDF del recibo',
+          'Cerrar',
+          { duration: 4000 },
+        ),
+    });
+  }
+
   imprimir(v: ValorizacionMineral): void {
     this.valorizacionMineralService.descargarPdf(v.id);
   }
 
   private productosTexto(v: ValorizacionMineral): string {
-    const minerales = v.recepcionMineral?.codificacion?.minerales ?? [];
+    const minerales = codificacionEfectiva(v)?.minerales ?? [];
     return minerales.map((m) => m.descripcion).join(', ') || '—';
   }
 

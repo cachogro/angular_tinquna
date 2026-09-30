@@ -20,25 +20,30 @@
       <!-- Apertura en Bs. -->
       <mat-form-field appearance="outline">
         <mat-label>Saldo inicial (Bs)</mat-label>
-        <input matInput type="number" step="0.01" min="0" formControlName="saldoInicialBob" />
-        <mat-error *ngIf="form.get('saldoInicialBob')?.hasError('min')">
+        <input matInput type="number" step="0.01" min="0" class="input-monto" formControlName="saldoInicialBs" />
+        <mat-error *ngIf="form.get('saldoInicialBs')?.hasError('pattern')">
+          Máximo 2 decimales
+        </mat-error>
+        <mat-error *ngIf="form.get('saldoInicialBs')?.hasError('min')">
           No puede ser negativo
         </mat-error>
       </mat-form-field>
 
       <mat-form-field appearance="outline">
         <mat-label>Fecha de apertura (Bs)</mat-label>
-        <input matInput [matDatepicker]="pickerBob" formControlName="fechaSaldoInicialBob" readonly
-          (click)="pickerBob.open()" />
-        <mat-datepicker-toggle matSuffix [for]="pickerBob"></mat-datepicker-toggle>
-        <mat-datepicker #pickerBob></mat-datepicker>
+        <input matInput class="input-fecha" [matDatepicker]="pickerBs" formControlName="fechaSaldoInicialBs" />
+        <mat-datepicker-toggle matSuffix [for]="pickerBs"></mat-datepicker-toggle>
+        <mat-datepicker #pickerBs></mat-datepicker>
         <mat-hint>Sin fecha, no se pueden cargar movimientos en Bs.</mat-hint>
       </mat-form-field>
 
       <!-- Apertura en $us. -->
       <mat-form-field appearance="outline">
         <mat-label>Saldo inicial ($us)</mat-label>
-        <input matInput type="number" step="0.01" min="0" formControlName="saldoInicialUsd" />
+        <input matInput type="number" step="0.01" min="0" class="input-monto" formControlName="saldoInicialUsd" />
+        <mat-error *ngIf="form.get('saldoInicialUsd')?.hasError('pattern')">
+          Máximo 2 decimales
+        </mat-error>
         <mat-error *ngIf="form.get('saldoInicialUsd')?.hasError('min')">
           No puede ser negativo
         </mat-error>
@@ -46,8 +51,7 @@
 
       <mat-form-field appearance="outline">
         <mat-label>Fecha de apertura ($us, opcional)</mat-label>
-        <input matInput [matDatepicker]="pickerUsd" formControlName="fechaSaldoInicialUsd" readonly
-          (click)="pickerUsd.open()" />
+        <input matInput class="input-fecha" [matDatepicker]="pickerUsd" formControlName="fechaSaldoInicialUsd" />
         <mat-datepicker-toggle matSuffix [for]="pickerUsd"></mat-datepicker-toggle>
         <mat-datepicker #pickerUsd></mat-datepicker>
         <mat-hint>Solo si la caja también maneja dólares</mat-hint>
@@ -84,11 +88,11 @@
               <td mat-cell *matCellDef="let row">{{ row.nombre }}</td>
             </ng-container>
 
-            <ng-container matColumnDef="saldoBob">
+            <ng-container matColumnDef="saldoBs">
               <th mat-header-cell *matHeaderCellDef>Saldo inicial (Bs)</th>
               <td mat-cell *matCellDef="let row">
-                Bs {{ num(row.saldoInicialBob) | number:'1.2-2' }}
-                <small class="fecha-apertura">{{ row.fechaSaldoInicialBob ? ('al ' + fechaFmt(row.fechaSaldoInicialBob)) : '(sin aperturar)' }}</small>
+                Bs {{ num(row.saldoInicialBs) | number:'1.2-2' }}
+                <small class="fecha-apertura">{{ row.fechaSaldoInicialBs ? ('al ' + fechaFmt(row.fechaSaldoInicialBs)) : '(sin aperturar)' }}</small>
               </td>
             </ng-container>
 

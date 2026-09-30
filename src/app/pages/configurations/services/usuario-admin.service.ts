@@ -1,4 +1,4 @@
-// src/app/pages/ui-components/panel-users/services/usuario-admin.service.ts
+// src/app/pages/configurations/services/usuario-admin.service.ts
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';

@@ -1,0 +1,25 @@
+<mat-form-field appearance="outline" class="rango-fechas__campo" subscriptSizing="dynamic">
+  <mat-label>{{ label() }}</mat-label>
+  <mat-date-range-input class="input-fecha" [rangePicker]="picker" [min]="min()" [max]="max()">
+    <input matStartDate placeholder="Desde" [formControl]="desde()" />
+    <input matEndDate placeholder="Hasta" [formControl]="hasta()" />
+  </mat-date-range-input>
+  <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+  <mat-date-range-picker #picker panelClass="panel-calendario-color">
+    <mat-date-range-picker-actions>
+      <button mat-button matDateRangePickerCancel>Cancelar</button>
+      <button mat-flat-button matDateRangePickerApply>Aceptar</button>
+    </mat-date-range-picker-actions>
+  </mat-date-range-picker>
+</mat-form-field>
+
+@if (atajos()) {
+<div class="rango-fechas__atajos" role="group" aria-label="Atajos de período">
+  @for (a of listaAtajos; track a.id) {
+  <button type="button" class="rango-fechas__atajo" [class.rango-fechas__atajo--activo]="atajoActivo() === a.id"
+    [attr.aria-pressed]="atajoActivo() === a.id" (click)="aplicarAtajo(a.id)">
+    {{ a.nombre }}
+  </button>
+  }
+</div>
+}

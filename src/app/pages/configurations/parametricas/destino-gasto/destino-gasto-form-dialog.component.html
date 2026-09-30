@@ -1,0 +1,94 @@
+<div class="blue_theme">
+  <app-parametrica-dialog-shell [titulo]="modoEdicion ? 'Modificar Destino del Gasto' : 'Nuevo Destino del Gasto'">
+
+    <!-- ==================== FORMULARIO ==================== -->
+    <form [formGroup]="form" (ngSubmit)="guardar()" class="destino-form">
+
+      <mat-form-field appearance="outline">
+        <mat-label>Nombre</mat-label>
+        <input matInput formControlName="nombre" maxlength="150" placeholder="Ej: COMBUSTIBLE GASOLINA" />
+        <mat-error *ngIf="form.get('nombre')?.hasError('required')">
+          El nombre es obligatorio
+        </mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Tipo</mat-label>
+        <mat-select formControlName="esEgreso">
+          <mat-option [value]="true">Egreso</mat-option>
+          <mat-option [value]="false">Ingreso</mat-option>
+        </mat-select>
+        <mat-hint>Egreso se ofrece en recibos de egreso; Ingreso, en los de ingreso</mat-hint>
+      </mat-form-field>
+
+    </form>
+
+    <!-- ==================== BOTONES ==================== -->
+    <div class="acciones">
+      <button mat-stroked-button type="button" (click)="cancelar()" [disabled]="guardando">
+        {{ modoEdicion ? 'Cancelar edición' : 'Limpiar' }}
+      </button>
+      <button mat-flat-button color="primary" type="button" (click)="guardar()" [disabled]="guardando">
+        {{ modoEdicion ? 'Actualizar' : 'Guardar' }}
+      </button>
+    </div>
+
+    <!-- ==================== TABLA ==================== -->
+    <mat-card class="tabla-card">
+      <mat-card-title>Destinos del gasto registrados</mat-card-title>
+
+      <mat-card-content>
+
+        <div class="tabla-scroll">
+          <table mat-table [dataSource]="destinos" class="tabla mat-elevation-z1">
+
+            <ng-container matColumnDef="id">
+              <th mat-header-cell *matHeaderCellDef>ID</th>
+              <td mat-cell *matCellDef="let row">{{ row.id }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="nombre">
+              <th mat-header-cell *matHeaderCellDef>Nombre</th>
+              <td mat-cell *matCellDef="let row">{{ row.nombre }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="tipo">
+              <th mat-header-cell *matHeaderCellDef>Tipo</th>
+              <td mat-cell *matCellDef="let row">{{ row.esEgreso ? 'Egreso' : 'Ingreso' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="estado">
+              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <td mat-cell *matCellDef="let row">
+                <span class="badge" [class.badge--vigente]="row.activo !== false" [class.badge--vencida]="row.activo === false">
+                  {{ row.activo !== false ? 'Activo' : 'Inactivo' }}
+                </span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef>Acciones</th>
+              <td mat-cell *matCellDef="let row">
+                <button mat-icon-button color="primary" matTooltip="Editar" (click)="editar(row)">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button mat-icon-button [color]="row.activo !== false ? 'warn' : 'primary'"
+                  [matTooltip]="row.activo !== false ? 'Desactivar' : 'Activar'" (click)="cambiarEstado(row)">
+                  <mat-icon>{{ row.activo !== false ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+            <tr mat-row *matRowDef="let row; columns: columnas"></tr>
+          </table>
+        </div>
+
+        <p *ngIf="!cargando && destinos.length === 0" class="sin-datos">
+          No hay destinos del gasto registrados.
+        </p>
+
+      </mat-card-content>
+    </mat-card>
+  </app-parametrica-dialog-shell>
+</div>

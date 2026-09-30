@@ -9,6 +9,16 @@
   <mat-card-content class="b-t-1">
 
     <div class="rl-acciones">
+      <button mat-stroked-button color="primary" (click)="descargarLibro()" [disabled]="descargandoLibro()"
+        matTooltip="Excel con todos los recibos que cumplen los filtros de la bandeja">
+        @if (descargandoLibro()) {
+        <mat-spinner diameter="18" class="rl-acciones__spinner"></mat-spinner>
+        } @else {
+        <mat-icon>download</mat-icon>
+        }
+        {{ descargandoLibro() ? 'Generando...' : 'Libro de recibos (Excel)' }}
+      </button>
+
       <button mat-flat-button color="primary" [matMenuTriggerFor]="menuGenerar">
         <mat-icon>receipt_long</mat-icon> Generar recibo
         <mat-icon iconPositionEnd>arrow_drop_down</mat-icon>
@@ -59,19 +69,7 @@
         </mat-select>
       </mat-form-field>
 
-      <mat-form-field appearance="outline" class="rl-toolbar__fecha" subscriptSizing="dynamic">
-        <input matInput [matDatepicker]="pickerDesde" placeholder="Desde" readonly
-          [formControl]="fechaDesdeControl" (click)="pickerDesde.open()" />
-        <mat-datepicker-toggle matSuffix [for]="pickerDesde"></mat-datepicker-toggle>
-        <mat-datepicker #pickerDesde></mat-datepicker>
-      </mat-form-field>
-
-      <mat-form-field appearance="outline" class="rl-toolbar__fecha" subscriptSizing="dynamic">
-        <input matInput [matDatepicker]="pickerHasta" placeholder="Hasta" readonly
-          [formControl]="fechaHastaControl" (click)="pickerHasta.open()" />
-        <mat-datepicker-toggle matSuffix [for]="pickerHasta"></mat-datepicker-toggle>
-        <mat-datepicker #pickerHasta></mat-datepicker>
-      </mat-form-field>
+      <app-rango-fechas [desde]="fechaDesdeControl" [hasta]="fechaHastaControl" />
 
       <button mat-icon-button (click)="toggleOrden()"
         [matTooltip]="orderDirectionControl.value === 'ASC' ? 'Ascendente' : 'Descendente'">
@@ -104,15 +102,6 @@
             <td mat-cell *matCellDef="let r">{{ codigoRecibo(r) }}</td>
           </ng-container>
 
-          <ng-container matColumnDef="tipo">
-            <th mat-header-cell *matHeaderCellDef>Tipo</th>
-            <td mat-cell *matCellDef="let r">
-              <span class="rl-chip" [class.rl-chip--egreso]="r.tipo === 'EGRESO'">
-                {{ r.tipo === 'INGRESO' ? 'Ingreso' : 'Egreso' }}
-              </span>
-            </td>
-          </ng-container>
-
           <ng-container matColumnDef="estado">
             <th mat-header-cell *matHeaderCellDef>Estado</th>
             <td mat-cell *matCellDef="let r">
@@ -123,8 +112,8 @@
           </ng-container>
 
           <ng-container matColumnDef="fecha">
-            <th mat-header-cell *matHeaderCellDef>Fecha</th>
-            <td mat-cell *matCellDef="let r">{{ fechaFmt(r.fecha) }}</td>
+            <th mat-header-cell *matHeaderCellDef class="col-fecha">Fecha</th>
+            <td mat-cell *matCellDef="let r" class="col-fecha">{{ fechaFmt(r.fecha) }}</td>
           </ng-container>
 
           <ng-container matColumnDef="persona">
@@ -144,7 +133,15 @@
 
           <ng-container matColumnDef="monto">
             <th mat-header-cell *matHeaderCellDef class="rl-num">Monto</th>
-            <td mat-cell *matCellDef="let r" class="rl-num">{{ num(r.montoTotal) | number:'1.2-2' }}</td>
+            <td mat-cell *matCellDef="let r" class="rl-num">
+              @if (r.moneda === 'USD') { <small class="rl-moneda">$us</small> }
+              {{ num(r.montoTotal) | number:'1.2-2' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="usuarioRegistro">
+            <th mat-header-cell *matHeaderCellDef>Generó</th>
+            <td mat-cell *matCellDef="let r">{{ r.usuarioRegistro || '—' }}</td>
           </ng-container>
 
           <ng-container matColumnDef="acciones">
@@ -166,8 +163,7 @@
                 <button mat-menu-item (click)="verPdf(r)">
                   <mat-icon>receipt_long</mat-icon> Recibo generado
                 </button>
-                <button mat-menu-item (click)="verPdfDetallado(r)"
-                  [disabled]="r.estado !== 'PROCESADO'">
+                <button mat-menu-item (click)="verPdfDetallado(r)" [disabled]="r.estado !== 'PROCESADO'">
                   <mat-icon>fact_check</mat-icon> Recibo detallado (procesado)
                 </button>
               </mat-menu>

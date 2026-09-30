@@ -1,0 +1,256 @@
+<mat-card class="cardWithShadow theme-card">
+  <mat-card-header class="card-header-row">
+    <div class="header-left">
+      <button mat-icon-button (click)="cancelar()" matTooltip="Volver">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <div>
+        <mat-card-title class="m-b-0">
+          {{ editando ? 'Editar promedio ' + (promedio()?.codigo ?? '') : 'Nuevo promedio' }}
+        </mat-card-title>
+        <mat-card-subtitle class="m-b-0">
+          Comercio interno · ley y humedad promedio ponderadas por peso de valorizaciones
+        </mat-card-subtitle>
+      </div>
+    </div>
+  </mat-card-header>
+
+  <mat-card-content class="b-t-1">
+<div class="pf-content">
+  @if (cargandoPromedio()) {
+  <div class="pf-msg"><mat-spinner diameter="28"></mat-spinner><span>Cargando promedio...</span></div>
+  } @else {
+  <div class="pf-cabecera">
+    <mat-form-field appearance="outline" class="pf-sel" subscriptSizing="dynamic">
+      <mat-label>Codificación del lote</mat-label>
+      <mat-select [formControl]="codificacionLoteControl" required>
+        @for (c of codificacionesLote(); track c.id) {
+        <mat-option [value]="c.id">{{ c.codigo }} · {{ c.nombre }}</mat-option>
+        }
+      </mat-select>
+      @if (editando && promedio()?.codigoLote) {
+      <mat-hint>Lote actual: {{ promedio()!.codigoLote }}. Al cambiarla toma el siguiente correlativo.</mat-hint>
+      }
+      @if (codificacionLoteControl.hasError('required')) {
+      <mat-error>Elige la codificación del lote</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="pf-desc" subscriptSizing="dynamic">
+      <mat-label>Descripción</mat-label>
+      <input matInput maxlength="150" placeholder="Ej. JULIO BAJAS 461" [formControl]="descripcionControl" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="pf-fecha" subscriptSizing="dynamic">
+      <mat-label>Fecha</mat-label>
+      <input matInput [matDatepicker]="pickerFecha" [formControl]="fechaControl" />
+      <mat-datepicker-toggle matSuffix [for]="pickerFecha"></mat-datepicker-toggle>
+      <mat-datepicker #pickerFecha></mat-datepicker>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="pf-obs" subscriptSizing="dynamic">
+      <mat-label>Observaciones</mat-label>
+      <input matInput maxlength="255" [formControl]="observacionesControl" />
+    </mat-form-field>
+  </div>
+
+  <h3>Valorizaciones disponibles</h3>
+  <div class="pf-toolbar">
+    <mat-form-field appearance="outline" class="pf-sel" subscriptSizing="dynamic">
+      <mat-label>Filtrar por codificación</mat-label>
+      <mat-select [formControl]="codificacionControl">
+        @for (c of codificaciones(); track c.id) {
+        <mat-option [value]="c.codigo">{{ c.codigo }} · {{ c.nombre }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="pf-sel" subscriptSizing="dynamic">
+      <mat-label>Estado</mat-label>
+      <mat-select [formControl]="estadoControl">
+        <mat-option value="ambas">Pre-valoradas y valoradas</mat-option>
+        <mat-option value="pre_valorizadas">Pre-valoradas</mat-option>
+        <mat-option value="valorizadas">Valoradas</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="pf-search" subscriptSizing="dynamic">
+      <mat-icon matPrefix>search</mat-icon>
+      <input matInput placeholder="Proveedor o código" [formControl]="searchControl" />
+    </mat-form-field>
+  </div>
+
+  <div class="pf-tabla-wrap">
+    @if (cargando()) {
+    <div class="pf-msg"><mat-spinner diameter="28"></mat-spinner><span>Cargando...</span></div>
+    } @else if (disponibles().length === 0) {
+    <div class="pf-msg">
+      <mat-icon>inbox</mat-icon>
+      <span>{{ codificacionControl.value ? 'No hay valorizaciones disponibles con estos filtros' : 'Elige una codificación' }}</span>
+    </div>
+    } @else {
+    <div class="pf-scroll">
+      <table mat-table [dataSource]="disponibles()" class="pf-tabla">
+        <ng-container matColumnDef="sel">
+          <th mat-header-cell *matHeaderCellDef>
+            <mat-checkbox [checked]="paginaCompleta()" [indeterminate]="paginaParcial()"
+              (change)="togglePagina()"></mat-checkbox>
+          </th>
+          <td mat-cell *matCellDef="let f" (click)="$event.stopPropagation()">
+            <mat-checkbox [checked]="estaSeleccionada(f)" (change)="toggle(f)"></mat-checkbox>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="codigo">
+          <th mat-header-cell *matHeaderCellDef>Lote</th>
+          <td mat-cell *matCellDef="let f">
+          {{ f.codigoOperacion }}
+          @if (f.codificacionRecepcion && f.codificacionRecepcion !== f.codificacion) {
+          <span class="pf-cod-cambiada" [matTooltip]="'Recepción ' + f.codificacionRecepcion + ' valorizada como ' + f.codificacion">{{ f.codificacionRecepcion }} → {{ f.codificacion }}</span>
+          }
+        </td>
+        </ng-container>
+        <ng-container matColumnDef="proveedor">
+          <th mat-header-cell *matHeaderCellDef>Referencia</th>
+          <td mat-cell *matCellDef="let f">{{ f.proveedor }}</td>
+        </ng-container>
+        <ng-container matColumnDef="sacos">
+          <th mat-header-cell *matHeaderCellDef class="pf-num"># Sacos</th>
+          <td mat-cell *matCellDef="let f" class="pf-num">{{ numFmt(f.numeroSacos) }}</td>
+        </ng-container>
+        <ng-container matColumnDef="peso">
+          <th mat-header-cell *matHeaderCellDef class="pf-num">Peso Kg</th>
+          <td mat-cell *matCellDef="let f" class="pf-num">{{ f.pesoKg | number:'1.0-2' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="humedad">
+          <th mat-header-cell *matHeaderCellDef class="pf-num">Humedad %</th>
+          <td mat-cell *matCellDef="let f" class="pf-num">{{ f.humedadPorcentaje != null ? (f.humedadPorcentaje | number:'1.0-4') : '—' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="leyes">
+          <th mat-header-cell *matHeaderCellDef>Ley</th>
+          <td mat-cell *matCellDef="let f">
+            @for (l of f.leyes; track l.idMineral) {
+            <span class="pf-ley">{{ l.mineral }} {{ l.ley | number:'1.0-4' }} {{ l.unidad }}</span>
+            } @empty { — }
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="monto">
+          <th mat-header-cell *matHeaderCellDef class="pf-num">Monto (Bs)</th>
+          <td mat-cell *matCellDef="let f" class="pf-num">{{ f.valorNetoVentaBolivianos | number:'1.2-2' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="estado">
+          <th mat-header-cell *matHeaderCellDef>Estado</th>
+          <td mat-cell *matCellDef="let f">
+            <span class="pf-estado" [class.pf-estado--val]="f.idEstadoValorizacion === 3">
+              {{ f.estadoValorizacion }}
+            </span>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+        <tr mat-row *matRowDef="let f; columns: columnas" (click)="toggle(f)" class="pf-fila"
+          [class.pf-fila--sel]="estaSeleccionada(f)"></tr>
+      </table>
+    </div>
+    <mat-paginator [length]="total()" [pageSize]="pageSize" [pageIndex]="pageIndex" [pageSizeOptions]="[10, 25, 50]"
+      (page)="onPageChange($event)"></mat-paginator>
+    }
+  </div>
+
+  <h3>Seleccionadas ({{ seleccionadas().length }})</h3>
+  @if (seleccionadas().length === 0) {
+  <p class="pf-hint">Marca al menos una valorización para armar el promedio.</p>
+  } @else {
+  <div class="pf-scroll pf-scroll--sel">
+    <table mat-table [dataSource]="seleccionadas()" class="pf-tabla">
+      <ng-container matColumnDef="codigo">
+        <th mat-header-cell *matHeaderCellDef>Lote</th>
+        <td mat-cell *matCellDef="let f">
+          {{ f.codigoOperacion }}
+          @if (f.codificacionRecepcion && f.codificacionRecepcion !== f.codificacion) {
+          <span class="pf-cod-cambiada" [matTooltip]="'Recepción ' + f.codificacionRecepcion + ' valorizada como ' + f.codificacion">{{ f.codificacionRecepcion }} → {{ f.codificacion }}</span>
+          }
+        </td>
+        <td mat-footer-cell *matFooterCellDef>Totales / promedios</td>
+      </ng-container>
+      <ng-container matColumnDef="proveedor">
+        <th mat-header-cell *matHeaderCellDef>Referencia</th>
+        <td mat-cell *matCellDef="let f">{{ f.proveedor }}</td>
+        <td mat-footer-cell *matFooterCellDef></td>
+      </ng-container>
+      <ng-container matColumnDef="sacos">
+        <th mat-header-cell *matHeaderCellDef class="pf-num"># Sacos</th>
+        <td mat-cell *matCellDef="let f" class="pf-num">{{ numFmt(f.numeroSacos) }}</td>
+        <td mat-footer-cell *matFooterCellDef class="pf-num">{{ totalSacos() }}</td>
+      </ng-container>
+      <ng-container matColumnDef="peso">
+        <th mat-header-cell *matHeaderCellDef class="pf-num">Peso Kg</th>
+        <td mat-cell *matCellDef="let f" class="pf-num">{{ f.pesoKg | number:'1.0-2' }}</td>
+        <td mat-footer-cell *matFooterCellDef class="pf-num">{{ totalKg() | number:'1.0-2' }}</td>
+      </ng-container>
+      <ng-container matColumnDef="humedad">
+        <th mat-header-cell *matHeaderCellDef class="pf-num">Humedad %</th>
+        <td mat-cell *matCellDef="let f" class="pf-num">{{ f.humedadPorcentaje != null ? (f.humedadPorcentaje | number:'1.0-4') : '—' }}</td>
+        <td mat-footer-cell *matFooterCellDef class="pf-num">{{ humedadPromedio() != null ? (humedadPromedio() | number:'1.0-4') : '—' }}</td>
+      </ng-container>
+      <ng-container matColumnDef="leyes">
+        <th mat-header-cell *matHeaderCellDef>Ley</th>
+        <td mat-cell *matCellDef="let f">
+          @for (l of f.leyes; track l.idMineral) {
+          <span class="pf-ley">{{ l.mineral }} {{ l.ley | number:'1.0-4' }} {{ l.unidad }}</span>
+          } @empty { — }
+        </td>
+        <td mat-footer-cell *matFooterCellDef>
+          @for (l of preview(); track l.idMineral) {
+          <span class="pf-ley">{{ l.mineral }} {{ l.ley | number:'1.0-4' }} {{ l.unidad }}</span>
+          } @empty { — }
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="monto">
+        <th mat-header-cell *matHeaderCellDef class="pf-num">Monto (Bs)</th>
+        <td mat-cell *matCellDef="let f" class="pf-num">{{ f.valorNetoVentaBolivianos | number:'1.2-2' }}</td>
+        <td mat-footer-cell *matFooterCellDef class="pf-num">{{ totalMonto() | number:'1.2-2' }}</td>
+      </ng-container>
+      <ng-container matColumnDef="estado">
+        <th mat-header-cell *matHeaderCellDef>Estado</th>
+        <td mat-cell *matCellDef="let f">
+          @if (f.estadoValorizacion) {
+          <span class="pf-estado" [class.pf-estado--val]="f.idEstadoValorizacion === 3">
+            {{ f.estadoValorizacion }}
+          </span>
+          } @else { — }
+        </td>
+        <td mat-footer-cell *matFooterCellDef></td>
+      </ng-container>
+      <ng-container matColumnDef="quitar">
+        <th mat-header-cell *matHeaderCellDef></th>
+        <td mat-cell *matCellDef="let f">
+          <button mat-icon-button color="warn" (click)="quitar(f)" aria-label="Quitar">
+            <mat-icon>close</mat-icon>
+          </button>
+        </td>
+        <td mat-footer-cell *matFooterCellDef></td>
+      </ng-container>
+      <tr mat-header-row *matHeaderRowDef="columnasSel"></tr>
+      <tr mat-row *matRowDef="let f; columns: columnasSel"></tr>
+      <tr mat-footer-row *matFooterRowDef="columnasSel; sticky: true" class="pf-totales"></tr>
+    </table>
+  </div>  @if (sinLeyes() > 0) {
+  <p class="pf-hint">
+    {{ sinLeyes() }} valorización(es) ya incluidas no aportan a la vista previa de leyes; el backend recalcula
+    el promedio definitivo al guardar.
+  </p>
+  }
+  }
+
+  <div class="pf-actions">
+    <button mat-button (click)="cancelar()" [disabled]="guardando()">Cancelar</button>
+    <button mat-flat-button color="primary" (click)="guardar()"
+      [disabled]="seleccionadas().length === 0 || codificacionLoteControl.invalid || guardando()">
+      <mat-icon>save</mat-icon>
+      {{ guardando() ? 'Guardando...' : editando ? 'Guardar cambios' : 'Crear promedio' }}
+    </button>
+  </div>
+  }
+</div>
+  </mat-card-content>
+</mat-card>

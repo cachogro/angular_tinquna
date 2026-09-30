@@ -40,11 +40,27 @@ export interface MovimientoBanco {
   folio: number;
   fecha: string;
   nroTransaccion?: string | null;
+  /** Texto libre (no valida contra catálogo en el back); el front reutiliza
+   *  el mismo listado de "Forma de pago" que ya usa Recibos (QR,
+   *  TRANSFERENCIA, CHEQUE, DEPOSITO, EFECTIVO). */
+  tipoTransaccion: string;
+  /** "FACTURA Y/O RECIBO": texto libre (máx. 30); en los movimientos que
+   *  nacen de un recibo trae su código (ej. "R-0009"). */
+  facturaRecibo?: string | null;
   /** Beneficiario / contraparte. Si hay persona vinculada, el back lo deriva de ella. */
   nombresApellidos?: string | null;
   /** Persona CI vinculada (null = texto libre). */
   idPersona?: string | null;
   persona?: PersonaMovimientoRef | null;
+  /** Actor productivo o cliente vinculado (excluyentes con persona). */
+  idActorProductivoMinero?: string | null;
+  actorProductivoMinero?: { id: string; nombre: string } | null;
+  idCliente?: string | null;
+  cliente?: { id: string; nombre: string } | null;
+  /** Usuario (login) que registró el movimiento. */
+  usuarioRegistro?: string | null;
+  /** Presente cuando el movimiento nace de un traspaso caja↔banco. */
+  idTraspaso?: string | null;
   concepto: string;
   /** "DEBE" = egreso/salida. */
   debe: string;
@@ -55,6 +71,46 @@ export interface MovimientoBanco {
   activo: boolean;
   usuarioUltimaModificacion?: string | null;
   fechaUltimaModificacion?: string | null;
+}
+
+/** GET /contabilidad/libreta-banco/detalle/:id — movimiento completo para
+ *  el visor. La bandeja trae solo lo que muestra la tabla. */
+export interface MovimientoBancoDetalle extends MovimientoBanco {
+  facturaRecibo?: string | null;
+  idDestinoGasto?: number | null;
+  destinoGasto?: { id: number; nombre: string } | null;
+  cuentaBancaria?: {
+    id: number;
+    numeroCuenta: string;
+    moneda: string;
+    alias?: string | null;
+    entidadFinanciera?: { nombre: string; sigla?: string | null } | null;
+  } | null;
+  idRecibo?: string | null;
+  recibo?: {
+    id: string;
+    serie: string;
+    numero: number;
+    tipo: 'INGRESO' | 'EGRESO';
+    estado: string;
+  } | null;
+  traspaso?: { id: string; tipo: 'DEPOSITO' | 'RETIRO'; concepto: string } | null;
+  idMovimientoKardex?: string | null;
+  movimientoKardex?: {
+    id: string;
+    numeroLinea: number;
+    kardex?: {
+      id: string;
+      numero: number;
+      tipo: string;
+      gestion: number;
+      persona?: PersonaMovimientoRef | null;
+      actorProductivoMinero?: { id: number; nombre: string } | null;
+      cliente?: { id: number | string; nombre: string } | null;
+    } | null;
+  } | null;
+  usuarioRegistro?: string | null;
+  fechaRegistro?: string | null;
 }
 
 export interface CuentaLibreta {
@@ -79,8 +135,15 @@ export interface GuardarMovimientoBancoRequest {
   /** "YYYY-MM-DD" — define el mes/gestión del movimiento. */
   fecha: string;
   nroTransaccion?: string;
-  /** Persona CI elegida de la lista. Sin `idPersona` = texto libre. */
+  /** N° de factura o recibo (texto libre, máx. 30). */
+  facturaRecibo?: string;
+  /** Texto libre, mismo catálogo de "Forma de pago" que Recibos. */
+  tipoTransaccion: string;
+  /** Contraparte: UNA de persona CI, actor productivo o cliente; sin
+   *  ninguna = texto libre en `nombresApellidos`. */
   idPersona?: string | number | null;
+  idActorProductivoMinero?: string | null;
+  idCliente?: string | null;
   /** Texto del beneficiario. Con `idPersona` y sin esto, el back lo deriva de la persona. */
   nombresApellidos?: string;
   concepto: string;

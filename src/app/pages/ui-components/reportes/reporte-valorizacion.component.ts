@@ -4,7 +4,6 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCardModule } from '@angular/material/card';
-import { MatNativeDateModule } from '@angular/material/core';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -21,6 +20,7 @@ import {
 } from '../models/valorizacion-mineral.models';
 import { RegistroMineralService } from '../services/registro-mineral.service';
 import { ValorizacionMineralService } from '../services/valorizacion-mineral.service';
+import { RangoFechasComponent } from '../../../shared/components/rango-fechas/rango-fechas.component';
 
 /** Formas de acotar por fecha; el backend las trata como excluyentes. */
 type ModoPeriodo = 'todos' | 'fechas' | 'mes' | 'semana';
@@ -49,6 +49,7 @@ const MESES = [
   selector: 'app-reporte-valorizacion',
   standalone: true,
   imports: [
+    RangoFechasComponent,
     CommonModule,
     ReactiveFormsModule,
     MatCardModule,
@@ -56,7 +57,6 @@ const MESES = [
     MatInputModule,
     MatSelectModule,
     MatDatepickerModule,
-    MatNativeDateModule,
     MatButtonModule,
     MatButtonToggleModule,
     MatIconModule,

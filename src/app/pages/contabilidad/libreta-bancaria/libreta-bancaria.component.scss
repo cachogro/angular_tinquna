@@ -134,6 +134,15 @@
   flex-wrap: wrap;
 }
 
+.lb-periodo__excel {
+  margin-left: auto;
+}
+
+.lb-btn-spinner {
+  display: inline-block;
+  margin-right: 6px;
+}
+
 .lb-cerrado-info {
   font-size: 12px;
   color: rgba(0, 0, 0, 0.55);
@@ -240,6 +249,15 @@
 
 .lb-persona-ico {
   color: var(--mat-sys-primary);
+  font-size: 13px;
+  width: 13px;
+  height: 13px;
+  vertical-align: text-bottom;
+  margin-right: 2px;
+}
+
+.lb-traspaso-ico {
+  color: #1565c0;
   font-size: 13px;
   width: 13px;
   height: 13px;

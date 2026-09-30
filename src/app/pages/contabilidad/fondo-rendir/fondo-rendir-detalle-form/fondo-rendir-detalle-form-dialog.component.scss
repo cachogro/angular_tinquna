@@ -1,0 +1,73 @@
+.fd-loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 32px;
+  justify-content: center;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.fd-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 480px;
+}
+
+.fd-form mat-form-field {
+  width: 100%;
+}
+
+.fd-form__row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.fd-form__full {
+  width: 100%;
+}
+
+.fd-aviso {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--mat-sys-primary) 8%, transparent);
+  font-size: 13px;
+}
+
+.fd-aviso mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  color: var(--mat-sys-primary);
+}
+
+.fd-aviso--exceso {
+  background: color-mix(in srgb, #ef6c00 12%, transparent);
+  color: #e65100;
+}
+
+.fd-aviso--exceso mat-icon {
+  color: #e65100;
+}
+
+.btn-spinner {
+  display: inline-block;
+}
+
+.btn-spinner ::ng-deep circle {
+  stroke: currentColor;
+}
+
+@media (max-width: 560px) {
+  .fd-form {
+    min-width: 0;
+  }
+  .fd-form__row2 {
+    grid-template-columns: 1fr;
+  }
+}

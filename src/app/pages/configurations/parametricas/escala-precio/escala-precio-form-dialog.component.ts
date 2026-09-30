@@ -36,6 +36,8 @@ import {
   Mineral,
 } from '../models/parametricas.models';
 import { ParametricasService } from '../../services/parametricas.service';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { FechaInputDirective } from '../../../../shared/directives/fecha-input.directive';
 
 export interface EscalaPrecioDialogData {
   /** Preselecciona este mineral al abrir. Útil cuando el modal se abre
@@ -47,11 +49,13 @@ export interface EscalaPrecioDialogData {
   selector: 'app-escala-precio-form-dialog',
   standalone: true,
   imports: [
+    FechaInputDirective,
     CommonModule,
     ReactiveFormsModule,
     FormsModule,
     MatFormFieldModule,
     MatInputModule,
+    MatDatepickerModule,
     MatSelectModule,
     MatButtonModule,
     MatDialogModule,
@@ -102,13 +106,13 @@ export class EscalaPrecioFormDialogComponent implements OnInit {
     'acciones',
   ];
 
-  /** Fecha de hoy en hora local, "YYYY-MM-DD": mínimo de los date inputs de vigencia. */
+  /** Hoy a las 00:00 (hora local): mínimo de los datepicker de vigencia. */
   readonly fechaMinima = this.obtenerFechaHoyLocal();
 
   /** Filtro de historial de la "Tabla vigente": vacío = tabla vigente ahora
    *  mismo; con fecha = la tabla que regía ese día. No forma parte de
    *  `form` porque es solo de consulta, no se manda en ningún guardado. */
-  readonly fechaConsultaControl = new FormControl<string>('');
+  readonly fechaConsultaControl = new FormControl<Date | null>(null);
 
   /** true mientras se está viendo una tabla histórica (con fecha filtrada):
    *  en ese modo la edición inline se deshabilita, porque el back solo deja
@@ -120,8 +124,8 @@ export class EscalaPrecioFormDialogComponent implements OnInit {
   form: FormGroup = this.fb.group(
     {
       idMineral: [null as number | null, [Validators.required]],
-      fechaVigenciaInicial: ['', [Validators.required]],
-      fechaVigenciaFinal: ['', [Validators.required]],
+      fechaVigenciaInicial: [null as Date | null, [Validators.required]],
+      fechaVigenciaFinal: [null as Date | null, [Validators.required]],
       /** Rango de ley: la tabla se genera con exactamente
        *  (leyFinal - leyInicial + 1) filas, correlativas. */
       leyInicial: [
@@ -296,7 +300,7 @@ export class EscalaPrecioFormDialogComponent implements OnInit {
     // de un mineral anterior.
     this.form.get('idMineral')!.valueChanges.subscribe(() => {
       this.filaEditandoId = null;
-      this.fechaConsultaControl.setValue('', { emitEvent: false });
+      this.fechaConsultaControl.setValue(null, { emitEvent: false });
       this.aplicarModoMineral();
       this.recargarTablaVigente();
     });
@@ -327,13 +331,15 @@ export class EscalaPrecioFormDialogComponent implements OnInit {
     if (!idMineral) return;
     this.parametricasService.cargarEscalaPrecioVigente(
       idMineral,
-      this.fechaConsultaControl.value || undefined,
+      this.fechaConsultaControl.value
+        ? this.aIso(this.fechaConsultaControl.value)
+        : undefined,
     );
   }
 
   /** Vuelve a mostrar la tabla vigente ahora mismo (sale del modo histórico). */
   limpiarFechaConsulta(): void {
-    this.fechaConsultaControl.setValue('');
+    this.fechaConsultaControl.setValue(null);
   }
 
   /** Ley que le corresponde a la fila `i`. Para estaño la teclea el usuario;
@@ -428,8 +434,8 @@ export class EscalaPrecioFormDialogComponent implements OnInit {
     this.parametricasService
       .crearEscalaPrecio({
         idMineral,
-        fechaVigenciaInicial: this.fechaInicioISO(fechaVigenciaInicial),
-        fechaVigenciaFinal: this.fechaFinISO(fechaVigenciaFinal),
+        fechaVigenciaInicial: this.fechaInicioISO(this.aIso(fechaVigenciaInicial)),
+        fechaVigenciaFinal: this.fechaFinISO(this.aIso(fechaVigenciaFinal)),
         filas: this.construirFilasParaEnviar(),
       })
       .subscribe({
@@ -470,20 +476,20 @@ export class EscalaPrecioFormDialogComponent implements OnInit {
     // El back ya recargó la tabla vigente ahora mismo (ver crearEscalaPrecio):
     // si había un filtro de fecha activo, se limpia para no mostrar un
     // título "histórico" con datos que en realidad son los recién guardados.
-    this.fechaConsultaControl.setValue('', { emitEvent: false });
+    this.fechaConsultaControl.setValue(null, { emitEvent: false });
   }
 
   cancelar(): void {
     this.form.reset({
       idMineral: null,
-      fechaVigenciaInicial: '',
-      fechaVigenciaFinal: '',
+      fechaVigenciaInicial: null,
+      fechaVigenciaFinal: null,
       leyInicial: null,
       leyFinal: null,
     });
     this.leyInicialVigente = null;
     this.filas.clear();
-    this.fechaConsultaControl.setValue('', { emitEvent: false });
+    this.fechaConsultaControl.setValue(null, { emitEvent: false });
   }
 
   // ==========================================================
@@ -553,12 +559,16 @@ export class EscalaPrecioFormDialogComponent implements OnInit {
     return this.parametricasService.cargandoEscalaPrecio();
   }
 
-  private obtenerFechaHoyLocal(): string {
+  private obtenerFechaHoyLocal(): Date {
     const hoy = new Date();
-    const year = hoy.getFullYear();
-    const month = String(hoy.getMonth() + 1).padStart(2, '0');
-    const day = String(hoy.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+  }
+
+  /** Date del datepicker → "YYYY-MM-DD" (día calendario local). */
+  private aIso(fecha: Date): string {
+    const mm = String(fecha.getMonth() + 1).padStart(2, '0');
+    const dd = String(fecha.getDate()).padStart(2, '0');
+    return `${fecha.getFullYear()}-${mm}-${dd}`;
   }
 
   /** El back espera timestamps ISO con offset de Bolivia (-04:00) para que

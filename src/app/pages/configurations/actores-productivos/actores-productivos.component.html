@@ -40,18 +40,18 @@
   </div>
 
   <div class="actores-table-wrapper">
-    @if (loading) {
+    @if (loading()) {
     <div class="actores-loading">
       <mat-spinner diameter="36"></mat-spinner>
       <span>Cargando actores productivos...</span>
     </div>
-    } @else if (actores.length === 0) {
+    } @else if (actores().length === 0) {
     <div class="actores-empty">
       <mat-icon>domain_disabled</mat-icon>
       <p>No se encontraron actores productivos con estos filtros</p>
     </div>
     } @else {
-    <table mat-table [dataSource]="actores" class="actores-table">
+    <table mat-table [dataSource]="actores()" class="actores-table">
 
       <ng-container matColumnDef="id">
         <th mat-header-cell *matHeaderCellDef>N°</th>
@@ -96,11 +96,9 @@
           <button mat-icon-button (click)="verPersonas(row)" matTooltip="Ver personas asociadas">
             <mat-icon>groups</mat-icon>
           </button>
-          @if (!esEmpresa(row)) {
           <button mat-icon-button (click)="abrirKardex(row)" matTooltip="Kardex">
             <mat-icon>menu_book</mat-icon>
           </button>
-          }
           <button mat-icon-button (click)="abrirDialogo(row)" matTooltip="Editar">
             <mat-icon>edit</mat-icon>
           </button>
@@ -117,7 +115,7 @@
       <tr mat-row *matRowDef="let row; columns: displayedColumns" [class.row-inactivo]="!row.activo"></tr>
     </table>
 
-    <mat-paginator [length]="total" [pageSize]="pageSize" [pageIndex]="pageIndex" [pageSizeOptions]="[10, 25, 50]"
+    <mat-paginator [length]="total()" [pageSize]="pageSize()" [pageIndex]="pageIndex()" [pageSizeOptions]="[10, 25, 50]"
       (page)="onPageChange($event)"></mat-paginator>
     }
   </div>

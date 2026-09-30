@@ -9,7 +9,10 @@ import {
   ActualizarCotizacionRequest,
   ActualizarEscalaPrecioRequest,
   Caja,
+  Cliente,
+  ClientesPaginados,
   Codificacion,
+  CodificacionLoteParam,
   Cotizacion,
   CotizacionesPaginadas,
   CrearCodificacionRequest,
@@ -21,10 +24,15 @@ import {
   EntidadFinanciera,
   EscalaPrecio,
   FiltrosActorProductivoMinero,
+  FiltrosCliente,
   FiltrosCotizacion,
   FormaPago,
+  LugarAcopio,
   GuardarActorProductivoMineroRequest,
   GuardarCajaRequest,
+  GuardarClienteRequest,
+  GuardarCodificacionLoteRequest,
+  GuardarDestinoGastoRequest,
   GuardarEntidadAporteRequest,
   GuardarEntidadFinancieraRequest,
   GuardarLaboratorioRequest,
@@ -514,6 +522,49 @@ export class ParametricasService {
   }
 
   // ==========================================================
+  // CLIENTE (compradores del mineral)
+  // ==========================================================
+
+  private readonly clienteUrl = `${this.baseUrl}/cliente`;
+  private clientes$?: Observable<Cliente[]>;
+
+  /** Un solo POST para crear y actualizar: sin `id` crea, con `id` actualiza. */
+  guardarCliente(data: GuardarClienteRequest): Observable<Cliente> {
+    return this.http.post<Cliente>(this.clienteUrl, data);
+  }
+
+  listarClientes(filtros: FiltrosCliente): Observable<ClientesPaginados> {
+    let params = new HttpParams()
+      .set('page', filtros.page)
+      .set('limit', filtros.limit);
+    if (filtros.busqueda) params = params.set('busqueda', filtros.busqueda);
+    if (filtros.activo !== undefined)
+      params = params.set('activo', filtros.activo);
+    if (filtros.orderBy) params = params.set('orderBy', filtros.orderBy);
+    if (filtros.orderDirection)
+      params = params.set('orderDirection', filtros.orderDirection);
+    return this.http.get<ClientesPaginados>(this.clienteUrl, { params });
+  }
+
+  cambiarEstadoCliente(id: string, activo: boolean): Observable<Cliente> {
+    return this.http.patch<Cliente>(
+      `${this.clienteUrl}/cambiar_estado/${id}`,
+      { activo },
+    );
+  }
+
+  /** Catálogo cacheado (para selects) — no se vuelve a pedir tras la primera
+   *  carga. `forzar: true` descarta la caché (p.ej. tras crear un cliente). */
+  getAllClientes(forzar = false): Observable<Cliente[]> {
+    if (forzar || !this.clientes$) {
+      this.clientes$ = this.http
+        .get<Cliente[]>(`${this.clienteUrl}/allClientes`)
+        .pipe(shareReplay(1));
+    }
+    return this.clientes$;
+  }
+
+  // ==========================================================
   // MINERALES
   // ==========================================================
 
@@ -650,6 +701,11 @@ export class ParametricasService {
     return this.formasPago$;
   }
 
+  /** Lugares de acopio activos (ordenados por descripción desde el backend) */
+  obtenerLugaresAcopio(): Observable<LugarAcopio[]> {
+    return this.http.get<LugarAcopio[]>(`${this.baseUrl}/lugar-acopio`);
+  }
+
   private tiposMovimientoKardex$?: Observable<TipoMovimientoKardex[]>;
 
   /** Catálogo cacheado — no se vuelve a pedir tras la primera carga */
@@ -727,5 +783,94 @@ export class ParametricasService {
     return this.http
       .patch<Caja>(`${this.cajaUrl}/cambiar_estado/${id}`, { activo })
       .pipe(tap(() => this.cargarCajas()));
+  }
+
+  // ==========================================================
+  // DESTINO DEL GASTO — administración (Contabilidad).
+  // El catálogo cacheado `obtenerDestinosGasto()` (solo activos) es el que
+  // consumen caja y recibos; aquí se lista todo, incluidos los inactivos.
+  // ==========================================================
+
+  private readonly destinoGastoUrl = `${this.baseUrl}/destino-gasto`;
+
+  readonly destinosGastoAdmin = signal<DestinoGasto[]>([]);
+  readonly cargandoDestinosGastoAdmin = signal<boolean>(false);
+
+  /** Un solo POST: sin `id` crea, con `id` actualiza. */
+  guardarDestinoGasto(data: GuardarDestinoGastoRequest): Observable<DestinoGasto> {
+    return this.http
+      .post<DestinoGasto>(this.destinoGastoUrl, data)
+      .pipe(tap(() => this.refrescarDestinosGasto()));
+  }
+
+  cambiarEstadoDestinoGasto(id: number, activo: boolean): Observable<DestinoGasto> {
+    return this.http
+      .patch<DestinoGasto>(`${this.destinoGastoUrl}/cambiar_estado/${id}`, { activo })
+      .pipe(tap(() => this.refrescarDestinosGasto()));
+  }
+
+  cargarDestinosGastoAdmin(): void {
+    this.cargandoDestinosGastoAdmin.set(true);
+    this.http
+      .get<DestinoGasto[]>(this.destinoGastoUrl, { params: { todos: 'true' } })
+      .subscribe({
+        next: (data) => {
+          this.destinosGastoAdmin.set(data);
+          this.cargandoDestinosGastoAdmin.set(false);
+        },
+        error: () => this.cargandoDestinosGastoAdmin.set(false),
+      });
+  }
+
+  /** Tras un cambio: recarga la tabla y descarta la caché de los selectores. */
+  private refrescarDestinosGasto(): void {
+    this.destinosGasto$ = undefined;
+    this.cargarDestinosGastoAdmin();
+  }
+
+  // ==========================================================
+  // CODIFICACIÓN DE LOTE (Comercio interno — promedios)
+  // ==========================================================
+
+  private readonly codificacionLoteUrl = `${this.baseUrl}/codificacion-lote`;
+
+  readonly codificacionesLote = signal<CodificacionLoteParam[]>([]);
+  readonly cargandoCodificacionesLote = signal<boolean>(false);
+
+  /** Un solo POST: sin `id` crea, con `id` actualiza (solo código y nombre). */
+  guardarCodificacionLote(
+    data: GuardarCodificacionLoteRequest,
+  ): Observable<CodificacionLoteParam> {
+    return this.http
+      .post<CodificacionLoteParam>(this.codificacionLoteUrl, data)
+      .pipe(tap(() => this.cargarCodificacionesLote()));
+  }
+
+  cambiarEstadoCodificacionLote(
+    id: string | number,
+    activo: boolean,
+  ): Observable<CodificacionLoteParam> {
+    return this.http
+      .patch<CodificacionLoteParam>(
+        `${this.codificacionLoteUrl}/cambiar_estado/${id}`,
+        { activo },
+      )
+      .pipe(tap(() => this.cargarCodificacionesLote()));
+  }
+
+  /** Lista todas, incluidas las inactivas (pantalla de administración). */
+  cargarCodificacionesLote(): void {
+    this.cargandoCodificacionesLote.set(true);
+    this.http
+      .get<CodificacionLoteParam[]>(this.codificacionLoteUrl, {
+        params: { todos: 'true' },
+      })
+      .subscribe({
+        next: (data) => {
+          this.codificacionesLote.set(data);
+          this.cargandoCodificacionesLote.set(false);
+        },
+        error: () => this.cargandoCodificacionesLote.set(false),
+      });
   }
 }

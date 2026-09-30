@@ -1,0 +1,95 @@
+<h2 mat-dialog-title>Otorgar préstamo al personal</h2>
+
+<mat-dialog-content>
+  <form [formGroup]="form" class="pf-form">
+    <mat-form-field appearance="outline" class="pf-full">
+      <mat-label>Persona (personal interno)</mat-label>
+      <mat-select formControlName="idPersona">
+        @for (p of personal(); track p.id) {
+        <mat-option [value]="p.id">{{ nombre(p) }} · {{ p.numeroDocumento }}</mat-option>
+        }
+      </mat-select>
+      @if (f.idPersona.hasError('required') && f.idPersona.touched) {
+      <mat-error>Obligatorio</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Fecha</mat-label>
+      <input matInput [matDatepicker]="picker" [max]="hoy" formControlName="fecha" />
+      <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+      <mat-datepicker #picker></mat-datepicker>
+      @if (f.fecha.hasError('matDatepickerParse') && f.fecha.touched) {
+      <mat-error>Fecha inválida (dd/mm/aaaa)</mat-error>
+      } @else if (f.fecha.hasError('required') && f.fecha.touched) {
+      <mat-error>Obligatorio (dd/mm/aaaa)</mat-error>
+      } @else if (f.fecha.hasError('matDatepickerMax') && f.fecha.touched) {
+      <mat-error>No puede ser una fecha futura</mat-error>
+      }
+    </mat-form-field>
+
+    <div></div>
+
+    <mat-form-field appearance="outline" class="pf-full">
+      <mat-label>A cuenta de qué se presta</mat-label>
+      <input matInput formControlName="descripcion" maxlength="255" placeholder="Ej: COMPRA DE MOTO HONDA XR150" />
+      <mat-hint>Concepto del recibo y del kardex: "PRÉSTAMO N° x: …"</mat-hint>
+      <mat-hint align="end">{{ f.descripcion.value?.length ?? 0 }}/255</mat-hint>
+      @if ((f.descripcion.hasError('required') || f.descripcion.hasError('soloEspacios')) && f.descripcion.touched) {
+      <mat-error>Obligatorio</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Monto del préstamo (Bs)</mat-label>
+      <input matInput appMonto formControlName="monto" />
+      @if (f.monto.hasError('required') && f.monto.touched) {
+      <mat-error>Obligatorio</mat-error>
+      } @else if (f.monto.hasError('pattern') && f.monto.touched) {
+      <mat-error>Número con hasta 2 decimales</mat-error>
+      } @else if (f.monto.hasError('min') && f.monto.touched) {
+      <mat-error>Debe ser mayor a 0</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Cuota mensual (Bs)</mat-label>
+      <input matInput appMonto formControlName="cuotaMensual" />
+      @if (cuotasEstimadas(); as n) {
+      <mat-hint>Se descuenta del sueldo cada mes · aprox. {{ n }} {{ n === 1 ? 'mes' : 'meses' }}</mat-hint>
+      } @else {
+      <mat-hint>Lo que se descuenta del sueldo cada mes</mat-hint>
+      }
+      @if (f.cuotaMensual.hasError('required') && f.cuotaMensual.touched) {
+      <mat-error>Obligatorio</mat-error>
+      } @else if (f.cuotaMensual.hasError('pattern') && f.cuotaMensual.touched) {
+      <mat-error>Número con hasta 2 decimales</mat-error>
+      } @else if (f.cuotaMensual.hasError('min') && f.cuotaMensual.touched) {
+      <mat-error>Debe ser mayor a 0</mat-error>
+      } @else if (f.cuotaMensual.hasError('cuotaMayorMonto') && f.cuotaMensual.touched) {
+      <mat-error>No puede ser mayor al monto prestado</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="pf-full">
+      <mat-label>Observaciones (opcional)</mat-label>
+      <input matInput formControlName="observaciones" maxlength="255" />
+      <mat-hint align="end">{{ f.observaciones.value?.length ?? 0 }}/255</mat-hint>
+    </mat-form-field>
+  </form>
+
+  <h3 class="pf-sub">Datos de pago (sale de caja o banco)</h3>
+  <app-datos-pago-fields [form]="pago" [esEgreso]="true" />
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-stroked-button (click)="cancelar()" [disabled]="guardando()">Cancelar</button>
+  <button mat-flat-button color="primary" (click)="guardar()" [disabled]="guardando()">
+    @if (guardando()) {
+    <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
+    <span>Guardando...</span>
+    } @else {
+    <span>Otorgar préstamo</span>
+    }
+  </button>
+</mat-dialog-actions>

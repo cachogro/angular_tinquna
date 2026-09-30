@@ -24,6 +24,8 @@ import {
   PersonaCI,
 } from 'src/app/pages/configurations/models/persona.models';
 import { PersonaService } from 'src/app/pages/configurations/services/persona.service';
+import { ParametricasService } from 'src/app/pages/configurations/services/parametricas.service';
+import { LugarAcopio } from 'src/app/pages/configurations/parametricas/models/parametricas.models';
 import {
   CodificacionCatalogo,
   DetalleMineralRegistro,
@@ -37,6 +39,12 @@ import {
   PersonaFormDialogData,
 } from 'src/app/pages/configurations/gestion-clientes/persona-form-dialog/persona-form-dialog.component';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+
+import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog/confirm-dialog.component';
+import {
+  abrirReciboAnticipo,
+  faltaReciboAnticipo,
+} from '../recibo-anticipo.util';
 
 const ID_TIPO_PERSONA_PROVEEDOR = 1;
 const ID_TIPO_PERSONA_MUESTRERO = 6;
@@ -87,6 +95,7 @@ export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly registroMineralService = inject(RegistroMineralService);
   private readonly personaService = inject(PersonaService);
+  private readonly parametricasService = inject(ParametricasService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
 
@@ -98,6 +107,7 @@ export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
   /** Personas con tipo "muestrero" (idTipoPersona = 6), para el select de muestrero */
   readonly muestreros = signal<PersonaCI[]>([]);
   readonly actoresMinero = signal<ActorProductivoMinero[]>([]);
+  readonly lugaresAcopio = signal<LugarAcopio[]>([]);
   readonly cargandoCatalogos = signal(true);
   readonly cargandoRegistro = signal(false);
   readonly guardando = signal(false);
@@ -151,6 +161,8 @@ export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
     /** Id de la persona (tipo muestrero) asignada a la recepción. Obligatorio: el
      *  usuario debe elegir uno explícitamente, no queda ninguno por defecto. */
     idMuestrero: new FormControl<string | null>(null, [Validators.required]),
+    /** Descripción del lugar de acopio elegido del catálogo. Obligatorio. */
+    lugarAcopio: new FormControl<string | null>(null, [Validators.required]),
   });
 
   /** Control independiente para el autocomplete: guarda el objeto PersonaCI
@@ -248,7 +260,7 @@ export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
       if (
         proveedorActual &&
         typeof proveedorActual === 'object' &&
-        String(proveedorActual.idActorProductivoMinero) !== String(valor.id)
+        this.idActorDePersona(proveedorActual) !== String(valor.id)
       ) {
         this.proveedorControl.setValue(null);
       }
@@ -275,7 +287,6 @@ export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
       proveedores: this.personaService.listarPersonas({
         page: 1,
         limit: 1000,
-        idTipoPersona: ID_TIPO_PERSONA_PROVEEDOR,
         activo: true,
       }),
       muestreros: this.personaService.listarPersonas({
@@ -285,8 +296,16 @@ export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
         activo: true,
       }),
       actoresMinero: this.personaService.getAllActoresMineros(),
+      lugaresAcopio: this.parametricasService.obtenerLugaresAcopio(),
     }).subscribe({
-      next: ({ codificaciones, proveedores, muestreros, actoresMinero }) => {
+      next: ({
+        codificaciones,
+        proveedores,
+        muestreros,
+        actoresMinero,
+        lugaresAcopio,
+      }) => {
+        this.lugaresAcopio.set(lugaresAcopio);
         this.codificaciones.set(codificaciones);
         this.proveedores.set(proveedores.data);
         this.muestreros.set(muestreros.data);
@@ -343,7 +362,21 @@ export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
       fechaHoraRecepcion: this.formatDatetimeLocal(fechaHoraRegistro),
       observaciones: registro.observaciones ?? '',
       idMuestrero: registro.idPersonalInterno ?? null,
+      lugarAcopio: registro.lugarAcopio || null,
     });
+
+    // Si el valor guardado ya no está en el catálogo activo, se conserva como opción
+    // para no perderlo al editar.
+    const lugarGuardado = registro.lugarAcopio as string | undefined;
+    if (
+      lugarGuardado &&
+      !this.lugaresAcopio().some((l) => l.descripcion === lugarGuardado)
+    ) {
+      this.lugaresAcopio.update((lista) => [
+        ...lista,
+        { id: -1, descripcion: lugarGuardado, activo: false },
+      ]);
+    }
 
     const proveedor = this.proveedores().find(
       (p) => p.id === registro.idPersona,
@@ -370,13 +403,19 @@ export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
       (p) => !idsMuestreros.has(String(p.id)),
     );
 
+    // Con actor elegido se listan todos sus asociados (SOCIO, CHOFER, etc.);
+    // sin actor, solo las personas de tipo proveedor de mineral.
     const actor = this.actorControl.value;
     if (actor && typeof actor === 'object') {
       return proveedores.filter(
-        (p) => String(p.idActorProductivoMinero) === String(actor.id),
+        (p) => this.idActorDePersona(p) === String(actor.id),
       );
     }
-    return proveedores;
+    return proveedores.filter((p) =>
+      p.personaTipos?.some(
+        (t) => Number(t.idPersonaTipo) === ID_TIPO_PERSONA_PROVEEDOR,
+      ),
+    );
   }
 
   private filtrarProveedores(texto: string): PersonaCI[] {
@@ -400,18 +439,23 @@ export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
     return lista.filter((a) => a.nombre.toLowerCase().includes(busqueda));
   }
 
+  /** Id del actor de una persona: el listado lo trae anidado (actorProductivoMinero.id)
+   *  y no siempre como idActorProductivoMinero. */
+  private idActorDePersona(persona: PersonaCI): string {
+    return String(
+      persona.actorProductivoMinero?.id ?? persona.idActorProductivoMinero ?? '',
+    );
+  }
+
   /** Resuelve el actor productivo minero de una persona: usa el objeto anidado si
    *  viene incluido, o lo busca por id dentro del catálogo ya cargado. */
   private resolverActorDePersona(
     persona: PersonaCI,
   ): ActorProductivoMinero | null {
     if (persona.actorProductivoMinero) return persona.actorProductivoMinero;
-    if (!persona.idActorProductivoMinero) return null;
-    return (
-      this.actoresMinero().find(
-        (a) => String(a.id) === String(persona.idActorProductivoMinero),
-      ) ?? null
-    );
+    const idActor = this.idActorDePersona(persona);
+    if (!idActor) return null;
+    return this.actoresMinero().find((a) => String(a.id) === idActor) ?? null;
   }
 
   // /** Reconstruye las filas de ley por mineral según la codificación elegida.
@@ -621,6 +665,7 @@ export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
       anticipo: v.anticipo ?? 0,
       humedad: v.humedad ?? 0,
       idPersonalInterno: v.idMuestrero!,
+      lugarAcopio: v.lugarAcopio!,
       fechaRecepcion: this.formatFechaHora(fechaHora),
       observaciones,
       // detalles: this.detalleControls().map((d) => ({
@@ -631,7 +676,7 @@ export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
     };
 
     this.registroMineralService.guardarRegistro(request).subscribe({
-      next: () => {
+      next: (registro) => {
         this.guardando.set(false);
         this.snackBar.open(
           this.esEdicion
@@ -640,6 +685,28 @@ export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
           'Cerrar',
           { duration: 3000 },
         );
+        // Con anticipo y sin recibo vigente, se ofrece generar el recibo (BORRADOR)
+        // antes de volver a la bandeja.
+        if (registro?.id && faltaReciboAnticipo(registro)) {
+          this.dialog
+            .open(ConfirmDialogComponent, {
+              data: {
+                title: 'Anticipo registrado',
+                message: 'La recepción tiene anticipo, ¿generar el recibo?',
+                confirmLabel: 'Generar recibo',
+                cancelLabel: 'Ahora no',
+                icon: 'receipt_long',
+              },
+            })
+            .afterClosed()
+            .subscribe((confirmado) => {
+              if (!confirmado) return this.volverALista();
+              abrirReciboAnticipo(this.dialog, registro).subscribe(() =>
+                this.volverALista(),
+              );
+            });
+          return;
+        }
         this.router.navigate(['/ui-components/recepcion-minerales']);
       },
       error: (err) => {
@@ -665,12 +732,15 @@ export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
       });
   }
 
+  private volverALista(): void {
+    this.router.navigate(['/ui-components/recepcion-minerales']);
+  }
+
   private cargarProveedores(idParaSeleccionar?: string): void {
     this.personaService
       .listarPersonas({
         page: 1,
         limit: 1000,
-        idTipoPersona: ID_TIPO_PERSONA_PROVEEDOR,
         activo: true,
       })
       .subscribe((resp) => {

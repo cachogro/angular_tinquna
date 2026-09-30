@@ -1,5 +1,5 @@
 <div class="tab-body">
-
+<br>
   <div class="row">
     <div class="col-lg-4 col-sm-6">
       <mat-card class="b-1 curso-card">
@@ -33,6 +33,24 @@
           <button matButton style="width: 100%; font-weight: bold;" matTooltip="registrar nueva caja"
             (click)="abrirNuevaCaja()">
             Nueva Caja
+          </button>
+        </mat-card-actions>
+      </mat-card>
+    </div>
+    <div class="col-lg-4 col-sm-6">
+      <mat-card class="b-1 curso-card">
+        <mat-card-header class="card-header header-orange">
+          <mat-card-title>Destino del Gasto</mat-card-title>
+        </mat-card-header>
+        <mat-card-content class="b-t-1" style="display: flex; justify-content: flex-start;">
+          <p>
+            Panel de Registro de Destinos del Gasto (categorías de egreso e ingreso de los recibos)
+          </p>
+        </mat-card-content>
+        <mat-card-actions class="card-footer">
+          <button matButton style="width: 100%; font-weight: bold;" matTooltip="registrar nuevo destino del gasto"
+            (click)="abrirNuevoDestinoGasto()">
+            Nuevo Destino del Gasto
           </button>
         </mat-card-actions>
       </mat-card>

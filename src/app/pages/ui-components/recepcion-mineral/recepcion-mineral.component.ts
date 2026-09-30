@@ -5,7 +5,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatNativeDateModule } from '@angular/material/core';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -31,8 +30,11 @@ import {
   RegistroMineral,
 } from '../models/registro-mineral.models';
 import { RegistroMineralService } from '../services/registro-mineral.service';
+import { abrirReciboAnticipo, faltaReciboAnticipo } from './recibo-anticipo.util';
+import { ReciboService } from '../../contabilidad/services/recibo.service';
 import { VerRecepcionDialogComponent } from './ver-recepcion-dialog/ver-recepcion-dialog.component';
 import { ValorizacionMineralService } from '../services/valorizacion-mineral.service';
+import { RangoFechasComponent } from '../../../shared/components/rango-fechas/rango-fechas.component';
 import { formatNumeroConMiles } from 'src/app/shared/utils/numero.util';interface OpcionOrden {
   value: string;
   label: string;
@@ -41,6 +43,7 @@ import { formatNumeroConMiles } from 'src/app/shared/utils/numero.util';interfac
 @Component({
   selector: 'app-recepcion-mineral',
   imports: [
+    RangoFechasComponent,
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
@@ -60,7 +63,6 @@ import { formatNumeroConMiles } from 'src/app/shared/utils/numero.util';interfac
     MatTooltipModule,
     MatProgressSpinnerModule,
     MatDatepickerModule,
-    MatNativeDateModule,
   ],
   templateUrl: './recepcion-mineral.component.html',
   styleUrl: './recepcion-mineral.component.scss',
@@ -74,6 +76,7 @@ export class RecepcionMineralComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly dialog = inject(MatDialog);
   private readonly router = inject(Router);
+  private readonly reciboService = inject(ReciboService);
 
   /** Estados en los que ya se puede imprimir el PDF de la recepción. */
   private readonly ESTADOS_CON_IMPRESION = new Set([2, 3, 5, 6]); // APROBADO, RECHAZADO A TOL, TRANZADO, REMUESTREO
@@ -183,6 +186,40 @@ export class RecepcionMineralComponent implements OnInit {
     );
 
     this.cargarRegistros();
+  }
+
+  /** Tiene un recibo de anticipo vigente (el back solo devuelve BORRADOR/PROCESADO). */
+  tieneReciboAnticipo(r: RegistroMineral): boolean {
+    return !!r.recibos?.length;
+  }
+
+  /** Anticipo > 0 y sin recibo vigente. */
+  puedeGenerarReciboAnticipo(r: RegistroMineral): boolean {
+    return faltaReciboAnticipo(r) && r.idEstado !== this.ESTADO_CANCELADO_ID;
+  }
+
+  generarReciboAnticipo(r: RegistroMineral): void {
+    abrirReciboAnticipo(this.dialog, r).subscribe((recibo) => {
+      if (recibo) this.cargarRegistros();
+    });
+  }
+
+  verPdfReciboAnticipo(r: RegistroMineral): void {
+    const recibo = r.recibos?.[0];
+    if (!recibo) return;
+    this.reciboService.obtenerPdf(recibo.id).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+      },
+      error: (err) =>
+        this.snackBar.open(
+          err?.error?.message ?? 'No se pudo generar el PDF del recibo',
+          'Cerrar',
+          { duration: 4000 },
+        ),
+    });
   }
 
   private reiniciarYcargar(): void {

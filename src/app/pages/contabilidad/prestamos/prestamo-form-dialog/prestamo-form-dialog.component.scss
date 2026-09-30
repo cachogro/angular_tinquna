@@ -1,0 +1,28 @@
+.pf-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 14px;
+  min-width: 560px;
+}
+.pf-form mat-form-field {
+  width: 100%;
+}
+.pf-full {
+  grid-column: 1 / -1;
+}
+.pf-sub {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.6);
+  margin: 8px 0 8px;
+}
+.btn-spinner {
+  display: inline-block;
+  margin-right: 6px;
+}
+@media (max-width: 620px) {
+  .pf-form {
+    grid-template-columns: 1fr;
+    min-width: 0;
+  }
+}

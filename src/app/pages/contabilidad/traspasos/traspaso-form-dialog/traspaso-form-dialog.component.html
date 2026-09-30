@@ -1,0 +1,109 @@
+<h2 mat-dialog-title>{{ titulo }}</h2>
+
+<mat-dialog-content>
+  @if (cargandoCatalogos()) {
+  <div class="tf-loading">
+    <mat-spinner diameter="32"></mat-spinner>
+    <span>Cargando catálogos...</span>
+  </div>
+  } @else {
+  <form [formGroup]="form" class="tf-form">
+    <div class="tf-form__row2">
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha</mat-label>
+        <input matInput class="input-fecha" [matDatepicker]="picker" formControlName="fecha" />
+        <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+        <mat-datepicker #picker></mat-datepicker>
+        @if (f.fecha.hasError('required') && f.fecha.touched) {
+        <mat-error>Obligatorio</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Monto</mat-label>
+        <input matInput type="number" step="0.01" min="0.01" class="input-monto" formControlName="monto" />
+        @if (f.monto.hasError('required') && f.monto.touched) {
+        <mat-error>Obligatorio</mat-error>
+        }
+        @if (f.monto.hasError('pattern') && f.monto.touched) {
+        <mat-error>Máximo 2 decimales</mat-error>
+        }
+        @if (f.monto.hasError('min') && f.monto.touched) {
+        <mat-error>Debe ser mayor a 0</mat-error>
+        }
+      </mat-form-field>
+    </div>
+
+    <div class="tf-form__row2">
+      <mat-form-field appearance="outline">
+        <mat-label>Cuenta bancaria</mat-label>
+        <mat-select formControlName="idCuentaBancaria">
+          @for (c of cuentas(); track c.idCuenta) {
+          <mat-option [value]="c.idCuenta">{{ etiquetaCuenta(c) }}</mat-option>
+          }
+        </mat-select>
+        @if (f.idCuentaBancaria.hasError('required') && f.idCuentaBancaria.touched) {
+        <mat-error>Obligatorio</mat-error>
+        }
+        @if (esEdicion) {
+        <mat-hint>No se puede cambiar en edición</mat-hint>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>N° de comprobante (opcional)</mat-label>
+        <input matInput formControlName="nroComprobante" maxlength="30" class="nro-cpte" />
+      </mat-form-field>
+    </div>
+
+    <mat-form-field appearance="outline" class="tf-form__full">
+      <mat-label>Concepto</mat-label>
+      <input matInput formControlName="concepto" maxlength="255" />
+      @if (f.concepto.hasError('required') && f.concepto.touched) {
+      <mat-error>Obligatorio</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="tf-form__full">
+      <mat-label>Destino del gasto (opcional)</mat-label>
+      <mat-select formControlName="idDestinoGasto">
+        <mat-option [value]="null">— Sin especificar —</mat-option>
+        @for (d of destinosGastoFiltrados; track d.id) {
+        <mat-option [value]="d.id">{{ d.nombre }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="tf-form__full">
+      <mat-label>Autorizó</mat-label>
+      <mat-select formControlName="idPersonaAutorizo">
+        @for (p of personasAutorizadas(); track p.id) {
+        <mat-option [value]="p.id">{{ nombreAutorizo(p) }}</mat-option>
+        } @empty {
+        <mat-option disabled>Sin personas autorizadas</mat-option>
+        }
+      </mat-select>
+      @if (f.idPersonaAutorizo.hasError('required') && f.idPersonaAutorizo.touched) {
+      <mat-error>Obligatorio</mat-error>
+      }
+      @if (esEdicion && !data.traspaso?.personaAutorizo) {
+      <mat-hint>Traspaso registrado sin autorizador: elige quién lo autorizó</mat-hint>
+      }
+    </mat-form-field>
+  </form>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-stroked-button (click)="cancelar()" [disabled]="guardando()">
+    Cancelar
+  </button>
+  <button mat-flat-button color="primary" (click)="guardar()" [disabled]="guardando() || cargandoCatalogos()">
+    @if (guardando()) {
+    <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
+    <span>Guardando...</span>
+    } @else {
+    <span>{{ esEdicion ? 'Guardar cambios' : 'Registrar' }}</span>
+    }
+  </button>
+</mat-dialog-actions>

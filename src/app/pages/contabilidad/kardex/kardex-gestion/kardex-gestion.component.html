@@ -1,0 +1,319 @@
+<mat-card class="cardWithShadow theme-card">
+  <mat-card-header>
+    <div class="kx-header">
+      <button mat-icon-button (click)="volver()" matTooltip="Volver">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <div>
+        <mat-card-title class="m-b-0">Kardex — {{ nombre() || '…' }}</mat-card-title>
+        <mat-card-subtitle class="m-b-0">
+          Contabilidad · {{ data.tipo === 'ACTOR' ? 'Actor productivo' : data.tipo === 'CLIENTE' ? 'Cliente' :
+          data.tipo === 'PERSONAL' ? 'Personal interno' : 'Asociado' }}
+        </mat-card-subtitle>
+      </div>
+    </div>
+  </mat-card-header>
+
+<mat-card-content class="kx-content b-t-1">
+  @if (cargando()) {
+  <div class="kx-loading">
+    <mat-spinner diameter="32"></mat-spinner>
+    <span>Cargando kardex...</span>
+  </div>
+  } @else {
+
+  @if (!hayKardex()) {
+  <p class="kx-empty-note">
+    {{ data.tipo === 'ACTOR' ? 'Este actor productivo' : (data.tipo === 'CLIENTE' ? 'Este cliente' : 'Esta persona') }} todavía no tiene kardex.
+    Abre el N°1 con el saldo que arrastra (del Excel u otro origen); si no arrastra nada, deja 0.
+  </p>
+  <form [formGroup]="form" class="kx-form">
+    <mat-form-field appearance="outline" class="kx-form__full">
+      <mat-label>Descripción (opcional)</mat-label>
+      <input matInput formControlName="descripcion" maxlength="150"
+        placeholder="Ej: ANTICIPOS A CTA SACOS DE MINERAL" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Fecha de apertura</mat-label>
+      <input matInput [matDatepicker]="pickerApertura" [max]="hoy" formControlName="fechaApertura" class="kx-num" />
+      <mat-datepicker-toggle matSuffix [for]="pickerApertura"></mat-datepicker-toggle>
+      <mat-datepicker #pickerApertura></mat-datepicker>
+      @if (f.fechaApertura.hasError('required') && f.fechaApertura.touched) {
+      <mat-error>Obligatorio</mat-error>
+      }
+      <mat-hint>Define la gestión (año) del kardex</mat-hint>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Saldo inicial (Bs)</mat-label>
+      <input matInput type="number" step="0.01" min="0" class="kx-num" formControlName="saldoInicial" />
+      @if (f.saldoInicial.hasError('required') && f.saldoInicial.touched) {
+      <mat-error>Obligatorio</mat-error>
+      }
+      @if (f.saldoInicial.hasError('pattern') && f.saldoInicial.touched) {
+      <mat-error>Máximo 2 decimales</mat-error>
+      }
+      @if (f.saldoInicial.hasError('min') && f.saldoInicial.touched) {
+      <mat-error>No puede ser negativo</mat-error>
+      }
+    </mat-form-field>
+  </form>
+  <div class="kx-abrir-acciones">
+    <button mat-stroked-button (click)="volver()" [disabled]="guardando()">Cancelar</button>
+    <button mat-flat-button color="primary" (click)="abrir()" [disabled]="guardando()">
+      @if (guardando()) {
+      <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
+      <span>Guardando...</span>
+      } @else {
+      <span>Abrir kardex</span>
+      }
+    </button>
+  </div>
+  } @else {
+
+  <!-- ===== Kardex abierto ===== -->
+  @if (kardexAbierto(); as ka) {
+  <div class="kx-resumen">
+    <div class="kx-resumen__titulo">
+      <span>N° {{ ka.numero }} · {{ ka.fechaApertura ? 'Apertura ' + fechaFmt(ka.fechaApertura) : 'Gestión ' + ka.gestion }}</span>
+      <span class="kx-badge">ABIERTO</span>
+    </div>
+    <div class="kx-resumen__desc">{{ ka.descripcion || 'Sin descripción' }}</div>
+    <div class="kx-tiles">
+      <div class="kx-tile">
+        <small>Saldo inicial</small>
+        <strong>Bs {{ num(ka.saldoInicial) | number:'1.2-2' }}</strong>
+      </div>
+      <div class="kx-tile kx-tile--destacado">
+        <small>Total anticipos por cobrar (saldo actual)</small>
+        <strong>Bs {{ num(ka.saldoActual) | number:'1.2-2' }}</strong>
+      </div>
+      @if (soportaBienes && bienesTotal() > 0) {
+      <div class="kx-tile kx-tile--bienes">
+        <small>Bienes en retención</small>
+        <strong>{{ bienesEnPosesion() }} {{ bienesEnPosesion() === 1 ? 'bien' : 'bienes' }}</strong>
+        <small>de {{ bienesTotal() }} registrado{{ bienesTotal() === 1 ? '' : 's' }}</small>
+      </div>
+      }
+    </div>
+    <div class="kx-resumen__acciones">
+      @if (soportaBienes) {
+      <button mat-stroked-button (click)="abrirBienes()">
+        <mat-icon>inventory_2</mat-icon> Bienes en dación  555
+      </button>
+      }
+      <button mat-stroked-button [disabled]="descargandoExcel()" (click)="descargarExcel(ka)">
+        @if (descargandoExcel()) {
+        <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
+        } @else {
+        <mat-icon>download</mat-icon>
+        }
+        Descargar Excel
+      </button>
+      <button mat-stroked-button [disabled]="guardando()" (click)="cerrar(ka)">
+        <mat-icon>lock</mat-icon> Cerrar N°{{ ka.numero }} (abre N°{{ ka.numero + 1 }})
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== Movimientos del kardex abierto ===== -->
+  <div class="kx-movimientos">
+    <div class="kx-movimientos__head">
+      <h3>Movimientos — N°{{ ka.numero }}</h3>
+      <button mat-flat-button color="primary" (click)="nuevoMovimiento()">
+        <mat-icon>add</mat-icon> Nuevo movimiento
+      </button>
+    </div>
+
+    @if (cargandoMovimientos()) {
+    <div class="kx-loading">
+      <mat-spinner diameter="24"></mat-spinner>
+      <span>Cargando movimientos...</span>
+    </div>
+    } @else if (movimientos().length === 0) {
+    <p class="kx-empty-note">Todavía no hay movimientos en este kardex.</p>
+    } @else {
+    <div class="kx-tabla-scroll">
+      <table mat-table [dataSource]="movimientosOrdenados()" class="kx-tabla mat-elevation-z1">
+
+        <ng-container matColumnDef="numeroLinea">
+          <th mat-header-cell *matHeaderCellDef>N°</th>
+          <td mat-cell *matCellDef="let m">{{ m.numeroLinea }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="fecha">
+          <th mat-header-cell *matHeaderCellDef class="col-fecha">Fecha</th>
+          <td mat-cell *matCellDef="let m" class="col-fecha">{{ fechaFmt(m.fecha) }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="nroComprobante">
+          <th mat-header-cell *matHeaderCellDef class="nro-cpte">Comprobante</th>
+          <td mat-cell *matCellDef="let m" class="nro-cpte">{{ m.nroComprobante || '—' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="detalle">
+          <th mat-header-cell *matHeaderCellDef>Detalle</th>
+          <td mat-cell *matCellDef="let m">{{ m.detalle }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="subcuenta">
+          <th mat-header-cell *matHeaderCellDef>Subcuenta</th>
+          <td mat-cell *matCellDef="let m">{{ m.subcuenta?.nombre || '—' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="formaPago">
+          <th mat-header-cell *matHeaderCellDef>F. pago</th>
+          <td mat-cell *matCellDef="let m">{{ m.formaPago?.nombre || '—' }}</td>
+        </ng-container>
+
+        <!-- Columnas en $us y T.C.: solo en líneas USD (vacías en Bs). -->
+        <ng-container matColumnDef="debeUsd">
+          <th mat-header-cell *matHeaderCellDef class="kx-num">DEBE $us</th>
+          <td mat-cell *matCellDef="let m" class="kx-num kx-neg">
+            {{ usd(m, m.debeUsd) ? (usd(m, m.debeUsd) | number:'1.2-2') : '' }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="haberUsd">
+          <th mat-header-cell *matHeaderCellDef class="kx-num">HABER $us</th>
+          <td mat-cell *matCellDef="let m" class="kx-num kx-pos">
+            {{ usd(m, m.haberUsd) ? (usd(m, m.haberUsd) | number:'1.2-2') : '' }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="tipoCambio">
+          <th mat-header-cell *matHeaderCellDef class="kx-num">T.C.</th>
+          <td mat-cell *matCellDef="let m" class="kx-num">
+            {{ m.moneda === 'USD' ? (num(m.tipoCambio) | number:'1.2-4') : '' }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="debe">
+          <th mat-header-cell *matHeaderCellDef class="kx-num">DEBE Bs</th>
+          <td mat-cell *matCellDef="let m" class="kx-num kx-neg">
+            {{ num(m.debe) ? (num(m.debe) | number:'1.2-2') : '' }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="haber">
+          <th mat-header-cell *matHeaderCellDef class="kx-num">HABER Bs</th>
+          <td mat-cell *matCellDef="let m" class="kx-num kx-pos">
+            {{ num(m.haber) ? (num(m.haber) | number:'1.2-2') : '' }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="saldo">
+          <th mat-header-cell *matHeaderCellDef class="kx-num">SALDO Bs</th>
+          <td mat-cell *matCellDef="let m" class="kx-num">{{ num(m.saldo) | number:'1.2-2' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="acciones">
+          <th mat-header-cell *matHeaderCellDef>Acciones</th>
+          <td mat-cell *matCellDef="let m">
+            <button mat-icon-button color="primary" matTooltip="Editar" (click)="editarMovimiento(m)">
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button mat-icon-button color="warn" matTooltip="Desactivar" (click)="desactivarMovimiento(m)">
+              <mat-icon>block</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columnasMovimientos"></tr>
+        <tr mat-row *matRowDef="let m; columns: columnasMovimientos" [class.kx-row-inactiva]="m.activo === false"></tr>
+      </table>
+    </div>
+    <mat-paginator [length]="movimientosTotal()" [pageSize]="movPageSize" [pageIndex]="movPageIndex"
+      [pageSizeOptions]="[10, 25, 50]" (page)="onMovimientosPage($event)"></mat-paginator>
+    }
+  </div>
+  } @else {
+  <div class="kx-aviso">
+    <mat-icon>info</mat-icon>
+    <span>No hay un kardex abierto actualmente para {{ nombre() }}.</span>
+    @if (soportaBienes && bienesTotal() > 0) {
+    <button mat-stroked-button class="kx-aviso__btn" (click)="abrirBienes()">
+      <mat-icon>inventory_2</mat-icon> Bienes en dación 88 ({{ bienesEnPosesion() }} en retención)
+    </button>
+    }
+  </div>
+  }
+
+  <!-- ===== Historial ===== -->
+  <div class="kx-historial">
+    <h3>Historial</h3>
+    <div class="kx-tabla-scroll">
+      <table mat-table [dataSource]="ordenados()" class="kx-tabla mat-elevation-z1">
+
+        <ng-container matColumnDef="numero">
+          <th mat-header-cell *matHeaderCellDef>N°</th>
+          <td mat-cell *matCellDef="let k">{{ k.numero }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="gestion">
+          <th mat-header-cell *matHeaderCellDef class="col-fecha">Apertura</th>
+          <td mat-cell *matCellDef="let k" class="col-fecha">{{ k.fechaApertura ? fechaFmt(k.fechaApertura) : k.gestion }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="descripcion">
+          <th mat-header-cell *matHeaderCellDef>Descripción</th>
+          <td mat-cell *matCellDef="let k">{{ k.descripcion || '—' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="estado">
+          <th mat-header-cell *matHeaderCellDef>Estado</th>
+          <td mat-cell *matCellDef="let k">
+            <span class="kx-badge" [class.kx-badge--cerrado]="k.estado === 'CERRADO'">
+              {{ k.estado }}
+            </span>
+            @if (k.activo === false) {
+            <span class="kx-badge kx-badge--baja">BAJA</span>
+            }
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="saldoInicial">
+          <th mat-header-cell *matHeaderCellDef class="kx-num">Saldo inicial</th>
+          <td mat-cell *matCellDef="let k" class="kx-num">{{ num(k.saldoInicial) | number:'1.2-2' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="saldo">
+          <th mat-header-cell *matHeaderCellDef class="kx-num">Saldo actual / cierre</th>
+          <td mat-cell *matCellDef="let k" class="kx-num">
+            {{ (k.estado === 'ABIERTO' ? num(k.saldoActual) : num(k.saldoCierre)) | number:'1.2-2' }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="acciones">
+          <th mat-header-cell *matHeaderCellDef>Acciones</th>
+          <td mat-cell *matCellDef="let k">
+            @if (k.estado === 'ABIERTO') {
+            <button mat-icon-button matTooltip="Cerrar" [disabled]="guardando()" (click)="cerrar(k)">
+              <mat-icon>lock</mat-icon>
+            </button>
+            }
+            @if (k.estado === 'CERRADO' && k.numero === maxNumero()) {
+            <button mat-icon-button color="warn" matTooltip="Reabrir" [disabled]="guardando()" (click)="reabrir(k)">
+              <mat-icon>lock_open</mat-icon>
+            </button>
+            }
+            @if (puedeDarBaja() && k.numero === 1) {
+            <button mat-icon-button [color]="k.activo === false ? 'primary' : 'warn'"
+              [matTooltip]="k.activo === false ? 'Activar' : 'Dar de baja'"
+              [disabled]="guardando()" (click)="toggleActivo(k)">
+              <mat-icon>{{ k.activo === false ? 'check_circle_outline' : 'block' }}</mat-icon>
+            </button>
+            }
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+        <tr mat-row *matRowDef="let k; columns: columnas" [class.kx-row-inactiva]="k.activo === false"></tr>
+      </table>
+    </div>
+  </div>
+  }
+  }
+</mat-card-content>
+</mat-card>

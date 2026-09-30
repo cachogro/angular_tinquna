@@ -6,6 +6,7 @@ import { APP_CONFIG } from 'src/app/config';
 import {
   AbrirKardexRequest,
   CerrarKardexResponse,
+  FiltroResumenDeudas,
   FiltrosKardex,
   Kardex,
   KardexPaginado,
@@ -31,6 +32,7 @@ export class KardexService {
         filtros.idActorProductivoMinero,
       );
     if (filtros.idPersona) params = params.set('idPersona', filtros.idPersona);
+    if (filtros.idCliente) params = params.set('idCliente', filtros.idCliente);
     if (filtros.busqueda) params = params.set('busqueda', filtros.busqueda);
     if (filtros.orderBy) params = params.set('orderBy', filtros.orderBy);
     if (filtros.orderDirection)
@@ -67,9 +69,25 @@ export class KardexService {
     });
   }
 
+  /** Reactiva un kardex INACTIVO (solo ADMINISTRADOR / OPERADOR); reinicia
+   *  el conteo de días de inactividad desde hoy. */
+  reactivar(id: string): Observable<Kardex> {
+    return this.http.patch<Kardex>(`${this.baseUrl}/${id}/reactivar`, {});
+  }
+
   /** Excel del kardex (cabecera + movimientos). */
   descargarExcel(id: string): Observable<Blob> {
     return this.http.get(`${this.baseUrl}/${id}/excel`, {
+      responseType: 'blob',
+    });
+  }
+
+  /** Excel del resumen de deudas de todos los kardex. Sin `tipo` salen todos. */
+  descargarResumenDeudas(filtro: FiltroResumenDeudas): Observable<Blob> {
+    let params = new HttpParams();
+    if (filtro.tipo) params = params.set('tipo', filtro.tipo);
+    return this.http.get(`${this.baseUrl}/reporte/deudas-totales/excel`, {
+      params,
       responseType: 'blob',
     });
   }

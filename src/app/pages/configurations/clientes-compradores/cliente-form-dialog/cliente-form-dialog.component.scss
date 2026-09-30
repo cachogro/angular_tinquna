@@ -1,0 +1,67 @@
+/*==========================
+FORMULARIO
+===========================*/
+
+.cliente-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 18px;
+}
+
+.cliente-form mat-form-field {
+  width: 100%;
+}
+
+.input-mayusculas {
+  text-transform: uppercase;
+}
+
+.fila-uno,
+.fila-dos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.fila-tres,
+.fila-cuatro {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+
+/*==========================
+BOTONES
+===========================*/
+
+.acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.acciones button {
+  min-width: 170px;
+}
+
+/*==========================
+RESPONSIVE
+===========================*/
+
+@media (max-width: 700px) {
+  .fila-uno,
+  .fila-dos {
+    grid-template-columns: 1fr;
+  }
+
+  .acciones {
+    flex-direction: column;
+  }
+
+  .acciones button {
+    width: 100%;
+  }
+}

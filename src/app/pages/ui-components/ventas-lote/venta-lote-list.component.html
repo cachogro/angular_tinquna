@@ -1,0 +1,137 @@
+<mat-card class="cardWithShadow theme-card">
+  <mat-card-header>
+    <div>
+      <mat-card-title class="m-b-0">Ventas de Lote</mat-card-title>
+      <mat-card-subtitle class="m-b-0">Comercio interno · seguimiento de anticipos y cobro de cada lote vendido</mat-card-subtitle>
+    </div>
+  </mat-card-header>
+
+  <mat-card-content class="b-t-1">
+    <div class="vll-acciones">
+      <button mat-flat-button color="primary" (click)="nueva()">
+        <mat-icon>add</mat-icon> Vender lote
+      </button>
+    </div>
+
+    <div class="vll-toolbar">
+      <mat-form-field appearance="outline" class="vll-toolbar__search" subscriptSizing="dynamic">
+        <mat-icon matPrefix>search</mat-icon>
+        <input matInput placeholder="Buscar por lote, promedio o cliente" [formControl]="searchControl" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="vll-toolbar__estado" subscriptSizing="dynamic">
+        <mat-label>Estado</mat-label>
+        <mat-select [formControl]="estadoControl">
+          <mat-option [value]="null">Todas</mat-option>
+          <mat-option value="ABIERTA">Abiertas (sin liquidar)</mat-option>
+          <mat-option value="LIQUIDADA">Liquidadas</mat-option>
+          <mat-option value="ANULADA">Anuladas</mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    @if (cargando()) {
+    <div class="vll-msg">
+      <mat-spinner diameter="32"></mat-spinner>
+      <span>Cargando ventas...</span>
+    </div>
+    } @else if (registros().length === 0) {
+    <div class="vll-msg vll-msg--vacio">
+      <mat-icon>local_shipping</mat-icon>
+      <p>No hay ventas de lote registradas</p>
+    </div>
+    } @else {
+    <div class="vll-scroll">
+      <table mat-table [dataSource]="registros()" class="vll-tabla mat-elevation-z1">
+        <ng-container matColumnDef="lote">
+          <th mat-header-cell *matHeaderCellDef>Lote</th>
+          <td mat-cell *matCellDef="let v">
+            <strong>{{ v.codigoLote || '—' }}</strong>
+            <small class="vll-apagado"> · {{ v.promedioMineral?.codigo }}</small>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="cliente">
+          <th mat-header-cell *matHeaderCellDef>Cliente</th>
+          <td mat-cell *matCellDef="let v">{{ v.cliente?.nombre ?? '—' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="fecha">
+          <th mat-header-cell *matHeaderCellDef>Fecha venta</th>
+          <td mat-cell *matCellDef="let v">{{ fechaFmt(v.fechaVenta) }}</td>
+        </ng-container>
+        <ng-container matColumnDef="moneda">
+          <th mat-header-cell *matHeaderCellDef>Moneda</th>
+          <td mat-cell *matCellDef="let v">{{ v.moneda === 'USD' ? '$us' : 'Bs' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="invertido">
+          <th mat-header-cell *matHeaderCellDef class="vll-num">Invertido (Bs)</th>
+          <td mat-cell *matCellDef="let v" class="vll-num">{{ v.totalEfectivoInvertido | number:'1.2-2' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="cobrado">
+          <th mat-header-cell *matHeaderCellDef class="vll-num">Cobrado (Bs)</th>
+          <td mat-cell *matCellDef="let v" class="vll-num">
+            {{ v.cobradoBolivianos | number:'1.2-2' }}
+            @if (v.cantidadCobros) { <small class="vll-apagado">({{ v.cantidadCobros }})</small> }
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="venta">
+          <th mat-header-cell *matHeaderCellDef class="vll-num">Venta (Bs)</th>
+          <td mat-cell *matCellDef="let v" class="vll-num">
+            {{ v.montoVentaBolivianos != null ? (v.montoVentaBolivianos | number:'1.2-2') : '—' }}
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="porCobrar">
+          <th mat-header-cell *matHeaderCellDef class="vll-num">Por cobrar (Bs)</th>
+          <td mat-cell *matCellDef="let v" class="vll-num" [class.vll-negativo]="(v.porCobrarBolivianos ?? 0) < 0">
+            {{ v.porCobrarBolivianos != null ? (v.porCobrarBolivianos | number:'1.2-2') : '—' }}
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="utilidad">
+          <th mat-header-cell *matHeaderCellDef class="vll-num">Utilidad (Bs)</th>
+          <td mat-cell *matCellDef="let v" class="vll-num" [class.vll-negativo]="(v.utilidadBolivianos ?? 0) < 0"
+            [class.vll-positivo]="(v.utilidadBolivianos ?? -1) >= 0">
+            {{ v.utilidadBolivianos != null ? (v.utilidadBolivianos | number:'1.2-2') : '—' }}
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="estado">
+          <th mat-header-cell *matHeaderCellDef>Estado</th>
+          <td mat-cell *matCellDef="let v">
+            <span class="vll-estado" [class.vll-estado--liq]="v.estado === 'LIQUIDADA'"
+              [class.vll-estado--pagada]="v.pagada" [class.vll-estado--anulada]="v.estado === 'ANULADA'">
+              {{ etiquetaEstado(v) }}
+            </span>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="acciones">
+          <th mat-header-cell *matHeaderCellDef>Acciones</th>
+          <td mat-cell *matCellDef="let v">
+            <button mat-icon-button matTooltip="Ver seguimiento y cobros" (click)="verDetalle(v)">
+              <mat-icon>visibility</mat-icon>
+            </button>
+            @if (puedeCobrar(v)) {
+            <button mat-icon-button color="primary"
+              [matTooltip]="v.estado === 'LIQUIDADA' ? 'Registrar pago' : 'Registrar anticipo'"
+              (click)="registrarCobro(v)">
+              <mat-icon>call_received</mat-icon>
+            </button>
+            }
+            @if (v.estado === 'ABIERTA') {
+            <button mat-icon-button matTooltip="Registrar liquidación" (click)="liquidar(v)">
+              <mat-icon>gavel</mat-icon>
+            </button>
+            <button mat-icon-button color="warn" matTooltip="Anular venta" (click)="anular(v)">
+              <mat-icon>block</mat-icon>
+            </button>
+            }
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+        <tr mat-row *matRowDef="let v; columns: columnas" [class.vll-fila-anulada]="v.estado === 'ANULADA'"></tr>
+      </table>
+    </div>
+
+    <mat-paginator [length]="total()" [pageSize]="pageSize" [pageIndex]="pageIndex" [pageSizeOptions]="[10, 25, 50]"
+      (page)="onPageChange($event)"></mat-paginator>
+    }
+  </mat-card-content>
+</mat-card>

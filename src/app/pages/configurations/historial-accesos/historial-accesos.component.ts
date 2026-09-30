@@ -3,7 +3,6 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import { MatNativeDateModule } from '@angular/material/core';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -23,6 +22,7 @@ import {
   TIPO_EVENTO_MAP,
   TipoEventoBitacora,
 } from './models/bitacora-acceso.models';
+import { RangoFechasComponent } from '../../../shared/components/rango-fechas/rango-fechas.component';
 
 interface OpcionOrden {
   value: string;
@@ -32,6 +32,7 @@ interface OpcionOrden {
 @Component({
   selector: 'app-historial-accesos',
   imports: [
+    RangoFechasComponent,
     CommonModule,
     ReactiveFormsModule,
     MatCardModule,
@@ -39,7 +40,6 @@ interface OpcionOrden {
     MatSelectModule,
     MatInputModule,
     MatDatepickerModule,
-    MatNativeDateModule,
     MatButtonModule,
     MatIconModule,
     MatTableModule,

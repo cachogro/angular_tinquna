@@ -1,0 +1,85 @@
+<h2 mat-dialog-title>Liquidación del lote {{ venta.codigoLote }}</h2>
+
+<mat-dialog-content>
+  <p class="vl-intro">
+    Monto <strong>neto</strong> de la liquidación de {{ venta.cliente?.nombre ?? 'el cliente' }}. Se carga en su kardex y
+    los anticipos ya cobrados se descuentan de ahí.
+  </p>
+
+  <form [formGroup]="form" class="vl-form">
+    <mat-form-field appearance="outline">
+      <mat-label>Monto neto ({{ simbolo }})</mat-label>
+      <input matInput appMonto formControlName="montoVenta" />
+      @if (f.montoVenta.hasError('required') && f.montoVenta.touched) {
+      <mat-error>Obligatorio</mat-error>
+      } @else if (f.montoVenta.hasError('pattern') && f.montoVenta.touched) {
+      <mat-error>Número con hasta 2 decimales</mat-error>
+      } @else if (f.montoVenta.hasError('min') && f.montoVenta.touched) {
+      <mat-error>Debe ser mayor a 0</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Fecha de liquidación</mat-label>
+      <input matInput class="input-fecha" [matDatepicker]="picker" [max]="hoy" formControlName="fechaLiquidacion" />
+      <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+      <mat-datepicker #picker></mat-datepicker>
+      @if (f.fechaLiquidacion.hasError('matDatepickerParse') && f.fechaLiquidacion.touched) {
+      <mat-error>Fecha inválida (dd/mm/aaaa)</mat-error>
+      } @else if (f.fechaLiquidacion.hasError('required') && f.fechaLiquidacion.touched) {
+      <mat-error>Obligatorio (dd/mm/aaaa)</mat-error>
+      }
+    </mat-form-field>
+
+    @if (esUsd) {
+    <mat-form-field appearance="outline">
+      <mat-label>Tipo de cambio (Bs por 1 $us)</mat-label>
+      <input matInput type="text" inputmode="decimal" class="input-monto" formControlName="tipoCambio" />
+      @if (f.tipoCambio.hasError('required') && f.tipoCambio.touched) {
+      <mat-error>Obligatorio en dólares</mat-error>
+      } @else if (f.tipoCambio.hasError('pattern') && f.tipoCambio.touched) {
+      <mat-error>Número con hasta 4 decimales</mat-error>
+      }
+    </mat-form-field>
+    }
+  </form>
+
+  <div class="vl-resumen">
+    <div class="vl-linea">
+      <span>Efectivo invertido</span>
+      <span>Bs {{ venta.totalEfectivoInvertido | number:'1.2-2' }}</span>
+    </div>
+    <div class="vl-linea">
+      <span>Venta (neto){{ esUsd ? ' en Bs' : '' }}</span>
+      <span>Bs {{ montoBs() | number:'1.2-2' }}</span>
+    </div>
+    @if (utilidad() !== null) {
+    <div class="vl-linea vl-linea--fuerte" [class.vl-negativo]="utilidad()! < 0">
+      <span>Utilidad</span>
+      <span>Bs {{ utilidad() | number:'1.2-2' }}</span>
+    </div>
+    }
+    <div class="vl-linea">
+      <span>Ya cobrado (anticipos)</span>
+      <span>Bs {{ venta.cobradoBolivianos | number:'1.2-2' }}</span>
+    </div>
+    @if (porCobrar() !== null) {
+    <div class="vl-linea vl-linea--fuerte" [class.vl-negativo]="porCobrar()! < 0">
+      <span>{{ porCobrar()! < 0 ? 'Saldo a favor del cliente' : 'Por cobrar' }}</span>
+      <span>Bs {{ (porCobrar()! < 0 ? -porCobrar()! : porCobrar()) | number:'1.2-2' }}</span>
+    </div>
+    }
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-stroked-button (click)="cancelar()" [disabled]="guardando()">Cancelar</button>
+  <button mat-flat-button color="primary" (click)="guardar()" [disabled]="guardando()">
+    @if (guardando()) {
+    <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
+    <span>Guardando...</span>
+    } @else {
+    <span>Registrar liquidación</span>
+    }
+  </button>
+</mat-dialog-actions>

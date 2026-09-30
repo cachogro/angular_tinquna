@@ -33,16 +33,6 @@
           </mat-select>
         </mat-form-field>
 
-        <mat-form-field appearance="outline" class="recepcion-toolbar__fechas" subscriptSizing="dynamic">
-          <mat-label>Rango de fechas</mat-label>
-          <mat-date-range-input [rangePicker]="pickerRango" [max]="hoy">
-            <input matStartDate placeholder="Desde" [formControl]="fechaDesdeControl" />
-            <input matEndDate placeholder="Hasta" [formControl]="fechaHastaControl" />
-          </mat-date-range-input>
-          <mat-datepicker-toggle matSuffix [for]="pickerRango"></mat-datepicker-toggle>
-          <mat-date-range-picker #pickerRango></mat-date-range-picker>
-        </mat-form-field>
-
         <mat-form-field appearance="outline" class="recepcion-toolbar__orden" subscriptSizing="dynamic">
           <mat-select [formControl]="orderByControl" placeholder="Ordenar por">
             @for (opcion of opcionesOrden; track opcion.value) {
@@ -61,6 +51,9 @@
           Limpiar
         </button>
       </div>
+
+      <!-- Período: en su propio renglón, debajo de la barra compacta de filtros. -->
+      <app-rango-fechas [desde]="fechaDesdeControl" [hasta]="fechaHastaControl" [max]="hoy" />
 
       <div class="recepcion-table-wrapper">
         @if (loading()) {
@@ -128,6 +121,16 @@
               </button>
               <button mat-icon-button (click)="imprimir(v)" matTooltip="Imprimir PDF">
                 <mat-icon>print</mat-icon>
+              </button>
+              }
+              @if (puedeGenerarRecibo(v)) {
+              <button mat-icon-button (click)="generarRecibo(v)" matTooltip="Generar recibo de pago">
+                <mat-icon>receipt_long</mat-icon>
+              </button>
+              } @else if (v.recibos?.length) {
+              <button mat-icon-button (click)="verPdfRecibo(v)"
+                [matTooltip]="'Ver recibo de pago (' + v.recibos?.[0]?.estado + ')'">
+                <mat-icon>receipt</mat-icon>
               </button>
               }
               @if (puedeMarcarEntregado(v)) {

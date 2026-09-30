@@ -8,12 +8,9 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
+import { montoDosDecimales } from '../../../../shared/utils/numero.util';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import {
-  MAT_DATE_LOCALE,
-  provideNativeDateAdapter,
-} from '@angular/material/core';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import {
   MatDialog,
@@ -32,6 +29,7 @@ import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog
 import { ParametricaDialogShellComponent } from '../shared/parametrica-dialog-shell.component';
 import { Caja } from '../models/parametricas.models';
 import { ParametricasService } from '../../services/parametricas.service';
+import { FechaInputDirective } from '../../../../shared/directives/fecha-input.directive';
 
 /** Mayúsculas, letras (con acentos/ñ), números, espacios y . - */
 const CHARSET_NOMBRE = /^[A-ZÁÉÍÓÚÑÜ0-9 .\-]*$/;
@@ -41,6 +39,7 @@ const CARACTERES_INVALIDOS_NOMBRE = /[^A-ZÁÉÍÓÚÑÜ0-9 .\-]/g;
   selector: 'app-caja-form-dialog',
   standalone: true,
   imports: [
+    FechaInputDirective,
     CommonModule,
     ReactiveFormsModule,
     MatFormFieldModule,
@@ -54,10 +53,6 @@ const CARACTERES_INVALIDOS_NOMBRE = /[^A-ZÁÉÍÓÚÑÜ0-9 .\-]/g;
     MatCardModule,
     MatDatepickerModule,
     ParametricaDialogShellComponent,
-  ],
-  providers: [
-    provideNativeDateAdapter(),
-    { provide: MAT_DATE_LOCALE, useValue: 'es-BO' },
   ],
   templateUrl: './caja-form-dialog.component.html',
   styleUrl: './caja-form-dialog.component.scss',
@@ -73,7 +68,7 @@ export class CajaFormDialogComponent implements OnInit {
   columnas = [
     'id',
     'nombre',
-    'saldoBob',
+    'saldoBs',
     'saldoUsd',
     'estado',
     'acciones',
@@ -96,9 +91,9 @@ export class CajaFormDialogComponent implements OnInit {
         Validators.pattern(CHARSET_NOMBRE),
       ],
     ],
-    saldoInicialBob: [0, [Validators.min(0)]],
-    fechaSaldoInicialBob: [null as Date | null],
-    saldoInicialUsd: [0, [Validators.min(0)]],
+    saldoInicialBs: [0, [montoDosDecimales, Validators.min(0)]],
+    fechaSaldoInicialBs: [null as Date | null],
+    saldoInicialUsd: [0, [montoDosDecimales, Validators.min(0)]],
     fechaSaldoInicialUsd: [null as Date | null],
   });
 
@@ -165,9 +160,9 @@ export class CajaFormDialogComponent implements OnInit {
       .guardarCaja({
         id: this.cajaEditando?.id,
         nombre: v.nombre,
-        saldoInicialBob: Number(v.saldoInicialBob ?? 0),
-        ...(v.fechaSaldoInicialBob
-          ? { fechaSaldoInicialBob: this.formatFecha(v.fechaSaldoInicialBob) }
+        saldoInicialBs: Number(v.saldoInicialBs ?? 0),
+        ...(v.fechaSaldoInicialBs
+          ? { fechaSaldoInicialBs: this.formatFecha(v.fechaSaldoInicialBs) }
           : {}),
         saldoInicialUsd: Number(v.saldoInicialUsd ?? 0),
         ...(v.fechaSaldoInicialUsd
@@ -204,8 +199,8 @@ export class CajaFormDialogComponent implements OnInit {
     this.cajaEditando = caja;
     this.form.patchValue({
       nombre: caja.nombre,
-      saldoInicialBob: Number(caja.saldoInicialBob ?? 0),
-      fechaSaldoInicialBob: this.parseFecha(caja.fechaSaldoInicialBob),
+      saldoInicialBs: Number(caja.saldoInicialBs ?? 0),
+      fechaSaldoInicialBs: this.parseFecha(caja.fechaSaldoInicialBs),
       saldoInicialUsd: Number(caja.saldoInicialUsd ?? 0),
       fechaSaldoInicialUsd: this.parseFecha(caja.fechaSaldoInicialUsd),
     });
@@ -215,8 +210,8 @@ export class CajaFormDialogComponent implements OnInit {
   limpiar(): void {
     this.form.reset({
       nombre: '',
-      saldoInicialBob: 0,
-      fechaSaldoInicialBob: null,
+      saldoInicialBs: 0,
+      fechaSaldoInicialBs: null,
       saldoInicialUsd: 0,
       fechaSaldoInicialUsd: null,
     });

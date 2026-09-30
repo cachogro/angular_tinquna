@@ -1,4 +1,4 @@
-// src/app/pages/ui-components/panel-users/services/catalogos.service.ts
+// src/app/pages/configurations/services/catalogos.service.ts
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, shareReplay } from 'rxjs';

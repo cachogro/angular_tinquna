@@ -1,0 +1,142 @@
+<h2 mat-dialog-title>Fondo a rendir cuentas_1111</h2>
+
+<mat-dialog-content>
+  @if (cargando()) {
+  <div class="fdd-loading">
+    <mat-spinner diameter="32"></mat-spinner>
+    <span>Cargando fondo...</span>
+  </div>
+  } @else if (fondo(); as f) {
+
+  <div class="fdd-cabecera">
+    <div class="fdd-cabecera__linea">
+      <span class="fdd-destinatario">{{ nombreDestinatario(f) }}</span>
+      <span class="fdd-estado" [class]="'fdd-estado--' + f.estado.toLowerCase()">
+        {{ estadoLabel(f.estado) }}
+      </span>
+    </div>
+    <p class="fdd-concepto">{{ f.concepto }} · {{ fechaFmt(f.fecha) }}</p>
+    @if (f.destinoGasto) {
+    <p class="fdd-destino">Destino del gasto: {{ f.destinoGasto.nombre }}</p>
+    }
+    <p class="fdd-destino">Aprobado por: {{ nombreAprobador(f) }}</p>
+  </div>
+
+  <div class="fdd-tiles">
+    <div class="fdd-tile">
+      <small>Entregado</small>
+      <strong>{{ num(f.montoEntregado) | number:'1.2-2' }}</strong>
+    </div>
+    <div class="fdd-tile">
+      <small>Justificado</small>
+      <strong class="fdd-pos">{{ num(f.montoJustificado) | number:'1.2-2' }}</strong>
+    </div>
+    @if (num(f.montoPorReponer) > 0) {
+    <div class="fdd-tile">
+      <small>Por reponer a {{ nombreDestinatario(f) }}</small>
+      <strong class="fdd-reponer">{{ num(f.montoPorReponer) | number:'1.2-2' }}</strong>
+    </div>
+    } @else {
+    <div class="fdd-tile">
+      <small>Saldo pendiente de justificar</small>
+      <strong [class.fdd-neg]="f.saldoPendiente > 0">{{ num(f.saldoPendiente) | number:'1.2-2' }}</strong>
+    </div>
+    }
+  </div>
+
+  <div class="fdd-detalles">
+    <div class="fdd-detalles__head">
+      <span>Comprobantes</span>
+      <button mat-stroked-button color="primary" (click)="agregarComprobante()"
+        [disabled]="f.estado === 'CERRADO_CON_DEUDA'">
+        <mat-icon>add</mat-icon> Agregar comprobante
+      </button>
+    </div>
+
+    @if (detalles().length === 0) {
+    <div class="fdd-empty">
+      <mat-icon>receipt_long</mat-icon>
+      <p>Todavía no se cargó ningún comprobante.</p>
+    </div>
+    } @else {
+    <div class="fdd-tabla-scroll">
+      <table mat-table [dataSource]="detalles()" class="fdd-tabla mat-elevation-z1">
+
+        <ng-container matColumnDef="fecha">
+          <th mat-header-cell *matHeaderCellDef class="col-fecha">Fecha</th>
+          <td mat-cell *matCellDef="let d" class="col-fecha">{{ fechaFmt(d.fecha) }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="concepto">
+          <th mat-header-cell *matHeaderCellDef>Concepto</th>
+          <td mat-cell *matCellDef="let d">{{ d.concepto }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="nroComprobante">
+          <th mat-header-cell *matHeaderCellDef class="nro-cpte">N° comprobante</th>
+          <td mat-cell *matCellDef="let d" class="nro-cpte">{{ d.nroComprobante || d.facturaRecibo || '—' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="destinoGasto">
+          <th mat-header-cell *matHeaderCellDef>Destino del gasto</th>
+          <td mat-cell *matCellDef="let d">{{ d.destinoGasto?.nombre || '—' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="monto">
+          <th mat-header-cell *matHeaderCellDef class="fdd-num">Monto</th>
+          <td mat-cell *matCellDef="let d" class="fdd-num">{{ num(d.monto) | number:'1.2-2' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="acciones">
+          <th mat-header-cell *matHeaderCellDef>Acciones</th>
+          <td mat-cell *matCellDef="let d">
+            @if (d.activo !== false && f.estado !== 'CERRADO_CON_DEUDA') {
+            <button mat-icon-button color="primary" matTooltip="Editar" (click)="editarComprobante(d)">
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button mat-icon-button color="warn" matTooltip="Anular" (click)="anularComprobante(d)">
+              <mat-icon>block</mat-icon>
+            </button>
+            }
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+        <tr mat-row *matRowDef="let d; columns: columnas" [class.fdd-row-inactiva]="d.activo === false"></tr>
+      </table>
+    </div>
+    }
+  </div>
+
+  @if (num(f.montoPorReponer) > 0) {
+  <div class="fdd-aviso fdd-aviso--reponer">
+    <mat-icon>currency_exchange</mat-icon>
+    <span>POR REPONER A: <strong>{{ nombreDestinatario(f) }}</strong> — Bs {{ num(f.montoPorReponer) | number:'1.2-2' }}.
+      Se justificó más de lo entregado; la empresa debe devolverle la diferencia.</span>
+  </div>
+  }
+
+  @if (f.estado === 'CERRADO_CON_DEUDA') {
+  <div class="fdd-aviso fdd-aviso--deuda">
+    <mat-icon>warning_amber</mat-icon>
+    <span>Este fondo se cerró con deuda: el saldo pendiente se cargó al kardex del destinatario.</span>
+  </div>
+  }
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  @if (fondo(); as f) {
+  <button mat-stroked-button color="primary" (click)="exportarExcel(f)"
+    matTooltip="Excel de rendición de cuentas del destinatario">
+    <mat-icon>download</mat-icon> Excel
+  </button>
+  <button mat-stroked-button color="warn" (click)="cerrarConDeuda()" [disabled]="!puedeCerrarConDeuda"
+    matTooltip="Carga el saldo pendiente como deuda en el kardex del destinatario">
+    <mat-icon>report</mat-icon> Cargar a kardex
+  </button>
+  }
+  <button mat-flat-button color="primary" (click)="cerrar()">
+    Cerrar
+  </button>
+</mat-dialog-actions>

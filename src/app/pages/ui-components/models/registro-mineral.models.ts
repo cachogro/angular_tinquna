@@ -60,6 +60,15 @@ export interface DetalleMineralRegistro {
   leyUnidad: LeyUnidad;
 }
 
+/** Recibo de anticipo vinculado a la recepción (subset que devuelve el back). */
+export interface ReciboAnticipoResumen {
+  id: string;
+  serie?: string;
+  numero?: number;
+  estado: 'BORRADOR' | 'PROCESADO' | 'ANULADO';
+  montoTotal?: string;
+}
+
 export interface RegistroMineral {
   activo: boolean;
   usuarioUltimaModificacion?: string | null;
@@ -75,9 +84,14 @@ export interface RegistroMineral {
   balanzaL: string; // el backend lo devuelve como string numérico
   balanzaT: string;
   anticipo: string;
+  /** Recibos de anticipo vinculados: el back devuelve solo el vigente
+   *  (BORRADOR o PROCESADO). Vacío + anticipo > 0 = falta generar el recibo. */
+  recibos?: ReciboAnticipoResumen[];
   humedad?: string | number | null;
   idPersonalInterno?: string | null;
   personalInterno?: PersonaResumen | null;
+  /** Texto libre (hasta 100); vacío en recepciones anteriores */
+  lugarAcopio?: string | null;
   /** @deprecated el backend ya no gestiona este campo */
   totalValorBruto?: string;
   fechaRecepcion: string; // ISO 8601 con offset, ej. '2026-07-22T14:35:00-04:00'
@@ -107,6 +121,8 @@ export interface GuardarRegistroMineralRequest {
   humedad: number;
   /** Id de la persona (tipo muestrero) asignada a la recepción. Opcional. */
   idPersonalInterno?: string;
+  /** Descripción del lugar de acopio (catálogo parametrica.lugar_acopio) */
+  lugarAcopio: string;
   fechaRecepcion: string; // ISO 8601 con offset, ej. '2026-07-22T14:35:00-04:00'
   observaciones: string;
   // detalles: DetalleMineralRequest[];

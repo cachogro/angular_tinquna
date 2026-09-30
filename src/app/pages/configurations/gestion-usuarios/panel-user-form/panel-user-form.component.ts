@@ -1,4 +1,4 @@
-// src/app/pages/ui-components/panel-users/panel-user-form/panel-user-form.component.ts
+// src/app/pages/configurations/gestion-usuarios/panel-user-form/panel-user-form.component.ts
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import {
@@ -14,7 +14,6 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MAT_DATE_LOCALE, MatNativeDateModule } from '@angular/material/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -26,11 +25,13 @@ import { obtenerRolUsuario } from '../models/usuario-admin.models';
 import { UsuarioAdminService } from '../../services/usuario-admin.service';
 import { CatalogosService } from '../../services/catalogos.service';
 import { MatCardModule } from '@angular/material/card';
+import { FechaInputDirective } from '../../../../shared/directives/fecha-input.directive';
 
 
 @Component({
   selector: 'app-panel-user-form',
   imports: [
+    FechaInputDirective,
     MatCardModule,
     CommonModule,
     ReactiveFormsModule,
@@ -39,12 +40,10 @@ import { MatCardModule } from '@angular/material/card';
     MatInputModule,
     MatSelectModule,
     MatDatepickerModule,
-    MatNativeDateModule,
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
   ],
-  providers: [{ provide: MAT_DATE_LOCALE, useValue: 'es-BO' }],
   templateUrl: './panel-user-form.component.html',
   styleUrl: './panel-user-form.component.scss',
 })

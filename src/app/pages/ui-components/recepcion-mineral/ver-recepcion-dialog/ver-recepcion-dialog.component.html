@@ -60,6 +60,11 @@
       <span class="detalle-item__valor">{{ nombreMuestrero() }}</span>
     </div>
 
+    <div class="detalle-item">
+      <span class="detalle-item__label">Lugar de acopio</span>
+      <span class="detalle-item__valor">{{ registro.lugarAcopio || '—' }}</span>
+    </div>
+
     @if (leyesTexto()) {
     <div class="detalle-item detalle-item--full">
       <span class="detalle-item__label">Leyes</span>

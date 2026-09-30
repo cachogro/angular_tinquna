@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -16,7 +16,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog/confirm-dialog.component';
 import {
@@ -30,14 +30,20 @@ import {
   PersonaFormDialogData,
 } from './persona-form-dialog/persona-form-dialog.component';
 import {
-  KardexDialogComponent,
-  KardexDialogData,
-} from '../../contabilidad/kardex/kardex-dialog.component';
+  KardexGestionData,
+  irAGestionKardex,
+} from '../../contabilidad/kardex/kardex-gestion/kardex-gestion.component';
 
 interface OpcionOrden {
   value: string;
   label: string;
 }
+
+/** Id del actor productivo minero que representa a la propia empresa
+ *  (TINKURIKUNA). Su personal vive en la pestaña dedicada "Personal interno"
+ *  (`PersonalInternoComponent`); esta bandeja ("Compras (Internos)") es para
+ *  el resto: proveedores, choferes, socios, etc. de otros actores. */
+const ID_ACTOR_EMPRESA = '1';
 
 @Component({
   selector: 'app-gestion-clientes',
@@ -66,6 +72,7 @@ interface OpcionOrden {
 export class GestionClientesComponent implements OnInit {
   private readonly personaService = inject(PersonaService);
   private readonly dialog = inject(MatDialog);
+  private readonly router = inject(Router);
   private readonly snackBar = inject(MatSnackBar);
 
   readonly displayedColumns = [
@@ -77,13 +84,16 @@ export class GestionClientesComponent implements OnInit {
     'acciones',
   ];
 
-  readonly personas = signal<PersonaCI[]>([]);
-  readonly total = signal(0);
+  /** Todas las personas que matchean los filtros de backend, ya excluido el
+   *  personal propio de TINKURIKUNA. */
+  readonly personasTodas = signal<PersonaCI[]>([]);
   readonly loading = signal(true);
   readonly tiposPersona = signal<PersonaTipoCatalogo[]>([]);
 
-  pageIndex = 0;
-  pageSize = 10;
+  // Señales (no propiedades planas): `personas`/`total` las leen dentro de
+  // un `computed()`, que solo se reinvalida cuando cambia una señal.
+  readonly pageIndex = signal(0);
+  readonly pageSize = signal(10);
 
   readonly searchControl = new FormControl('');
   readonly documentoControl = new FormControl('');
@@ -97,6 +107,13 @@ export class GestionClientesComponent implements OnInit {
   ];
   readonly orderByControl = new FormControl<string>('id');
   readonly orderDirectionControl = new FormControl<'ASC' | 'DESC'>('DESC');
+
+  readonly total = computed(() => this.personasTodas().length);
+
+  readonly personas = computed(() => {
+    const inicio = this.pageIndex() * this.pageSize();
+    return this.personasTodas().slice(inicio, inicio + this.pageSize());
+  });
 
   ngOnInit(): void {
     this.personaService.getAllPersonaTipo().subscribe({
@@ -123,7 +140,7 @@ export class GestionClientesComponent implements OnInit {
   }
 
   private reiniciarYcargar(): void {
-    this.pageIndex = 0;
+    this.pageIndex.set(0);
     this.cargarPersonas();
   }
 
@@ -131,10 +148,15 @@ export class GestionClientesComponent implements OnInit {
     this.loading.set(true);
     const estado = this.estadoControl.value;
 
+    // El back no filtra personas por actor, así que se trae todo lo que
+    // matchea el resto de filtros (volumen chico, igual que en
+    // PersonasDeActorDialogComponent / PersonalInternoComponent) y se
+    // excluye acá al personal de TINKURIKUNA; la paginación también queda
+    // del lado del cliente para que el total mostrado sea el correcto.
     this.personaService
       .listarPersonas({
-        page: this.pageIndex + 1,
-        limit: this.pageSize,
+        page: 1,
+        limit: 1000,
         busqueda: this.searchControl.value || undefined,
         numeroDocumento: this.documentoControl.value || undefined,
         idTipoPersona: this.tipoControl.value ?? undefined,
@@ -144,8 +166,14 @@ export class GestionClientesComponent implements OnInit {
       })
       .subscribe({
         next: (res) => {
-          this.personas.set(res.data);
-          this.total.set(res.total);
+          this.personasTodas.set(
+            (res.data ?? []).filter(
+              (p) =>
+                String(
+                  p.actorProductivoMinero?.id ?? p.idActorProductivoMinero ?? '',
+                ) !== ID_ACTOR_EMPRESA,
+            ),
+          );
           this.loading.set(false);
         },
         error: () => {
@@ -162,9 +190,8 @@ export class GestionClientesComponent implements OnInit {
   }
 
   onPageChange(event: PageEvent): void {
-    this.pageIndex = event.pageIndex;
-    this.pageSize = event.pageSize;
-    this.cargarPersonas();
+    this.pageIndex.set(event.pageIndex);
+    this.pageSize.set(event.pageSize);
   }
 
   toggleOrden(): void {
@@ -189,7 +216,7 @@ export class GestionClientesComponent implements OnInit {
    *  actual para que ese número no cambie con la fila, sino que se mantenga
    *  ligado al mismo registro al togglear ascendente/descendente. */
   numeroFila(i: number): number {
-    const offset = this.pageIndex * this.pageSize + i;
+    const offset = this.pageIndex() * this.pageSize() + i;
     return this.orderDirectionControl.value === 'ASC'
       ? offset + 1
       : this.total() - offset;
@@ -215,23 +242,21 @@ export class GestionClientesComponent implements OnInit {
         if (!resultado) return;
         // En alta, volvemos a la primera página (orden por defecto DESC: la
         // recién creada queda arriba); en edición mantenemos la página actual.
-        if (esAlta) this.pageIndex = 0;
+        if (esAlta) this.pageIndex.set(0);
         this.cargarPersonas();
       });
   }
 
   abrirKardex(persona: PersonaCI): void {
-    const data: KardexDialogData = {
-      tipo: 'PERSONAL',
+    // Esta bandeja ("Compras (Internos)") excluye al personal de TINKURIKUNA
+    // (ver GestionClientesComponent.cargarPersonas): todo lo que se lista
+    // acá es, por definición, tipo ASOCIADO en el kardex.
+    const data: KardexGestionData = {
+      tipo: 'ASOCIADO',
       idPersona: persona.id,
       nombreDestinatario: this.nombreCompleto(persona),
     };
-    this.dialog.open(KardexDialogComponent, {
-      data,
-      width: '1000px',
-      maxWidth: '95vw',
-      autoFocus: false,
-    });
+    irAGestionKardex(this.router, data);
   }
 
   confirmarCambioEstado(persona: PersonaCI): void {
@@ -255,7 +280,7 @@ export class GestionClientesComponent implements OnInit {
 
         this.personaService.cambiarEstado(persona.id, activar).subscribe({
           next: (actualizada) => {
-            this.personas.update((lista) =>
+            this.personasTodas.update((lista) =>
               lista.map((p) => (p.id === persona.id ? actualizada : p)),
             );
             this.snackBar.open(

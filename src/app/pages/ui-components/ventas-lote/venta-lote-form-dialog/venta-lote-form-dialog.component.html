@@ -1,0 +1,119 @@
+<h2 mat-dialog-title>Vender lote</h2>
+
+<mat-dialog-content>
+  @if (cargando()) {
+  <div class="vf-loading">
+    <mat-spinner diameter="28"></mat-spinner>
+    <span>Cargando lotes y clientes...</span>
+  </div>
+  } @else {
+  <form [formGroup]="form" class="vf-form">
+    <mat-form-field appearance="outline" class="vf-full">
+      <mat-label>Lote (promedio)</mat-label>
+      <mat-select formControlName="idPromedioMineral">
+        @for (p of promedios(); track p.id) {
+        <mat-option [value]="p.id">
+          {{ etiquetaPromedio(p) }} — {{ p.pesoTotalKilogramos | number:'1.0-2' }} kg ·
+          Bs {{ p.totalEfectivoInvertido | number:'1.2-2' }}
+        </mat-option>
+        } @empty {
+        <mat-option disabled>No hay lotes sin vender</mat-option>
+        }
+      </mat-select>
+      @if (f.idPromedioMineral.hasError('required') && f.idPromedioMineral.touched) {
+      <mat-error>Obligatorio</mat-error>
+      }
+    </mat-form-field>
+
+    @if (promedioSeleccionado(); as p) {
+    <div class="vf-resumen vf-full">
+      <div>
+        <small>Efectivo invertido</small>
+        <strong>Bs {{ p.totalEfectivoInvertido | number:'1.2-2' }}</strong>
+      </div>
+      <div>
+        <small>Peso total</small>
+        <strong>{{ p.pesoTotalKilogramos | number:'1.0-2' }} kg</strong>
+      </div>
+      <div>
+        <small>Leyes promedio</small>
+        <strong>
+          @for (l of p.leyes; track l.idMineral) {
+          <span class="vf-ley">{{ l.mineral }} {{ l.leyPromedio | number:'1.0-4' }} {{ l.leyUnidad }}</span>
+          } @empty { — }
+        </strong>
+      </div>
+    </div>
+    }
+
+    <mat-form-field appearance="outline" class="vf-full">
+      <mat-label>Cliente comprador</mat-label>
+      <mat-select formControlName="idCliente">
+        @for (c of clientes(); track c.id) {
+        <mat-option [value]="c.id">{{ c.nombre }}</mat-option>
+        } @empty {
+        <mat-option disabled>Ningún cliente tiene kardex abierto</mat-option>
+        }
+      </mat-select>
+      <!-- <mat-hint>Solo clientes con kardex abierto: ahí se registran sus anticipos.</mat-hint> -->
+      @if (f.idCliente.hasError('required') && f.idCliente.touched) {
+      <mat-error>Obligatorio</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Fecha de venta</mat-label>
+      <input matInput class="input-fecha" [matDatepicker]="picker" [max]="hoy" formControlName="fechaVenta" />
+      <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+      <mat-datepicker #picker></mat-datepicker>
+      @if (f.fechaVenta.hasError('matDatepickerParse') && f.fechaVenta.touched) {
+      <mat-error>Fecha inválida (dd/mm/aaaa)</mat-error>
+      } @else if (f.fechaVenta.hasError('required') && f.fechaVenta.touched) {
+      <mat-error>Obligatorio (dd/mm/aaaa)</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Moneda</mat-label>
+      <mat-select formControlName="moneda">
+        <mat-option value="BS">Bs</mat-option>
+        <mat-option value="USD">$us</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    @if (esUsd) {
+    <mat-form-field appearance="outline">
+      <mat-label>Tipo de cambio</mat-label>
+      <input matInput type="text" inputmode="decimal" class="input-monto" formControlName="tipoCambio"
+        placeholder="6.96" />
+      <!-- <mat-hint>De referencia; cada cobro lleva su propio tipo de cambio.</mat-hint> -->
+      @if (f.tipoCambio.hasError('required') && f.tipoCambio.touched) {
+      <mat-error>Obligatorio en dólares</mat-error>
+      } @else if (f.tipoCambio.hasError('pattern') && f.tipoCambio.touched) {
+      <mat-error>Número con hasta 4 decimales</mat-error>
+      } @else if (f.tipoCambio.hasError('min') && f.tipoCambio.touched) {
+      <mat-error>Debe ser mayor a 0</mat-error>
+      }
+    </mat-form-field>
+    }
+
+    <mat-form-field appearance="outline" class="vf-full">
+      <mat-label>Observaciones (opcional)</mat-label>
+      <input matInput formControlName="observaciones" maxlength="255" />
+      <mat-hint align="end">{{ f.observaciones.value?.length ?? 0 }}/255</mat-hint>
+    </mat-form-field>
+  </form>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-stroked-button (click)="cancelar()" [disabled]="guardando()">Cancelar</button>
+  <button mat-flat-button color="primary" (click)="guardar()" [disabled]="guardando() || cargando()">
+    @if (guardando()) {
+    <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
+    <span>Guardando...</span>
+    } @else {
+    <span>Registrar venta</span>
+    }
+  </button>
+</mat-dialog-actions>

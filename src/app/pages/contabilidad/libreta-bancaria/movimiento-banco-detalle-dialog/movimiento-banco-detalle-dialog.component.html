@@ -1,0 +1,114 @@
+<h2 mat-dialog-title>
+  @if (movimiento(); as m) {
+  <mat-icon [class.md-icono--haber]="esHaber(m)" [class.md-icono--debe]="!esHaber(m)">
+    {{ esHaber(m) ? 'call_received' : 'call_made' }}
+  </mat-icon>
+  Movimiento folio {{ m.folio }}
+  } @else {
+  Detalle del movimiento
+  }
+</h2>
+
+<mat-dialog-content class="md-content">
+  @if (cargando()) {
+  <div class="md-loading">
+    <mat-spinner diameter="32"></mat-spinner>
+    <span>Cargando movimiento...</span>
+  </div>
+  } @else if (movimiento(); as m) {
+  <div class="md-tiles">
+    <div class="md-tile">
+      <small>Estado</small>
+      <strong [class.md-anulado]="m.activo === false">{{ m.activo === false ? 'Desactivado' : 'Vigente' }}</strong>
+    </div>
+    <div class="md-tile">
+      <small>Fecha</small>
+      <strong>{{ fechaFmt(m.fecha) }}</strong>
+    </div>
+    <div class="md-tile">
+      <small>Registrado</small>
+      <strong>{{ fechaHoraFmt(m.fechaRegistro) }}</strong>
+      @if (m.usuarioRegistro) {
+      <small>por {{ m.usuarioRegistro }}</small>
+      }
+    </div>
+    <div class="md-tile">
+      <small>Período</small>
+      <strong>{{ periodoLabel(m) }}</strong>
+    </div>
+    <div class="md-tile">
+      <small>Cuenta bancaria</small>
+      <strong>{{ cuentaLabel(m) }}</strong>
+    </div>
+    <div class="md-tile">
+      <small>Tipo de transacción</small>
+      <strong>{{ m.tipoTransaccion || '—' }}</strong>
+    </div>
+    <div class="md-tile">
+      <small>Nombres y apellidos</small>
+      <strong>{{ beneficiario(m) }}</strong>
+      @if (m.persona?.numeroDocumento) {
+      <small>CI {{ m.persona?.numeroDocumento }}</small>
+      }
+    </div>
+    <div class="md-tile">
+      <small>Destino del gasto</small>
+      <strong>{{ m.destinoGasto?.nombre || '—' }}</strong>
+    </div>
+    <div class="md-tile md-tile--destacado">
+      <small>{{ esHaber(m) ? 'HABER (ingreso)' : 'DEBE (egreso)' }}</small>
+      <strong>{{ moneda(m) }} {{ monto(m) | number:'1.2-2' }}</strong>
+    </div>
+    <div class="md-tile">
+      <small>Saldo tras el movimiento</small>
+      <strong>{{ moneda(m) }} {{ num(m.saldo) | number:'1.2-2' }}</strong>
+    </div>
+  </div>
+
+  <p class="md-linea"><strong>Concepto:</strong> {{ m.concepto }}</p>
+  <p class="md-linea"><strong>N° transacción:</strong> <span class="nro-cpte">{{ m.nroTransaccion || '—' }}</span></p>
+  @if (m.facturaRecibo) {
+  <p class="md-linea"><strong>Factura y/o recibo:</strong> {{ m.facturaRecibo }}</p>
+  }
+
+  @if (m.recibo || m.traspaso || m.movimientoKardex) {
+  <h3>Origen</h3>
+  <div class="md-origen-lista">
+    @if (m.recibo; as r) {
+    <div class="md-origen">
+      <mat-icon>receipt_long</mat-icon>
+      <span>
+        Recibo <strong>{{ codigoRecibo(m) }}</strong>
+        ({{ r.tipo === 'INGRESO' ? 'ingreso' : 'egreso' }} · {{ r.estado }})
+      </span>
+      <button mat-button color="primary" (click)="verRecibo(r.id)">Ver recibo</button>
+    </div>
+    }
+    @if (m.traspaso; as t) {
+    <div class="md-origen">
+      <mat-icon>sync_alt</mat-icon>
+      <span>
+        Traspaso <strong>{{ t.tipo === 'DEPOSITO' ? 'Depósito · Caja → Banco' : 'Retiro · Banco → Caja' }}</strong>
+        · {{ t.concepto }}
+      </span>
+      <button mat-button color="primary" (click)="verTraspaso(t.id)">Ver traspaso</button>
+    </div>
+    }
+    @if (m.movimientoKardex; as mk) {
+    <div class="md-origen">
+      <mat-icon>menu_book</mat-icon>
+      <span>
+        Kardex
+        @if (mk.kardex; as k) { N° {{ k.numero }} ({{ k.gestion }}) de <strong>{{ titularKardex(m) }}</strong> · }
+        línea {{ mk.numeroLinea }}
+      </span>
+    </div>
+    }
+  </div>
+  }
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-flat-button color="primary" (click)="cerrar()">Cerrar</button>
+</mat-dialog-actions>

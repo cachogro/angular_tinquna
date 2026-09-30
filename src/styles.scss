@@ -19,3 +19,43 @@ mat-sidenav-container {
 mat-sidenav-content {
   padding-top: 0 !important;
 }
+
+/* N° de comprobante / transacción (alfanumérico, máx. 30): alineado a la
+   derecha en inputs y en columnas de tabla (th + td). */
+.nro-cpte {
+  text-align: right;
+}
+
+/* Montos que se introducen en formularios: alineados a la derecha. */
+.input-monto {
+  text-align: right;
+}
+
+/* Fechas (dd/mm/aaaa): alineadas a la derecha en inputs de datepicker y en
+   columnas de tabla (th + td). En rangos se aplica al mat-date-range-input. */
+.input-fecha,
+.col-fecha {
+  text-align: right;
+}
+.mat-date-range-input.input-fecha .mat-date-range-input-container {
+  justify-content: flex-end;
+}
+
+/* Panel del calendario de rangos (app-rango-fechas): esquinas redondeadas y
+   cabecera con el color principal. */
+.panel-calendario-color {
+  --mat-datepicker-calendar-container-shape: 16px;
+  --mat-datepicker-calendar-navigation-button-icon-color: var(--mat-sys-on-primary, #fff);
+  --mat-datepicker-calendar-period-button-text-color: var(--mat-sys-on-primary, #fff);
+  --mat-datepicker-calendar-period-button-icon-color: var(--mat-sys-on-primary, #fff);
+
+  .mat-datepicker-content {
+    overflow: hidden;
+  }
+
+  .mat-calendar-header {
+    padding-bottom: 8px;
+    background: var(--mat-sys-primary, #5d87ff);
+    color: var(--mat-sys-on-primary, #fff);
+  }
+}

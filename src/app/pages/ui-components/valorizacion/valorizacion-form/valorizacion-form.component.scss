@@ -567,6 +567,29 @@
   padding: 16px;
 }
 
+.valorizacion-form__cod-valorizacion {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+
+  mat-form-field {
+    width: 100%;
+    max-width: 360px;
+  }
+}
+
+.valorizacion-form__cod-cambiada {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 0 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(255, 152, 0, 0.15);
+  color: #b26a00;
+}
+
 .valorizacion-form__datos-recepcion p.small {
   margin-bottom: 2px;
   line-height: 0.2;

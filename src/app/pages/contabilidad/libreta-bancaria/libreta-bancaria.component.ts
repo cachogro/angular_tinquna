@@ -14,7 +14,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { Observable } from 'rxjs';
 import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog/confirm-dialog.component';
 import {
-  MonedaCuenta,
+  MonedaCuentaBancaria,
   etiquetaMonedaCuenta,
 } from '../../configurations/parametricas/models/parametricas.models';
 import { ParametricasService } from '../../configurations/services/parametricas.service';
@@ -25,18 +25,26 @@ import {
 } from '../models/libreta-banco.models';
 import { LibretaBancoService } from '../services/libreta-banco.service';
 import {
+  descargarBlob,
+  mensajeErrorBlob,
+} from '../../../shared/utils/descarga-archivo.util';
+import {
+  MovimientoBancoDetalleDialogComponent,
+  MovimientoBancoDetalleDialogData,
+} from './movimiento-banco-detalle-dialog/movimiento-banco-detalle-dialog.component';
+import {
   MovimientoFormDialogComponent,
   MovimientoFormDialogData,
-} from './movimiento-form-dialog.component';
+} from './movimiento-form-dialog/movimiento-form-dialog.component';
 import {
   SaldoInicialDialogComponent,
   SaldoInicialDialogData,
-} from './saldo-inicial-dialog.component';
+} from './saldo-inicial-dialog/saldo-inicial-dialog.component';
 
 interface CuentaOpcion {
   idCuenta: number;
   numeroCuenta: string;
-  moneda: MonedaCuenta;
+  moneda: MonedaCuentaBancaria;
   saldoInicial: string | null;
   fechaSaldoInicial: string | null;
   idEntidad: number;
@@ -88,12 +96,14 @@ export class LibretaBancariaComponent implements OnInit {
   readonly columnas = [
     'folio',
     'fecha',
+    'tipoTransaccion',
     'nroTransaccion',
     'nombresApellidos',
     'concepto',
     'debe',
     'haber',
     'saldo',
+    'usuarioRegistro',
     'acciones',
   ];
 
@@ -373,6 +383,57 @@ export class LibretaBancariaComponent implements OnInit {
       });
   }
 
+  // ---------- Excel ----------
+
+  readonly descargandoExcel = signal(false);
+
+  /** Excel de la libreta con el filtro actual: el mes elegido (o la gestión,
+   *  o toda la historia de la cuenta si no hay filtro). */
+  descargarExcel(): void {
+    const id = this.cuentaSelId();
+    if (id == null || this.descargandoExcel()) return;
+    const gestion = this.gestionSel();
+    const mes = gestion != null ? this.mesSel() : null;
+
+    this.descargandoExcel.set(true);
+    this.libretaService.descargarExcel(id, gestion, mes).subscribe({
+      next: (blob) => {
+        this.descargandoExcel.set(false);
+        const sufijo = [
+          gestion,
+          mes != null ? String(mes).padStart(2, '0') : null,
+        ]
+          .filter((v) => v != null)
+          .join('-');
+        descargarBlob(
+          blob,
+          `libreta-banco-${id}${sufijo ? `-${sufijo}` : ''}.xlsx`,
+        );
+      },
+      error: async (err) => {
+        this.descargandoExcel.set(false);
+        this.snackBar.open(
+          (await mensajeErrorBlob(err)) ??
+            'No se pudo generar el Excel de la libreta bancaria',
+          'Cerrar',
+          { duration: 5000 },
+        );
+      },
+    });
+  }
+
+  /** El visor pide el movimiento completo por id; la bandeja trae solo lo
+   *  que muestra la tabla. */
+  verDetalle(m: MovimientoBanco): void {
+    const data: MovimientoBancoDetalleDialogData = { id: m.id };
+    this.dialog.open(MovimientoBancoDetalleDialogComponent, {
+      data,
+      width: '760px',
+      maxWidth: '95vw',
+      autoFocus: false,
+    });
+  }
+
   editarMovimiento(m: MovimientoBanco): void {
     const id = this.cuentaSelId();
     if (id == null) return;
@@ -588,6 +649,6 @@ export class LibretaBancariaComponent implements OnInit {
   }
 
   get etiquetaMonedaSel(): string {
-    return etiquetaMonedaCuenta(this.cuentaSel()?.moneda ?? 'BOB');
+    return etiquetaMonedaCuenta(this.cuentaSel()?.moneda ?? 'BS');
   }
 }

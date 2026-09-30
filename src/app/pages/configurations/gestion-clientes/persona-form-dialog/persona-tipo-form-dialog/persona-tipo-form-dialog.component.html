@@ -1,0 +1,61 @@
+<h2 mat-dialog-title>Nuevo tipo o rol</h2>
+
+<mat-dialog-content>
+  <form [formGroup]="form" class="tipo-rol-form">
+    <mat-form-field appearance="outline">
+      <mat-label>Código</mat-label>
+      <input matInput formControlName="codigo" maxlength="20" />
+      <mat-hint>2 a 20 caracteres (ej. INT, CHOF)</mat-hint>
+      @if (f.codigo.hasError('required') && f.codigo.touched) {
+      <mat-error>Obligatorio</mat-error>
+      }
+      @if (f.codigo.hasError('minlength') && f.codigo.touched) {
+      <mat-error>Mínimo 2 caracteres</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Nombre</mat-label>
+      <input matInput formControlName="nombre" maxlength="50" />
+      <mat-hint>3 a 50 caracteres</mat-hint>
+      @if (f.nombre.hasError('required') && f.nombre.touched) {
+      <mat-error>Obligatorio</mat-error>
+      }
+      @if (f.nombre.hasError('minlength') && f.nombre.touched) {
+      <mat-error>Mínimo 3 caracteres</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Descripción (opcional)</mat-label>
+      <textarea
+        matInput
+        formControlName="descripcion"
+        rows="2"
+        maxlength="150"
+      ></textarea>
+      @if (f.descripcion.hasError('maxlength') && f.descripcion.touched) {
+      <mat-error>Máximo 150 caracteres</mat-error>
+      }
+    </mat-form-field>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-stroked-button (click)="cancelar()" [disabled]="guardando()">
+    Cancelar
+  </button>
+  <button
+    mat-flat-button
+    color="primary"
+    (click)="guardar()"
+    [disabled]="guardando()"
+  >
+    @if (guardando()) {
+    <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
+    <span>Guardando...</span>
+    } @else {
+    <span>Crear</span>
+    }
+  </button>
+</mat-dialog-actions>

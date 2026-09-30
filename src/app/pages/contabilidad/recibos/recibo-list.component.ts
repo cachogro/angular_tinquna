@@ -4,10 +4,6 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import {
-  MAT_DATE_LOCALE,
-  provideNativeDateAdapter,
-} from '@angular/material/core';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -32,17 +28,23 @@ import { ReciboService } from '../services/recibo.service';
 import {
   ReciboDetalleDialogComponent,
   ReciboDetalleDialogData,
-} from './recibo-detalle-dialog.component';
+} from './recibo-detalle-dialog/recibo-detalle-dialog.component';
 import {
   ReciboFormDialogComponent,
   ReciboFormDialogData,
   ReciboFormModo,
-} from './recibo-form-dialog.component';
+} from './recibo-form-dialog/recibo-form-dialog.component';
+import { RangoFechasComponent } from '../../../shared/components/rango-fechas/rango-fechas.component';
+import {
+  descargarBlob,
+  mensajeErrorBlob,
+} from '../../../shared/utils/descarga-archivo.util';
 
 @Component({
   selector: 'app-recibo-list',
   standalone: true,
   imports: [
+    RangoFechasComponent,
     CommonModule,
     ReactiveFormsModule,
     MatCardModule,
@@ -59,10 +61,6 @@ import {
     MatDialogModule,
     MatDatepickerModule,
   ],
-  providers: [
-    provideNativeDateAdapter(),
-    { provide: MAT_DATE_LOCALE, useValue: 'es-BO' },
-  ],
   templateUrl: './recibo-list.component.html',
   styleUrl: './recibo-list.component.scss',
 })
@@ -73,13 +71,13 @@ export class ReciboListComponent implements OnInit {
 
   readonly columnas = [
     'numero',
-    'tipo',
     'estado',
     'fecha',
     'persona',
     'concepto',
     'formaPago',
     'monto',
+    'usuarioRegistro',
     'acciones',
   ];
 
@@ -96,10 +94,11 @@ export class ReciboListComponent implements OnInit {
   readonly fechaHastaControl = new FormControl<Date | null>(null);
   readonly searchControl = new FormControl('');
   readonly orderDirectionControl = new FormControl<'ASC' | 'DESC'>('DESC');
-  /** Por número (correlativo que nunca reinicia), no por fecha: la fecha es
-   *  editable por el usuario y no siempre coincide con el orden real de
-   *  registro; con "numero" el último creado siempre queda primero. */
-  readonly orderBy: OrdenRecibo = 'numero';
+  /** Por id (orden real de registro), no por fecha ni por número: la fecha es
+   *  editable por el usuario, y el número es correlativo POR SERIE (R/C), así
+   *  que mezclando ingresos y egresos un R-0021 quedaría detrás de un C-0150.
+   *  Con "id" el último creado siempre queda primero. */
+  readonly orderBy: OrdenRecibo = 'id';
 
   ngOnInit(): void {
     this.searchControl.valueChanges
@@ -108,8 +107,12 @@ export class ReciboListComponent implements OnInit {
 
     this.tipoControl.valueChanges.subscribe(() => this.reiniciarYcargar());
     this.estadoControl.valueChanges.subscribe(() => this.reiniciarYcargar());
-    this.fechaDesdeControl.valueChanges.subscribe(() => this.reiniciarYcargar());
-    this.fechaHastaControl.valueChanges.subscribe(() => this.reiniciarYcargar());
+    this.fechaDesdeControl.valueChanges.subscribe(() =>
+      this.reiniciarYcargar(),
+    );
+    this.fechaHastaControl.valueChanges.subscribe(() =>
+      this.reiniciarYcargar(),
+    );
     this.orderDirectionControl.valueChanges.subscribe(() =>
       this.reiniciarYcargar(),
     );
@@ -167,6 +170,46 @@ export class ReciboListComponent implements OnInit {
     );
   }
 
+  // ---------- Libro de recibos (Excel) ----------
+
+  readonly descargandoLibro = signal(false);
+
+  /** Excel "Libro de recibos" con los mismos filtros de la bandeja (sin
+   *  paginar: trae todos los que cumplan, procesados, borradores y anulados). */
+  descargarLibro(): void {
+    if (this.descargandoLibro()) return;
+    const fechaDesde = this.formatFecha(this.fechaDesdeControl.value);
+    const fechaHasta = this.formatFecha(this.fechaHastaControl.value);
+    this.descargandoLibro.set(true);
+    this.reciboService
+      .descargarLibroExcel({
+        tipo: this.tipoControl.value ?? undefined,
+        estado: this.estadoControl.value ?? undefined,
+        fechaDesde,
+        fechaHasta,
+        busqueda: this.searchControl.value?.trim() || undefined,
+      })
+      .subscribe({
+        next: (blob) => {
+          this.descargandoLibro.set(false);
+          const periodo =
+            fechaDesde || fechaHasta
+              ? `-${fechaDesde ?? 'inicio'}_al_${fechaHasta ?? 'hoy'}`
+              : '';
+          descargarBlob(blob, `libro-recibos${periodo}.xlsx`);
+        },
+        error: async (err) => {
+          this.descargandoLibro.set(false);
+          this.snackBar.open(
+            (await mensajeErrorBlob(err)) ??
+              'No se pudo generar el libro de recibos',
+            'Cerrar',
+            { duration: 5000 },
+          );
+        },
+      });
+  }
+
   limpiarFiltros(): void {
     this.tipoControl.setValue(null, { emitEvent: false });
     this.estadoControl.setValue(null, { emitEvent: false });
@@ -189,9 +232,22 @@ export class ReciboListComponent implements OnInit {
     this.abrirFormulario(tipo, 'PROCESAR');
   }
 
-  /** Acción de fila: procesar un BORRADOR existente. */
+  /** Acción de fila: procesar un BORRADOR existente. La fila de la bandeja
+   *  viene de un listado liviano (solo `persona`/`formaPago` con join; sin
+   *  `personaAutorizo`, `actorProductivoMinero`, `cliente`) — hay que pedir
+   *  el detalle completo antes de abrir el diálogo para que la cabecera fija
+   *  (Autorizó, contraparte ACTOR/CLIENTE) se muestre bien. */
   procesarBorrador(r: Recibo): void {
-    this.abrirFormulario(r.tipo, 'PROCESAR', r);
+    this.reciboService.obtener(r.id).subscribe({
+      next: (completo) => this.abrirFormulario(r.tipo, 'PROCESAR', completo),
+      error: (err) => {
+        this.snackBar.open(
+          err?.error?.message ?? 'No se pudo cargar el recibo',
+          'Cerrar',
+          { duration: 4000 },
+        );
+      },
+    });
   }
 
   private abrirFormulario(
@@ -277,10 +333,10 @@ export class ReciboListComponent implements OnInit {
         window.open(url, '_blank');
         setTimeout(() => window.URL.revokeObjectURL(url), 60000);
       },
-      error: (err) => {
+      error: async (err) => {
         this.descargandoPdf.set(null);
         this.snackBar.open(
-          err?.error?.message ?? 'No se pudo generar el PDF del recibo',
+          (await mensajeErrorBlob(err)) ?? 'No se pudo generar el PDF del recibo',
           'Cerrar',
           { duration: 5000 },
         );
@@ -310,6 +366,7 @@ export class ReciboListComponent implements OnInit {
         .replace(/\s+/g, ' ');
     }
     if (r.actorProductivoMinero) return r.actorProductivoMinero.nombre;
+    if (r.cliente) return r.cliente.nombre;
     return r.nombresApellidos || '—';
   }
 

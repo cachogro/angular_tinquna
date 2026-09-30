@@ -1,0 +1,34 @@
+<a [routerLink]="['/']" class="branding-logo">
+  <img
+    src="./assets/images/logos/logo.svg"
+    class="align-middle m-2"
+    style="width: 187px; height: 55px;"
+    alt="logo"
+  />
+</a>
+
+@if (authService.user(); as user) {
+  <div class="user-card">
+    <div class="user-card__fila">
+      <span
+        class="user-card__nombre"
+        [title]="user.persona.nombres + ' ' + user.persona.apellidoPaterno"
+      >
+        {{ user.persona.nombres }} {{ user.persona.apellidoPaterno }}
+      </span>
+    </div>
+    <span>
+      @if (user.roles[0]?.nombre; as rol) {
+        <span class="user-card__rol">{{ rol }}</span>
+      }
+    </span>
+    <span class="user-card__linea">
+      <i-tabler name="user-circle" class="icon-14"></i-tabler>
+      <span>{{ user.usuario }}</span>
+    </span>
+    <span class="user-card__linea" [title]="user.persona.correoElectronico">
+      <i-tabler name="mail" class="icon-14"></i-tabler>
+      <span>{{ user.persona.correoElectronico }}</span>
+    </span>
+  </div>
+}

@@ -9,6 +9,11 @@
         <mat-card-subtitle class="m-b-0">
           @if (valorizacion(); as v) {
           Recepción {{ v.recepcionMineral?.codigoOperacion ?? '—' }} — {{ mineral()?.descripcion ?? 'Mineral' }}
+          @if (codificacionCambiada()) {
+          <span class="valorizacion-form__cod-cambiada">
+            {{ v.recepcionMineral?.codificacion?.codigo }} → {{ codificacion()?.codigo }}
+          </span>
+          }
           } @else {
           Cargando...
           }
@@ -117,6 +122,30 @@
                   }}</span>
               </p>
             </div>
+          </div>
+
+          <!-- Tipo con el que se valoriza: laboratorio puede mostrar más minerales que la
+               codificación de la recepción (ej. ICC que se valoriza como BCL). -->
+          <div class="valorizacion-form__cod-valorizacion">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Valorizar como</mat-label>
+              <mat-select [formControl]="codificacionValorizacionControl"
+                (selectionChange)="onCambioCodificacionValorizacion($event.value)">
+                @for (c of codificacionesCatalogo(); track c.id) {
+                <mat-option [value]="c.id">
+                  {{ c.codigo }} — {{ c.nombre }}
+                  @if (c.id === v.recepcionMineral?.codificacion?.id) { (recepción) }
+                </mat-option>
+                }
+              </mat-select>
+              <mat-hint>
+                Recepción: {{ v.recepcionMineral?.codificacion?.codigo ?? '—' }}.
+                No se puede cambiar si ya está en un promedio.
+              </mat-hint>
+            </mat-form-field>
+            @if (cambiandoCodificacion()) {
+            <mat-spinner diameter="20"></mat-spinner>
+            }
           </div>
         </div>
       </div>

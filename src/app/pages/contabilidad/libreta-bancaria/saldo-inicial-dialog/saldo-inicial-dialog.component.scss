@@ -1,0 +1,32 @@
+.si-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 360px;
+}
+.si-form mat-form-field {
+  width: 100%;
+}
+.si-input-derecha {
+  text-align: right;
+}
+.si-cuenta {
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+.si-nota {
+  color: rgba(0, 0, 0, 0.55);
+  font-size: 12px;
+  margin: 8px 0 0;
+}
+.btn-spinner {
+  display: inline-block;
+}
+.btn-spinner ::ng-deep circle {
+  stroke: currentColor;
+}
+@media (max-width: 480px) {
+  .si-form {
+    min-width: 0;
+  }
+}

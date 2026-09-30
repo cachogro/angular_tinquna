@@ -31,7 +31,7 @@ import {
   CuentaFinanciera,
   EntidadFinanciera,
   GuardarCuentaFinancieraRequest,
-  MonedaCuenta,
+  MonedaCuentaBancaria,
   etiquetaMonedaCuenta,
 } from '../models/parametricas.models';
 import { ParametricasService } from '../../services/parametricas.service';
@@ -46,7 +46,7 @@ const CARACTERES_INVALIDOS_NUMERO_CUENTA = /[^0-9]/g;
 interface FilaCuentaRaw {
   id: number | null;
   numeroCuenta: string;
-  moneda: MonedaCuenta | null;
+  moneda: MonedaCuentaBancaria | null;
   alias: string;
   activo: boolean;
   // Se conservan tal cual vienen del back para no perderlos al editar la
@@ -88,7 +88,7 @@ export class EntidadFinancieraFormDialogComponent implements OnInit {
   guardando = false;
   columnas = ['id', 'nombre', 'sigla', 'cuentas', 'estado', 'acciones'];
 
-  readonly monedas: MonedaCuenta[] = ['BOB', 'USD'];
+  readonly monedas: MonedaCuentaBancaria[] = ['BS', 'USD'];
 
   readonly etiquetaMoneda = etiquetaMonedaCuenta;
 
@@ -103,7 +103,7 @@ export class EntidadFinancieraFormDialogComponent implements OnInit {
   form: FormGroup = this.fb.group({
     nombre: [
       '',
-      [Validators.required, Validators.maxLength(120)],
+      [Validators.required, Validators.minLength(3), Validators.maxLength(120)],
     ],
     sigla: ['', [Validators.required, Validators.maxLength(10)]],
     cuentas: this.fb.array([], this.sinNumerosCuentaRepetidos),
@@ -138,7 +138,7 @@ export class EntidadFinancieraFormDialogComponent implements OnInit {
       id: [cuenta?.id ?? null],
       numeroCuenta: [
         cuenta?.numeroCuenta ?? '',
-        [Validators.required, Validators.maxLength(30)],
+        [Validators.required, Validators.maxLength(40)],
       ],
       moneda: [cuenta?.moneda ?? null, [Validators.required]],
       alias: [cuenta?.alias ?? '', [Validators.maxLength(60)]],
@@ -269,7 +269,7 @@ export class EntidadFinancieraFormDialogComponent implements OnInit {
       .map((c) => ({
         ...(c.id ? { id: c.id } : {}),
         numeroCuenta: c.numeroCuenta.trim(),
-        moneda: c.moneda as MonedaCuenta,
+        moneda: c.moneda as MonedaCuentaBancaria,
         ...(c.alias?.trim() ? { alias: c.alias.trim() } : {}),
         ...(c.saldoInicial != null
           ? { saldoInicial: Number(c.saldoInicial) }
@@ -301,10 +301,14 @@ export class EntidadFinancieraFormDialogComponent implements OnInit {
           this.limpiar();
         },
         error: (err) => {
+          // Los 400 de validación llegan como arreglo de mensajes; los 409
+          // (número de cuenta o nombre repetido) como texto.
+          const msg = err?.error?.message;
           this.snackBar.open(
-            err?.error?.message ?? 'Ocurrió un error al guardar',
+            (Array.isArray(msg) ? msg.join(' · ') : msg) ??
+              'Ocurrió un error al guardar',
             'Cerrar',
-            { duration: 4000 },
+            { duration: 6000 },
           );
           this.guardando = false;
         },

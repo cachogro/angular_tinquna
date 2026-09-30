@@ -98,4 +98,21 @@ export class MovimientoCajaService {
       responseType: 'blob',
     });
   }
+
+  /** Excel de la caja de flujo completa del mes: caja en Bs, caja en $us y
+   *  todas las cuentas bancarias en una sola hoja. */
+  descargarExcelCompleto(filtro: {
+    idCaja: number;
+    gestion: number;
+    mes: number;
+  }): Observable<Blob> {
+    const params = new HttpParams()
+      .set('idCaja', filtro.idCaja)
+      .set('gestion', filtro.gestion)
+      .set('mes', filtro.mes);
+    return this.http.get(`${this.baseUrl}/excel-completo`, {
+      params,
+      responseType: 'blob',
+    });
+  }
 }

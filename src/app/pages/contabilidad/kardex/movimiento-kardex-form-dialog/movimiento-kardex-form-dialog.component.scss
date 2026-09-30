@@ -1,0 +1,103 @@
+.mk-titulo__destinatario {
+  font-weight: 400;
+  color: rgba(0, 0, 0, 0.6);
+  font-size: 0.85em;
+}
+
+.mk-loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 32px;
+  justify-content: center;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.mk-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 620px;
+}
+
+.mk-form mat-form-field {
+  width: 100%;
+}
+
+.mk-form__row3 {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr 1fr;
+  gap: 14px;
+}
+
+.mk-form__row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.mk-form__full {
+  width: 100%;
+}
+
+.mk-doc {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.btn-spinner {
+  display: inline-block;
+}
+
+.btn-spinner ::ng-deep circle {
+  stroke: currentColor;
+}
+
+/* Panel del select de cuenta bancaria: textos chicos y que envuelvan. */
+::ng-deep .mk-cuenta-panel {
+  &.mat-mdc-select-panel {
+    max-width: 460px;
+  }
+  .mat-mdc-option {
+    min-height: 34px;
+    line-height: 1.25;
+  }
+  .mat-mdc-option .mdc-list-item__primary-text {
+    font-size: 12px;
+    white-space: normal;
+  }
+  .mat-mdc-optgroup-label .mdc-list-item__primary-text {
+    font-size: 11px;
+    font-weight: 700;
+    opacity: 0.75;
+  }
+}
+
+@media (max-width: 680px) {
+  .mk-form {
+    min-width: 0;
+  }
+  .mk-form__row3,
+  .mk-form__row2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Movimiento en USD: lo que registra el kardex (siempre Bs = monto × T.C.). */
+.mk-equivalente {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2px;
+  padding-bottom: 20px;
+  text-align: right;
+}
+
+.mk-equivalente small {
+  color: rgba(0, 0, 0, 0.5);
+  font-size: 11px;
+}
+
+.mk-equivalente strong {
+  color: #1565c0;
+}

@@ -8,7 +8,6 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule } from '@angular/material/core';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
@@ -27,6 +26,7 @@ import {
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { RegistroMineralService } from '../services/registro-mineral.service';
 import { formatNumeroSinCeros } from 'src/app/shared/utils/numero.util';
+import { RangoFechasComponent } from '../../../shared/components/rango-fechas/rango-fechas.component';
 
 interface OpcionOrden {
   value: string;
@@ -54,6 +54,7 @@ const MESES = [
   selector: 'app-reporte-recepcion-mineral',
   standalone: true,
   imports: [
+    RangoFechasComponent,
     CommonModule,
     ReactiveFormsModule,
     RouterModule,
@@ -62,7 +63,6 @@ const MESES = [
     MatInputModule,
     MatSelectModule,
     MatDatepickerModule,
-    MatNativeDateModule,
     MatButtonModule,
     MatButtonToggleModule,
     MatIconModule,

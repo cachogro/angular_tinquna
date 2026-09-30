@@ -62,6 +62,12 @@ export interface PersonaCI {
   fechaNacimiento?: string | null;
   fechaInicioLaboral?: string | null;
   direccion?: string | null;
+  /** Salario mensual vigente en Bs (base de su boleta de pago). Solo personal
+   *  de la empresa. El back lo devuelve como número o string decimal. */
+  salarioMensual?: number | string | null;
+  /** true si puede figurar como "autorizó" en un recibo (ver
+   *  `GET /comercio_interno/persona_ci/autorizadas`). */
+  autorizado?: boolean;
 }
 
 /** id presente = actualizar (solo se mandan los campos a cambiar); sin id = crear (todos requeridos) */
@@ -80,6 +86,8 @@ export interface GuardarPersonaRequest {
   fechaNacimiento?: string;
   fechaInicioLaboral?: string;
   direccion?: string;
+  /** Obligatorio para personal de la empresa (> 0, hasta 2 decimales). */
+  salarioMensual?: number;
 }
 
 export interface FiltrosPersona {

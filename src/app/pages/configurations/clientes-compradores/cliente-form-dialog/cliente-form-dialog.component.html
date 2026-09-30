@@ -1,0 +1,123 @@
+<div class="blue_theme">
+  <app-parametrica-dialog-shell [titulo]="modoEdicion ? 'Modificar cliente' : 'Nuevo cliente'">
+
+    <!-- ==================== FORMULARIO ==================== -->
+    <form [formGroup]="form" (ngSubmit)="guardar()" class="cliente-form">
+
+      <!-- Fila 1: nombre, teléfono -->
+      <div class="fila-uno">
+        <mat-form-field appearance="outline">
+          <mat-label>Nombre</mat-label>
+          <input matInput formControlName="nombre" maxlength="100"
+            placeholder="Ej: Comercializadora Minera del Sur" class="input-mayusculas" />
+          <mat-error *ngIf="form.get('nombre')?.hasError('required')">
+            El nombre es obligatorio
+          </mat-error>
+          <mat-error *ngIf="form.get('nombre')?.hasError('pattern')">
+            Solo letras, números, espacios y # / ° ' " . - _ ,
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Teléfono</mat-label>
+          <input matInput formControlName="telefono" maxlength="15" placeholder="Ej: 72460000" />
+          <mat-error *ngIf="form.get('telefono')?.hasError('pattern')">
+            Solo números y "+"
+          </mat-error>
+          <mat-hint>Opcional</mat-hint>
+        </mat-form-field>
+      </div>
+
+      <!-- Fila 2: dirección, NIT -->
+      <div class="fila-dos">
+        <mat-form-field appearance="outline">
+          <mat-label>Dirección</mat-label>
+          <input matInput formControlName="direccion" maxlength="100" placeholder="Ej: Zona Industrial, Potosí"
+            class="input-mayusculas" />
+          <mat-error *ngIf="form.get('direccion')?.hasError('required')">
+            La dirección es obligatoria
+          </mat-error>
+          <mat-error *ngIf="form.get('direccion')?.hasError('pattern')">
+            Solo letras, números, espacios y # / ° ' " . - _ ,
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>NIT</mat-label>
+          <input matInput formControlName="nit" maxlength="20" placeholder="Ej: 1234567890" />
+          <mat-error *ngIf="form.get('nit')?.hasError('pattern')">
+            Solo números
+          </mat-error>
+          <mat-hint>Opcional</mat-hint>
+        </mat-form-field>
+      </div>
+
+      <!-- Fila 3: tipo de actor (solo etiqueta, no lo convierte en proveedor) + fecha de inicio de operaciones -->
+      <div class="fila-dos">
+        <mat-form-field appearance="outline">
+          <mat-label>Tipo de actor</mat-label>
+          <mat-select formControlName="idTipoActorProductivoMinero" placeholder="Selecciona un tipo">
+            <mat-option [value]="SIN_TIPO">Sin tipo</mat-option>
+            <mat-option *ngFor="let tipo of tiposActor" [value]="tipo.id">
+              {{ tipo.descripcion }}
+            </mat-option>
+          </mat-select>
+          <mat-error *ngIf="form.get('idTipoActorProductivoMinero')?.hasError('required')">
+            Elige un tipo, o "Sin tipo" si no aplica
+          </mat-error>
+          <mat-hint>Solo una etiqueta — no registra al cliente como proveedor</mat-hint>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha de inicio de operaciones</mat-label>
+          <input matInput [matDatepicker]="pickerInicioOperaciones" [max]="hoy"
+            formControlName="fechaInicioOperaciones" placeholder="dd/mm/aaaa" />
+          <mat-datepicker-toggle matSuffix [for]="pickerInicioOperaciones"></mat-datepicker-toggle>
+          <mat-datepicker #pickerInicioOperaciones [restoreFocus]="false"></mat-datepicker>
+          <mat-error *ngIf="form.get('fechaInicioOperaciones')?.hasError('required')">
+            Obligatoria — usa la fecha real para migrar el histórico del Excel
+          </mat-error>
+        </mat-form-field>
+      </div>
+
+      <!-- Fila 3: municipio -->
+      <div class="fila-tres">
+        <mat-form-field appearance="outline">
+          <mat-label>Departamento/provincia/municipio-ETIOC/código</mat-label>
+          <input matInput type="text" [formControl]="municipioCtrl" [matAutocomplete]="autoMunicipio"
+            (blur)="onMunicipioBlur()" placeholder="Escribe para buscar..." />
+          <mat-icon matSuffix>search</mat-icon>
+          <mat-autocomplete #autoMunicipio="matAutocomplete" [displayWith]="mostrarMunicipio"
+            (optionSelected)="onMunicipioSeleccionado($event)">
+            <mat-option *ngFor="let municipio of municipiosFiltrados" [value]="municipio">
+              {{ municipio.departamento }} - {{ municipio.provincia }} - {{ municipio.municipio }} -
+              {{ municipio.codigo }}
+            </mat-option>
+          </mat-autocomplete>
+          <mat-hint>Opcional</mat-hint>
+        </mat-form-field>
+      </div>
+
+      <!-- Fila 4: observaciones -->
+      <div class="fila-cuatro">
+        <mat-form-field appearance="outline">
+          <mat-label>Observaciones</mat-label>
+          <textarea matInput formControlName="observaciones" maxlength="255" rows="2"
+            placeholder="Ej: Compra mineral de plomo/plata"></textarea>
+          <mat-hint>Opcional</mat-hint>
+        </mat-form-field>
+      </div>
+
+    </form>
+
+    <!-- ==================== BOTONES ==================== -->
+    <div class="acciones">
+      <button mat-stroked-button type="button" (click)="cancelar()" [disabled]="guardando">
+        Cancelar
+      </button>
+      <button mat-flat-button color="primary" type="button" (click)="guardar()" [disabled]="guardando">
+        {{ modoEdicion ? 'Actualizar' : 'Guardar' }}
+      </button>
+    </div>
+  </app-parametrica-dialog-shell>
+</div>

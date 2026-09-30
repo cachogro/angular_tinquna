@@ -1,0 +1,172 @@
+<h2 mat-dialog-title>Entregar fondo a rendir cuentas_333333</h2>
+
+<mat-dialog-content>
+  @if (cargandoCatalogos()) {
+  <div class="fr-loading">
+    <mat-spinner diameter="32"></mat-spinner>
+    <span>Cargando catálogos...</span>
+  </div>
+  } @else {
+  <form [formGroup]="form" class="fr-form">
+    <div class="fr-destinatario">
+      <span class="fr-destinatario__label">Destinatario</span>
+      <mat-button-toggle-group formControlName="destinatarioTipo" class="fr-destinatario__tipo">
+        <mat-button-toggle value="PERSONA">Persona CI</mat-button-toggle>
+        <mat-button-toggle value="ACTOR">Actor productivo</mat-button-toggle>
+      </mat-button-toggle-group>
+
+      @if (destinatarioTipo === 'ACTOR') {
+      <mat-form-field appearance="outline" class="fr-form__full">
+        <mat-label>Actor productivo</mat-label>
+        <mat-select formControlName="idActorDestinatario">
+          @for (a of actores(); track a.id) {
+          <mat-option [value]="a.id">{{ a.nombre }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      } @else {
+      <mat-form-field appearance="outline" class="fr-form__full">
+        <mat-label>Persona registrada</mat-label>
+        <input matInput formControlName="personaDestinatario" [matAutocomplete]="autoPer"
+          #perTrigger="matAutocompleteTrigger" (focus)="perTrigger.openPanel()"
+          placeholder="Buscar por nombre o documento" />
+        <mat-autocomplete #autoPer="matAutocomplete" [displayWith]="displayPersona">
+          @for (p of (personasFiltradas$ | async); track p.id) {
+          <mat-option [value]="p">
+            <span>{{ nombreCompleto(p) }}</span>
+            <small class="fr-doc"> · {{ p.numeroDocumento }}</small>
+          </mat-option>
+          } @empty {
+          <mat-option disabled>Sin coincidencias</mat-option>
+          }
+        </mat-autocomplete>
+      </mat-form-field>
+      }
+    </div>
+
+    <div class="fr-form__row2">
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha</mat-label>
+        <input matInput [matDatepicker]="picker" formControlName="fecha" class="fr-input-derecha" />
+        <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+        <mat-datepicker #picker></mat-datepicker>
+        @if (f.fecha.hasError('required') && f.fecha.touched) {
+        <mat-error>Obligatorio</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Monto</mat-label>
+        <input matInput type="text" inputmode="decimal" class="fr-input-derecha" formControlName="monto"
+          placeholder="0.00" (keydown)="restringirEntradaNumerica($event)" />
+        @if (f.monto.hasError('required') && f.monto.touched) {
+        <mat-error>Obligatorio</mat-error>
+        }
+        @if (f.monto.hasError('pattern') && f.monto.touched) {
+        <mat-error>Número con hasta 2 decimales</mat-error>
+        } @else if (f.monto.hasError('min') && f.monto.touched) {
+        <mat-error>Debe ser mayor a 0</mat-error>
+        }
+      </mat-form-field>
+    </div>
+
+    <mat-form-field appearance="outline" class="fr-form__full">
+      <mat-label>Concepto</mat-label>
+      <input matInput formControlName="concepto" maxlength="255" />
+      @if (f.concepto.hasError('required') && f.concepto.touched) {
+      <mat-error>Obligatorio</mat-error>
+      }
+    </mat-form-field>
+
+    <div class="fr-form__row2">
+      <mat-form-field appearance="outline">
+        <mat-label>Forma de pago</mat-label>
+        <mat-select formControlName="idFormaPago">
+          @for (fp of formasPago(); track fp.id) {
+          <mat-option [value]="fp.id">{{ fp.nombre }}</mat-option>
+          }
+        </mat-select>
+        @if (f.idFormaPago.hasError('required') && f.idFormaPago.touched) {
+        <mat-error>Obligatorio</mat-error>
+        } @else if (f.idFormaPago.value != null) {
+        <mat-hint>{{ requiereCuentaBancaria ? 'Se debita de la libreta bancaria' : 'Sale en efectivo de la caja de flujo' }}</mat-hint>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Destino del gasto (opcional)</mat-label>
+        <mat-select formControlName="idDestinoGasto">
+          <mat-option [value]="null">— Sin especificar —</mat-option>
+          @for (d of destinosGasto(); track d.id) {
+          <mat-option [value]="d.id">{{ d.nombre }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    @if (requiereCuentaBancaria) {
+    <div class="fr-form__row2">
+      <mat-form-field appearance="outline">
+        <mat-label>Cuenta bancaria</mat-label>
+        <mat-select formControlName="idCuentaBancaria">
+          @for (c of cuentas(); track c.idCuenta) {
+          <mat-option [value]="c.idCuenta">{{ etiquetaCuenta(c) }}</mat-option>
+          } @empty {
+          <mat-option disabled>Sin cuentas bancarias activas</mat-option>
+          }
+        </mat-select>
+        @if (f.idCuentaBancaria.hasError('required') && f.idCuentaBancaria.touched) {
+        <mat-error>Obligatorio con forma de pago bancaria</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>N° de comprobante</mat-label>
+        <input matInput formControlName="nroComprobante" maxlength="30" class="nro-cpte"
+          placeholder="Ej: CH-000123/A" />
+        @if (f.nroComprobante.hasError('required') && f.nroComprobante.touched) {
+        <mat-error>Obligatorio con forma de pago bancaria</mat-error>
+        }
+      </mat-form-field>
+    </div>
+    }
+
+    <div class="fr-form__row2">
+      <mat-form-field appearance="outline">
+        <mat-label>Autorizó</mat-label>
+        <mat-select formControlName="idPersonaAutorizo">
+          @for (p of personasAutorizadas(); track p.id) {
+          <mat-option [value]="p.id">{{ nombreCompleto(p) }} — {{ p.numeroDocumento }}</mat-option>
+          } @empty {
+          <mat-option disabled>Sin personas autorizadas</mat-option>
+          }
+        </mat-select>
+        @if (f.idPersonaAutorizo.hasError('required') && f.idPersonaAutorizo.touched) {
+        <mat-error>Obligatorio</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha límite (opcional)</mat-label>
+        <input matInput [matDatepicker]="pickerLimite" formControlName="fechaLimite" class="fr-input-derecha" />
+        <mat-datepicker-toggle matSuffix [for]="pickerLimite"></mat-datepicker-toggle>
+        <mat-datepicker #pickerLimite></mat-datepicker>
+      </mat-form-field>
+    </div>
+  </form>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-stroked-button (click)="cancelar()" [disabled]="guardando()">
+    Cancelar
+  </button>
+  <button mat-flat-button color="primary" (click)="guardar()" [disabled]="guardando() || cargandoCatalogos()">
+    @if (guardando()) {
+    <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
+    <span>Guardando...</span>
+    } @else {
+    <span>Entregar</span>
+    }
+  </button>
+</mat-dialog-actions>

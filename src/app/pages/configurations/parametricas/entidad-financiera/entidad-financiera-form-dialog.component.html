@@ -13,6 +13,9 @@
           <mat-error *ngIf="form.get('nombre')?.hasError('required')">
             El nombre es obligatorio
           </mat-error>
+          <mat-error *ngIf="form.get('nombre')?.hasError('minlength')">
+            El nombre debe tener al menos 3 caracteres
+          </mat-error>
         </mat-form-field>
 
         <mat-form-field appearance="outline">
@@ -40,7 +43,7 @@
 
             <mat-form-field appearance="outline" class="cuenta-fila__numero">
               <mat-label>N° de cuenta</mat-label>
-              <input matInput formControlName="numeroCuenta" maxlength="30" inputmode="numeric" />
+              <input matInput formControlName="numeroCuenta" maxlength="40" inputmode="numeric" />
               <mat-error *ngIf="fila.get('numeroCuenta')?.hasError('required')">
                 Obligatorio
               </mat-error>

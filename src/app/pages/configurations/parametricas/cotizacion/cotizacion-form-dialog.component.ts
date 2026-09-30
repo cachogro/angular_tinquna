@@ -37,6 +37,8 @@ import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog
 import { Cotizacion, FiltrosCotizacion, Mineral } from '../models/parametricas.models';
 import { ParametricasService } from '../../services/parametricas.service';
 import { ParametricaDialogShellComponent } from '../shared/parametrica-dialog-shell.component';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { FechaInputDirective } from '../../../../shared/directives/fecha-input.directive';
 
 interface OpcionOrden {
   value: string;
@@ -55,11 +57,13 @@ export interface CotizacionDialogData {
   selector: 'app-cotizacion-form-dialog',
   standalone: true,
   imports: [
+    FechaInputDirective,
     CommonModule,
     ReactiveFormsModule,
     FormsModule,
     MatFormFieldModule,
     MatInputModule,
+    MatDatepickerModule,
     MatAutocompleteModule,
     MatButtonModule,
     MatDialogModule,
@@ -128,9 +132,9 @@ export class CotizacionFormDialogComponent implements OnInit {
     return !!this.cotizacionEditando;
   }
 
-  /** Fecha de hoy en hora local, "YYYY-MM-DD". Sirve como mínimo del date
-   *  input y para validar que fechaVigenciaFinal no sea anterior a hoy
-   *  (el back rechaza esas fechas con 400). */
+  /** Hoy a las 00:00 (hora local). Sirve como mínimo del datepicker y para
+   *  validar que fechaVigenciaFinal no sea anterior a hoy (el back rechaza
+   *  esas fechas con 400). */
   readonly fechaMinima = this.obtenerFechaHoyLocal();
 
   private validarFechaNoAnteriorAHoy = (
@@ -147,17 +151,14 @@ export class CotizacionFormDialogComponent implements OnInit {
       [Validators.required, Validators.min(0), this.validarMaxDecimales(5)],
     ],
     fechaVigenciaFinal: [
-      '',
+      null as Date | null,
       [Validators.required, this.validarFechaNoAnteriorAHoy],
     ],
   });
 
-  private obtenerFechaHoyLocal(): string {
+  private obtenerFechaHoyLocal(): Date {
     const hoy = new Date();
-    const year = hoy.getFullYear();
-    const month = String(hoy.getMonth() + 1).padStart(2, '0');
-    const day = String(hoy.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
   }
 
   /** El back acepta como máximo 5 decimales en cotización */
@@ -364,12 +365,12 @@ export class CotizacionFormDialogComponent implements OnInit {
         ? this.parametricasService.actualizarCotizacion({
             id: this.cotizacionEditando.id,
             cotizacionMineralDolares,
-            fechaVigenciaFinal,
+            fechaVigenciaFinal: this.aIso(fechaVigenciaFinal),
           })
         : this.parametricasService.crearCotizacion({
             idMineral,
             cotizacionMineralDolares,
-            fechaVigenciaFinal,
+            fechaVigenciaFinal: this.aIso(fechaVigenciaFinal),
           });
 
     request$.subscribe({
@@ -416,7 +417,7 @@ export class CotizacionFormDialogComponent implements OnInit {
     this.form.reset({
       idMineral: null,
       cotizacionMineralDolares: null,
-      fechaVigenciaFinal: '',
+      fechaVigenciaFinal: null,
     });
     this.form.get('idMineral')!.enable();
     this.mineralCtrl.setValue('');
@@ -429,9 +430,17 @@ export class CotizacionFormDialogComponent implements OnInit {
   }
 
   /** El back devuelve fechas tipo "2026-08-14T04:00:00.000Z" o "2026-07-15";
-   *  el input type="date" necesita siempre "YYYY-MM-DD". */
-  private aInputDate(fecha: string): string {
-    return fecha?.slice(0, 10) ?? '';
+   *  el datepicker necesita un Date local con esa fecha (sin el offset). */
+  private aInputDate(fecha: string): Date | null {
+    const [a, m, d] = (fecha ?? '').slice(0, 10).split('-').map(Number);
+    return a && m && d ? new Date(a, m - 1, d) : null;
+  }
+
+  /** Date del datepicker → "YYYY-MM-DD", lo que espera el back. */
+  private aIso(fecha: Date): string {
+    const mm = String(fecha.getMonth() + 1).padStart(2, '0');
+    const dd = String(fecha.getDate()).padStart(2, '0');
+    return `${fecha.getFullYear()}-${mm}-${dd}`;
   }
 
   /** Formatea a "dd/mm/aaaa" para la tabla. Se hace por string, sin pasar

@@ -1,0 +1,101 @@
+.pl-msg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 40px 16px;
+  color: rgba(0, 0, 0, 0.45);
+  text-align: center;
+}
+
+.pl-msg--vacio {
+  flex-direction: column;
+}
+
+.pl-msg--vacio mat-icon {
+  font-size: 40px;
+  width: 40px;
+  height: 40px;
+}
+
+.pl-acciones {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.pl-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: flex-start;
+  margin: 8px 0 16px;
+}
+
+.pl-toolbar__search {
+  flex: 1 1 260px;
+  min-width: 220px;
+}
+
+.pl-scroll {
+  overflow: auto;
+  max-height: 560px;
+}
+
+.pl-tabla {
+  width: 100%;
+  min-width: 900px;
+}
+
+.pl-tabla .mat-mdc-header-row {
+  height: 28px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.pl-tabla .mat-mdc-header-cell {
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  font-weight: 600;
+  font-size: 10.5px;
+  letter-spacing: 0.2px;
+  padding: 2px 8px !important;
+}
+
+.pl-tabla .mat-mdc-row {
+  height: 30px;
+}
+
+.pl-tabla .mat-mdc-cell {
+  padding: 2px 8px !important;
+  font-size: 11.5px;
+}
+
+.pl-tabla .mat-mdc-row:hover {
+  background: color-mix(in srgb, var(--mat-sys-primary) 8%, transparent);
+}
+
+.pl-tabla ::ng-deep .mat-mdc-icon-button {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  line-height: 28px;
+}
+
+.pl-tabla ::ng-deep .mat-mdc-icon-button .mat-icon {
+  font-size: 17px;
+  width: 17px;
+  height: 17px;
+  line-height: 17px;
+}
+
+.pl-num {
+  text-align: right;
+}
+
+.pl-ley {
+  display: inline-block;
+  margin-right: 10px;
+  white-space: nowrap;
+}

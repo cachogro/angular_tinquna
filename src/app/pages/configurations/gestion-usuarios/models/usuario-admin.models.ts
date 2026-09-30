@@ -1,5 +1,4 @@
-// src/app/core/auth/models/usuario-admin.models.ts
-
+// src/app/pages/configurations/gestion-usuarios/models/usuario-admin.models.ts
 export interface PersonaRegistro {
   nombres: string;
   apellidoPaterno: string;

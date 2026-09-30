@@ -50,7 +50,9 @@
       <!-- Vigencia final -->
       <mat-form-field appearance="outline">
         <mat-label>Vigencia hasta</mat-label>
-        <input matInput type="date" formControlName="fechaVigenciaFinal" [min]="fechaMinima" />
+        <input matInput [matDatepicker]="pickerVigencia" formControlName="fechaVigenciaFinal" [min]="fechaMinima" />
+        <mat-datepicker-toggle matSuffix [for]="pickerVigencia"></mat-datepicker-toggle>
+        <mat-datepicker #pickerVigencia></mat-datepicker>
         <mat-error *ngIf="form.get('fechaVigenciaFinal')?.hasError('required')">
           La fecha de vigencia final es obligatoria
         </mat-error>

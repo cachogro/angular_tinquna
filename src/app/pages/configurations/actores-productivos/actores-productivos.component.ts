@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
@@ -15,16 +16,22 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog/confirm-dialog.component';
 import { ActorProductivoMineroFormDialogComponent } from '../parametricas/actor-productivo-minero/actor-productivo-minero-form-dialog.component';
-import { PersonasDeActorDialogComponent } from './personas-de-actor-dialog.component';
+import { PersonasDeActorDialogComponent } from './personas-de-actor-dialog/personas-de-actor-dialog.component';
 import {
-  KardexDialogComponent,
-  KardexDialogData,
-} from '../../contabilidad/kardex/kardex-dialog.component';
+  KardexGestionData,
+  irAGestionKardex,
+} from '../../contabilidad/kardex/kardex-gestion/kardex-gestion.component';
 import {
   ActorProductivoMinero,
   TipoActorProductivoMinero,
 } from '../parametricas/models/parametricas.models';
 import { ParametricasService } from '../services/parametricas.service';
+
+/** Id del actor productivo minero que representa a la propia empresa
+ *  (TINKURIKUNA): esta bandeja es "Compras (Actores productivos)" — la
+ *  empresa no se compra mineral a sí misma, así que no se lista acá. Su
+ *  personal vive en la pestaña dedicada "Personal interno". */
+const ID_ACTOR_EMPRESA = '1';
 
 /**
  * Bandeja de actores productivos mineros: mismo formato que la de
@@ -54,6 +61,7 @@ import { ParametricasService } from '../services/parametricas.service';
 export class ActoresProductivosComponent implements OnInit {
   private readonly parametricasService = inject(ParametricasService);
   private readonly dialog = inject(MatDialog);
+  private readonly router = inject(Router);
   private readonly snackBar = inject(MatSnackBar);
 
   readonly displayedColumns = [
@@ -67,26 +75,28 @@ export class ActoresProductivosComponent implements OnInit {
 
   tipos: TipoActorProductivoMinero[] = [];
 
-  pageIndex = 0;
-  pageSize = 10;
+  /** Todos los actores que matchean los filtros de backend, ya excluida
+   *  TINKURIKUNA (id 1). */
+  readonly actoresTodos = signal<ActorProductivoMinero[]>([]);
+  readonly loading = signal(false);
+
+  // Señales (no propiedades planas): `actores`/`total` las leen dentro de
+  // un `computed()`, que solo se reinvalida cuando cambia una señal.
+  readonly pageIndex = signal(0);
+  readonly pageSize = signal(10);
 
   readonly searchControl = new FormControl('');
   readonly tipoControl = new FormControl<number | string | null>(null);
   readonly estadoControl = new FormControl<string | null>(null); // 'true' | 'false' | null
-  // ASC por defecto: TINKURIKUNA (id 1) es el actor más antiguo, así que
-  // debe aparecer primero, con N° 1, en vez de quedar enterrado en la
-  // última página bajo el orden "más nuevos primero".
-  readonly orderDirectionControl = new FormControl<'ASC' | 'DESC'>('ASC');
+  // DESC por defecto: el último actor registrado aparece primero.
+  readonly orderDirectionControl = new FormControl<'ASC' | 'DESC'>('DESC');
 
-  get actores(): ActorProductivoMinero[] {
-    return this.parametricasService.actoresProductivosMineros();
-  }
-  get total(): number {
-    return this.parametricasService.totalActoresProductivosMineros();
-  }
-  get loading(): boolean {
-    return this.parametricasService.cargandoActoresProductivosMineros();
-  }
+  readonly total = computed(() => this.actoresTodos().length);
+
+  readonly actores = computed(() => {
+    const inicio = this.pageIndex() * this.pageSize();
+    return this.actoresTodos().slice(inicio, inicio + this.pageSize());
+  });
 
   ngOnInit(): void {
     this.parametricasService.obtenerTiposActorProductivoMinero().subscribe({
@@ -108,31 +118,52 @@ export class ActoresProductivosComponent implements OnInit {
   }
 
   private reiniciarYcargar(): void {
-    this.pageIndex = 0;
+    this.pageIndex.set(0);
     this.cargar();
   }
 
   cargar(): void {
+    this.loading.set(true);
     const estado = this.estadoControl.value;
-    this.parametricasService.cargarActoresProductivosMineros({
-      page: this.pageIndex + 1,
-      limit: this.pageSize,
-      busqueda: this.searchControl.value?.trim() || undefined,
-      idTipoActorProductivoMinero: this.tipoControl.value ?? undefined,
-      activo: estado === null ? undefined : estado === 'true',
-      // El back, sin `orderBy`, ordena alfabéticamente por nombre — hay que
-      // pedir 'id' explícito para que numeroFila() (que asume "más antiguo
-      // = id más chico = N° 1") funcione, y así TINKURIKUNA (id 1) quede
-      // primero en vez de enterrado según el alfabeto.
-      orderBy: 'id',
-      orderDirection: this.orderDirectionControl.value ?? undefined,
-    });
+
+    // El back no filtra actores excluyendo un id puntual, así que se trae
+    // todo lo que matchea el resto de filtros (volumen chico, mismo criterio
+    // que en GestionClientesComponent/PersonalInternoComponent) y se excluye
+    // acá a TINKURIKUNA; la paginación también queda del lado del cliente
+    // para que el total mostrado sea el correcto.
+    this.parametricasService
+      .listarActoresProductivosMineros({
+        page: 1,
+        limit: 1000,
+        busqueda: this.searchControl.value?.trim() || undefined,
+        idTipoActorProductivoMinero: this.tipoControl.value ?? undefined,
+        activo: estado === null ? undefined : estado === 'true',
+        orderBy: 'id',
+        orderDirection: this.orderDirectionControl.value ?? undefined,
+      })
+      .subscribe({
+        next: (res) => {
+          this.actoresTodos.set(
+            (res.data ?? []).filter(
+              (a) => String(a.id) !== ID_ACTOR_EMPRESA,
+            ),
+          );
+          this.loading.set(false);
+        },
+        error: () => {
+          this.loading.set(false);
+          this.snackBar.open(
+            'No se pudo cargar el listado de actores productivos',
+            'Cerrar',
+            { duration: 4000 },
+          );
+        },
+      });
   }
 
   onPageChange(event: PageEvent): void {
-    this.pageIndex = event.pageIndex;
-    this.pageSize = event.pageSize;
-    this.cargar();
+    this.pageIndex.set(event.pageIndex);
+    this.pageSize.set(event.pageSize);
   }
 
   toggleOrden(): void {
@@ -145,7 +176,7 @@ export class ActoresProductivosComponent implements OnInit {
     this.searchControl.setValue('', { emitEvent: false });
     this.tipoControl.setValue(null, { emitEvent: false });
     this.estadoControl.setValue(null, { emitEvent: false });
-    this.orderDirectionControl.setValue('ASC', { emitEvent: false });
+    this.orderDirectionControl.setValue('DESC', { emitEvent: false });
     this.reiniciarYcargar();
   }
 
@@ -153,10 +184,10 @@ export class ActoresProductivosComponent implements OnInit {
    *  el más antiguo es 1 y el más nuevo es `total()`. Se invierte según el
    *  sentido del orden para que el número quede ligado al registro. */
   numeroFila(i: number): number {
-    const offset = this.pageIndex * this.pageSize + i;
+    const offset = this.pageIndex() * this.pageSize() + i;
     return this.orderDirectionControl.value === 'ASC'
       ? offset + 1
-      : this.total - offset;
+      : this.total() - offset;
   }
 
   /** Descripción del tipo, usando el catálogo cacheado si el back no lo
@@ -171,27 +202,13 @@ export class ActoresProductivosComponent implements OnInit {
     return tipo?.descripcion ?? '—';
   }
 
-  /** true si el actor es la propia empresa (id 1, "TINKURIKUNA"): no tiene
-   *  kardex propio — sus personas relacionadas sí lo tienen. */
-  esEmpresa(actor: ActorProductivoMinero): boolean {
-    return (
-      String(actor.id) === '1' &&
-      (actor.nombre ?? '').trim().toUpperCase() === 'TINKURIKUNA'
-    );
-  }
-
   abrirKardex(actor: ActorProductivoMinero): void {
-    const data: KardexDialogData = {
+    const data: KardexGestionData = {
       tipo: 'ACTOR',
       idActorProductivoMinero: actor.id,
       nombreDestinatario: actor.nombre,
     };
-    this.dialog.open(KardexDialogComponent, {
-      data,
-      width: '1000px',
-      maxWidth: '95vw',
-      autoFocus: false,
-    });
+    irAGestionKardex(this.router, data);
   }
 
   verPersonas(actor: ActorProductivoMinero): void {
@@ -241,14 +258,16 @@ export class ActoresProductivosComponent implements OnInit {
         this.parametricasService
           .cambiarEstadoActorProductivoMinero(actor.id, activar)
           .subscribe({
-            next: () =>
+            next: () => {
               this.snackBar.open(
                 activar
                   ? 'Actor productivo activado correctamente'
                   : 'Actor productivo desactivado correctamente',
                 'Cerrar',
                 { duration: 3000 },
-              ),
+              );
+              this.cargar();
+            },
             error: (err) =>
               this.snackBar.open(
                 err?.error?.message ?? 'No se pudo cambiar el estado',

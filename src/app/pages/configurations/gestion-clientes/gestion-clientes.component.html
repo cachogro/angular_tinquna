@@ -155,7 +155,7 @@
           <tr mat-row *matRowDef="let row; columns: displayedColumns" [class.row-inactivo]="!row.activo"></tr>
         </table>
 
-        <mat-paginator [length]="total()" [pageSize]="pageSize" [pageIndex]="pageIndex" [pageSizeOptions]="[10, 25, 50]"
+        <mat-paginator [length]="total()" [pageSize]="pageSize()" [pageIndex]="pageIndex()" [pageSizeOptions]="[10, 25, 50]"
           (page)="onPageChange($event)"></mat-paginator>
         }
       </div>

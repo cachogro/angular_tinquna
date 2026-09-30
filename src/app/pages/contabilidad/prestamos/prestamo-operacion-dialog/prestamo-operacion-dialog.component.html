@@ -1,0 +1,69 @@
+<h2 mat-dialog-title>
+  {{ esAbono ? 'Abono al préstamo' : 'Cambiar cuota mensual' }} N° {{ p.numero }}
+</h2>
+
+<mat-dialog-content>
+  <p class="po-resumen">
+    <strong>{{ nombre(p.persona) }}</strong> · {{ p.descripcion }}<br />
+    Saldo actual: <strong>Bs {{ num(p.saldo) | number: '1.2-2' }}</strong>
+    · Cuota pactada: Bs {{ num(p.cuotaMensual) | number: '1.2-2' }}
+  </p>
+
+  @if (esAbono) {
+  <form [formGroup]="formAbono" class="po-form">
+    <mat-form-field appearance="outline">
+      <mat-label>Fecha</mat-label>
+      <input matInput [matDatepicker]="picker" [max]="hoy" formControlName="fecha" />
+      <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+      <mat-datepicker #picker></mat-datepicker>
+      @if (formAbono.controls.fecha.hasError('matDatepickerParse') && formAbono.controls.fecha.touched) {
+      <mat-error>Fecha inválida (dd/mm/aaaa)</mat-error>
+      } @else if (formAbono.controls.fecha.hasError('required') && formAbono.controls.fecha.touched) {
+      <mat-error>Obligatorio (dd/mm/aaaa)</mat-error>
+      } @else if (formAbono.controls.fecha.hasError('matDatepickerMax') && formAbono.controls.fecha.touched) {
+      <mat-error>No puede ser una fecha futura</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Monto del abono (Bs)</mat-label>
+      <input matInput appMonto formControlName="monto" />
+      <mat-hint>Máximo el saldo: Bs {{ num(p.saldo) | number: '1.2-2' }}</mat-hint>
+      @if (formAbono.controls.monto.hasError('required') && formAbono.controls.monto.touched) { <mat-error>Obligatorio</mat-error> }
+      @if (formAbono.controls.monto.hasError('pattern') && formAbono.controls.monto.touched) { <mat-error>Número con hasta 2 decimales</mat-error> }
+      @if (formAbono.controls.monto.hasError('min') && formAbono.controls.monto.touched) { <mat-error>Debe ser mayor a 0</mat-error> }
+      @if (formAbono.controls.monto.hasError('max') && formAbono.controls.monto.touched) { <mat-error>Supera el saldo</mat-error> }
+    </mat-form-field>
+  </form>
+
+  <h3 class="po-sub">Datos de pago (entra a caja o banco)</h3>
+  <app-datos-pago-fields [form]="pago" [esEgreso]="false" />
+  } @else {
+  <form [formGroup]="formCuota" class="po-form">
+    <mat-form-field appearance="outline">
+      <mat-label>Nueva cuota mensual (Bs)</mat-label>
+      <input matInput appMonto formControlName="cuotaMensual" />
+      @if (formCuota.controls.cuotaMensual.hasError('required') && formCuota.controls.cuotaMensual.touched) { <mat-error>Obligatorio</mat-error> }
+      @if (formCuota.controls.cuotaMensual.hasError('pattern') && formCuota.controls.cuotaMensual.touched) { <mat-error>Número con hasta 2 decimales</mat-error> }
+      @if (formCuota.controls.cuotaMensual.hasError('min') && formCuota.controls.cuotaMensual.touched) { <mat-error>Debe ser mayor a 0</mat-error> }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Observaciones (opcional)</mat-label>
+      <input matInput formControlName="observaciones" maxlength="255" placeholder="Motivo del cambio" />
+    </mat-form-field>
+  </form>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-stroked-button (click)="cancelar()" [disabled]="guardando()">Cancelar</button>
+  <button mat-flat-button color="primary" (click)="guardar()" [disabled]="guardando()">
+    @if (guardando()) {
+    <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
+    <span>Guardando...</span>
+    } @else {
+    <span>{{ esAbono ? 'Registrar abono' : 'Guardar cuota' }}</span>
+    }
+  </button>
+</mat-dialog-actions>

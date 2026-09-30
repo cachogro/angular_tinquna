@@ -26,6 +26,16 @@ export const navItems: NavItem[] = [
     route: '/ui-components/valorizacion',
   },
   {
+    displayName: 'Promedios',
+    iconName: 'solar:calculator-line-duotone',
+    route: '/ui-components/promedios',
+  },
+  {
+    displayName: 'Ventas de Lote',
+    iconName: 'solar:hand-money-line-duotone',
+    route: '/ui-components/ventas-lote',
+  },
+  {
     displayName: 'Reportes',
     iconName: 'solar:file-text-line-duotone',
     route: '/ui-components/reportes',
@@ -54,6 +64,16 @@ export const navItems: NavItem[] = [
     route: '/contabilidad/recibos',
   },
   {
+    displayName: 'Traspasos',
+    iconName: 'solar:transfer-horizontal-line-duotone',
+    route: '/contabilidad/traspasos',
+  },
+  {
+    displayName: 'Fondo a Rendir Cuentas',
+    iconName: 'solar:wallet-money-line-duotone',
+    route: '/contabilidad/fondo-rendir',
+  },
+  {
     displayName: 'Libreta Bancaria',
     iconName: 'solar:notebook-line-duotone',
     route: '/contabilidad/libreta-bancaria',
@@ -67,6 +87,22 @@ export const navItems: NavItem[] = [
     displayName: 'Caja de Flujo',
     iconName: 'solar:safe-square-line-duotone',
     route: '/contabilidad/caja-flujo',
+  },
+  {
+    displayName: 'Préstamos al Personal',
+    iconName: 'solar:hand-money-line-duotone',
+    route: '/contabilidad/prestamos',
+  },
+  {
+    displayName: 'Boletas de Pago',
+    iconName: 'solar:bill-check-line-duotone',
+    route: '/contabilidad/boletas-pago',
+  },
+
+  {
+    displayName: 'Reporte por Destino',
+    iconName: 'solar:chart-2-line-duotone',
+    route: '/contabilidad/reportes/destino-gasto',
   },
 
   //-----------MODULO LOGUIN NO SE PUEDE ACCEDER SI UYA ESTAS LOGUEADO

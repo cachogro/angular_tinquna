@@ -12,6 +12,7 @@ import {
   AbstractControl,
   FormArray,
   FormBuilder,
+  FormControl,
   FormGroup,
   ReactiveFormsModule,
   Validators,
@@ -48,9 +49,11 @@ import { ParametricasService } from 'src/app/pages/configurations/services/param
 import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog/confirm-dialog.component';
 import { formatNumeroConMiles } from 'src/app/shared/utils/numero.util';
 import {
+  CodificacionCatalogo,
   LeyUnidad,
   MineralResumen,
 } from '../../models/registro-mineral.models';
+import { RegistroMineralService } from '../../services/registro-mineral.service';
 import { VerRecepcionDialogComponent } from '../../recepcion-mineral/ver-recepcion-dialog/ver-recepcion-dialog.component';
 import {
   ActualizarValorizacionRequest,
@@ -63,6 +66,7 @@ import {
   EntidadAporte,
   TipoBaseAporteCatalogo,
   ValorizacionMineral,
+  codificacionEfectiva,
 } from '../../models/valorizacion-mineral.models';
 import { ValorizacionMineralService } from '../../services/valorizacion-mineral.service';
 import {
@@ -72,6 +76,10 @@ import {
   VerValorizacionDialogData,
 } from './ver-valorizacion-dialog/ver-valorizacion-dialog.component';
 import { VerTablaPrecioDialogComponent } from './ver-tabla-precio-dialog/ver-tabla-precio-dialog.component';
+import {
+  abrirReciboValorizacion,
+  faltaReciboValorizacion,
+} from '../recibo-valorizacion.util';
 
 /** Unidades disponibles para expresar la ley de un mineral. */
 const LEY_UNIDADES: LeyUnidad[] = ['%', 'g/TM'];
@@ -202,6 +210,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     ValorizacionMineralService,
   );
   private readonly parametricasService = inject(ParametricasService);
+  private readonly registroMineralService = inject(RegistroMineralService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
 
@@ -426,10 +435,32 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
    *  siendo el valor por defecto; esto es una excepción puntual por fila. */
   readonly importesManualesPenalidadBcl = signal<Record<number, number>>({});
 
+  /** Codificación con la que se valoriza (ver codificacionEfectiva): todas
+   *  las detecciones de abajo (RAM/BCL/BZL/AC) y los minerales esperados
+   *  salen de acá, no de la codificación de la recepción. */
+  readonly codificacion = computed(() =>
+    codificacionEfectiva(this.valorizacion()),
+  );
+
+  /** true si se valoriza con un tipo distinto al de la recepción (ej. ICC → BCL). */
+  readonly codificacionCambiada = computed(
+    () => this.valorizacion()?.codificacionValorizacion != null,
+  );
+
+  /** Catálogo para el selector "Valorizar como". */
+  readonly codificacionesCatalogo = signal<CodificacionCatalogo[]>([]);
+  readonly cambiandoCodificacion = signal(false);
+  /** Fuera de `form` a propósito: cambiarlo no es un autoguardado más, va
+   *  con confirmación y recarga todo el formulario (ver
+   *  onCambioCodificacionValorizacion). */
+  readonly codificacionValorizacionControl = new FormControl<string | null>(
+    null,
+  );
+
   /** Solo en la codificación RAM el mineral es de libre elección; en el resto,
    *  el mineral viene fijo por la codificación de la recepción. */
   readonly esCodificacionRam = computed(() => {
-    const cod = this.valorizacion()?.recepcionMineral?.codificacion;
+    const cod = this.codificacion();
     if (!cod) return false;
     const texto = `${cod.codigo ?? ''} ${cod.nombre ?? ''}`.toUpperCase();
     return (
@@ -441,7 +472,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
   /** BCL (Plata + Plomo): fórmula propia del contrato de fundición (ver
    *  recalcularFilaLeyBcl), separada de la estándar y de RAM. */
   readonly esCodificacionBcl = computed(() => {
-    const cod = this.valorizacion()?.recepcionMineral?.codificacion;
+    const cod = this.codificacion();
     if (!cod) return false;
     const texto = `${cod.codigo ?? ''} ${cod.nombre ?? ''}`.toUpperCase();
     return (
@@ -453,7 +484,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
   /** BZL (Plata + Zinc): mismo contrato de fundición que BCL, ver
    *  recalcularFilaLeyBcl. */
   readonly esCodificacionBzl = computed(() => {
-    const cod = this.valorizacion()?.recepcionMineral?.codificacion;
+    const cod = this.codificacion();
     if (!cod) return false;
     const texto = `${cod.codigo ?? ''} ${cod.nombre ?? ''}`.toUpperCase();
     return texto.includes(CLAVE_CODIFICACION_BZL);
@@ -473,7 +504,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
    *  "AC" es demasiado corto para un texto.includes() seguro (colisiones con
    *  otros nombres): se exige id === '4' o el CÓDIGO exacto "AC". */
   readonly esCodificacionAc = computed(() => {
-    const cod = this.valorizacion()?.recepcionMineral?.codificacion;
+    const cod = this.codificacion();
     if (!cod) return false;
     return (
       String(cod.id) === ID_CODIFICACION_AC ||
@@ -613,8 +644,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
       (m) => Number(m.id) === id,
     );
     if (delCatalogo) return delCatalogo;
-    const deCodificacion =
-      this.valorizacion()?.recepcionMineral?.codificacion?.minerales ?? [];
+    const deCodificacion = this.codificacion()?.minerales ?? [];
     return deCodificacion.find((m) => Number(m.id) === id);
   }
 
@@ -842,6 +872,9 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     this.parametricasService.obtenerLaboratorios().subscribe((data) => {
       this.laboratorios.set(data);
     });
+    this.registroMineralService
+      .getAllCodificaciones()
+      .subscribe((data) => this.codificacionesCatalogo.set(data));
     this.parametricasService
       .obtenerAllEntidadesAporte()
       .subscribe((data: EntidadAporte[]) => this.entidadesAporte.set(data));
@@ -898,6 +931,12 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
 
   private inicializarConValorizacion(v: ValorizacionMineral): void {
     this.valorizacion.set(v);
+    this.codificacionValorizacionControl.setValue(
+      this.codificacion()?.id ?? null,
+      { emitEvent: false },
+    );
+    if (this.esEditable) this.codificacionValorizacionControl.enable();
+    else this.codificacionValorizacionControl.disable();
     this.usarBalanzaT.set(this.resolverUsarBalanzaTInicial(v));
     // Ver comentario de llegoAlStepGastosBcl: si ya había calculos
     // guardados de una sesión anterior, no hace falta revisitar el step
@@ -922,7 +961,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     // Se usa solo para el encabezado (nombre a mostrar); la codificación
     // puede traer varios minerales (ej. BZL -> Plata + Zinc), cada uno se
     // valoriza con su propia cotización vigente y factorConversion.
-    const mineral = v.recepcionMineral?.codificacion?.minerales?.[0] ?? null;
+    const mineral = codificacionEfectiva(v)?.minerales?.[0] ?? null;
     this.mineral.set(mineral);
 
     // Ver comentario de alTocado/rollbackTocado: si ya había algo guardado,
@@ -1076,8 +1115,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
       const idsGuardados = new Set(
         detallesGuardados.map((d) => String(d['idMineral'])),
       );
-      let mineralesCodificacion =
-        v.recepcionMineral?.codificacion?.minerales ?? [];
+      let mineralesCodificacion = codificacionEfectiva(v)?.minerales ?? [];
       if (esConcentrado) {
         mineralesCodificacion = [...mineralesCodificacion].sort(
           (a, b) => ordenBaseAntesQuePlata(a.id) - ordenBaseAntesQuePlata(b.id),
@@ -2193,7 +2231,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
 
     const base: (Mineral | MineralResumen)[] = this.esCodificacionRam()
       ? this.mineralesCatalogo()
-      : (this.valorizacion()?.recepcionMineral?.codificacion?.minerales ?? []);
+      : (this.codificacion()?.minerales ?? []);
 
     return base.filter((m) => !usados.has(String(m.id)));
   }
@@ -3146,6 +3184,101 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
 
   /** Guarda y pasa a PRE-VALORIZADO (id 2): un paso intermedio, sigue
    *  pudiendo revisarse antes del cierre definitivo. */
+  /** "Valorizar como": laboratorio mostró más minerales de los que indica
+   *  la codificación de la recepción (ej. ICC que en realidad es BCL). El
+   *  código de operación no cambia; cambian fórmulas, minerales esperados,
+   *  PDF y la lista de promedios en la que aparece. Se guarda primero lo
+   *  tecleado hasta ahora (mismo PATCH) y se recarga todo el formulario con
+   *  el tipo nuevo. */
+  onCambioCodificacionValorizacion(idNueva: string | null): void {
+    const v = this.valorizacion();
+    const idActual = this.codificacion()?.id ?? null;
+    const revertir = () =>
+      this.codificacionValorizacionControl.setValue(idActual, {
+        emitEvent: false,
+      });
+    if (!v || !idNueva || String(idNueva) === String(idActual)) return;
+
+    if (this.guardadoEnCurso) {
+      revertir();
+      this.snackBar.open(
+        'Espera un momento, se está guardando el borrador...',
+        'Cerrar',
+        { duration: 3000 },
+      );
+      return;
+    }
+
+    const nueva = this.codificacionesCatalogo().find(
+      (c) => String(c.id) === String(idNueva),
+    );
+    const idRecepcion = v.recepcionMineral?.codificacion?.id ?? null;
+    const codigoRecepcion = v.recepcionMineral?.codificacion?.codigo ?? '—';
+    const vuelveAOriginal = String(idNueva) === String(idRecepcion);
+    const codigoNuevo = nueva?.codigo ?? codigoRecepcion;
+
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: `¿Valorizar como ${codigoNuevo}?`,
+        message: vuelveAOriginal
+          ? `Se volverá a valorizar como ${codigoRecepcion}, la codificación original de la recepción. Cambian las fórmulas y los minerales esperados.`
+          : `La recepción ${v.recepcionMineral?.codigoOperacion ?? ''} mantiene su código, pero se valorizará con las fórmulas y minerales de ${codigoNuevo}` +
+            `${nueva?.minerales?.length ? ' (' + nueva.minerales.map((m) => m.descripcion).join(', ') + ')' : ''}` +
+            ` y aparecerá en los promedios de ${codigoNuevo}. Revisa las leyes después del cambio.`,
+        confirmLabel: `Sí, valorizar como ${codigoNuevo}`,
+        icon: 'swap_horiz',
+      },
+    });
+
+    dialogRef.afterClosed().subscribe((confirmado) => {
+      if (!confirmado) {
+        revertir();
+        return;
+      }
+      if (this.autoguardadoTimeout) {
+        clearTimeout(this.autoguardadoTimeout);
+        this.autoguardadoTimeout = undefined;
+      }
+      const payload: ActualizarValorizacionRequest = {
+        ...(this.esEditable && !this.cargandoInicial
+          ? this.construirPayloadActual()
+          : {}),
+        idCodificacionValorizacion: vuelveAOriginal ? null : String(idNueva),
+      };
+      this.cambiandoCodificacion.set(true);
+      this.guardadoEnCurso = true;
+      this.valorizacionMineralService
+        .actualizarValorizacion(this.valorizacionId, payload)
+        .pipe(
+          finalize(() => {
+            this.guardadoEnCurso = false;
+            this.cambiandoCodificacion.set(false);
+          }),
+        )
+        .subscribe({
+          next: () => {
+            this.snackBar.open(
+              `Valorización cambiada a ${codigoNuevo}`,
+              'Cerrar',
+              { duration: 3000 },
+            );
+            // Recarga completa: filas de ley, gastos/penalidades y aportes
+            // dependen del tipo, igual que al abrir la página.
+            this.cargandoInicial = true;
+            this.cargarValorizacion();
+          },
+          error: (err) => {
+            revertir();
+            this.snackBar.open(
+              err?.error?.message ?? 'No se pudo cambiar la codificación',
+              'Cerrar',
+              { duration: 5000 },
+            );
+          },
+        });
+    });
+  }
+
   guardarComoPrevalorizado(): void {
     this.confirmarYGuardarConEstado(ESTADO_VALORIZACION_PREVALORIZADO_ID);
   }
@@ -3251,7 +3384,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
             'Cerrar',
             { duration: 3000 },
           );
-          this.router.navigate(['/ui-components/valorizacion']);
+          this.ofrecerReciboYVolver(actualizado);
         },
         error: (err) => {
           console.log('[guardar] error', err);
@@ -3262,6 +3395,33 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
             'Ocurrió un error al guardar la valorización';
           this.snackBar.open(mensaje, 'Cerrar', { duration: 5000 });
         },
+      });
+  }
+
+  /** Igual que el anticipo en recepción: al quedar VALORIZADO con saldo a
+   *  pagar y sin recibo vigente, se ofrece generar el recibo (BORRADOR)
+   *  antes de volver a la bandeja. "Ahora no" lo deja pendiente en la
+   *  bandeja (botón "Generar recibo"). */
+  private ofrecerReciboYVolver(v: ValorizacionMineral): void {
+    const volver = () => this.router.navigate(['/ui-components/valorizacion']);
+    if (!faltaReciboValorizacion(v)) {
+      volver();
+      return;
+    }
+    this.dialog
+      .open(ConfirmDialogComponent, {
+        data: {
+          title: 'Valorización finalizada',
+          message: `El líquido pagable es Bs ${formatNumeroConMiles(v.totalValorLiquidoVentaBolivianos)}, ¿generar el recibo de pago?`,
+          confirmLabel: 'Generar recibo',
+          cancelLabel: 'Ahora no',
+          icon: 'receipt_long',
+        },
+      })
+      .afterClosed()
+      .subscribe((confirmado) => {
+        if (!confirmado) return void volver();
+        abrirReciboValorizacion(this.dialog, v).subscribe(() => volver());
       });
   }
 
@@ -3499,7 +3659,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
   }
 
   productosTexto(v: ValorizacionMineral): string {
-    const minerales = v.recepcionMineral?.codificacion?.minerales ?? [];
+    const minerales = codificacionEfectiva(v)?.minerales ?? [];
     return minerales.map((m) => m.descripcion).join(', ') || '—';
   }
 

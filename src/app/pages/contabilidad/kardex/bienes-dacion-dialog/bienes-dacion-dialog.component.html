@@ -1,0 +1,120 @@
+<h2 mat-dialog-title>Bienes en dación de pago — {{ data.nombreDestinatario }}</h2>
+
+<mat-dialog-content class="bd-content">
+  <div class="bd-head">
+    <mat-form-field appearance="outline" class="bd-filtro" subscriptSizing="dynamic">
+      <mat-label>Estado</mat-label>
+      <mat-select [(ngModel)]="estado" (selectionChange)="onEstadoChange()">
+        <mat-option value="">Todos</mat-option>
+        <mat-option value="EN_POSESION">En posesión</mat-option>
+        <mat-option value="VENDIDO">Vendido</mat-option>
+        <mat-option value="DEVUELTO">Devuelto</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <span [matTooltip]="data.tieneKardexAbierto ? '' : 'Para registrar un bien, abre primero un kardex'">
+      <button mat-flat-button color="primary" [disabled]="!data.tieneKardexAbierto" (click)="registrar()">
+        <mat-icon>add</mat-icon> Registrar bien
+      </button>
+    </span>
+  </div>
+
+  @if (!data.tieneKardexAbierto) {
+  <div class="bd-aviso">
+    <mat-icon>info</mat-icon>
+    <span>No hay kardex abierto: puedes consultar, vender o devolver los bienes, pero no registrar nuevos.</span>
+  </div>
+  }
+
+  @if (cargando()) {
+  <div class="bd-loading">
+    <mat-spinner diameter="28"></mat-spinner>
+    <span>Cargando bienes...</span>
+  </div>
+  } @else if (bienes().length === 0) {
+  <p class="bd-empty">
+    {{ estado ? 'No hay bienes con ese estado.' : 'Todavía no hay bienes recibidos en dación de pago.' }}
+  </p>
+  } @else {
+  <div class="bd-tabla-scroll">
+    <table mat-table [dataSource]="bienes()" class="bd-tabla mat-elevation-z1">
+
+      <ng-container matColumnDef="fechaRecepcion">
+        <th mat-header-cell *matHeaderCellDef class="col-fecha">Recepción</th>
+        <td mat-cell *matCellDef="let b" class="col-fecha">{{ fechaFmt(b.fechaRecepcion) }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="descripcion">
+        <th mat-header-cell *matHeaderCellDef>Descripción</th>
+        <td mat-cell *matCellDef="let b" class="bd-desc">{{ b.descripcion }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="valorReferencial">
+        <th mat-header-cell *matHeaderCellDef class="bd-num">Valor ref. (Bs)</th>
+        <td mat-cell *matCellDef="let b" class="bd-num">
+          {{ num(b.valorReferencial) ? (num(b.valorReferencial) | number:'1.2-2') : '—' }}
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="estado">
+        <th mat-header-cell *matHeaderCellDef>Estado</th>
+        <td mat-cell *matCellDef="let b">
+          <span class="bd-badge" [class.bd-badge--vendido]="b.estado === 'VENDIDO'"
+            [class.bd-badge--devuelto]="b.estado === 'DEVUELTO'">
+            {{ estadoLabel(b.estado) }}
+          </span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="resolucion">
+        <th mat-header-cell *matHeaderCellDef>Venta / devolución</th>
+        <td mat-cell *matCellDef="let b">
+          @if (b.estado === 'VENDIDO') {
+          {{ fechaFmt(b.fechaVenta) }} · Bs {{ num(b.montoVenta) | number:'1.2-2' }}
+          @if (b.recibo) {
+          <small class="bd-recibo" matTooltip="Recibo de ingreso: amortizó la deuda en el kardex">
+            · {{ b.recibo.serie }}-{{ ('0000' + b.recibo.numero).slice(-4) }}
+          </small>
+          }
+          } @else if (b.estado === 'DEVUELTO') {
+          {{ fechaFmt(b.fechaDevolucion) }}
+          } @else {
+          —
+          }
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="observaciones">
+        <th mat-header-cell *matHeaderCellDef>Observaciones</th>
+        <td mat-cell *matCellDef="let b" class="bd-obs" [matTooltip]="b.observaciones || ''">
+          {{ b.observaciones || '—' }}
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="acciones">
+        <th mat-header-cell *matHeaderCellDef>Acciones</th>
+        <td mat-cell *matCellDef="let b">
+          <button mat-icon-button color="primary" matTooltip="Vender"
+            [disabled]="b.estado !== 'EN_POSESION'" (click)="vender(b)">
+            <mat-icon>sell</mat-icon>
+          </button>
+          <button mat-icon-button color="warn" matTooltip="Devolver"
+            [disabled]="b.estado !== 'EN_POSESION'" (click)="devolver(b)">
+            <mat-icon>undo</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+      <tr mat-row *matRowDef="let b; columns: columnas" [class.bd-row-cerrada]="b.estado !== 'EN_POSESION'"></tr>
+    </table>
+  </div>
+  }
+
+  <mat-paginator [length]="total()" [pageSize]="pageSize" [pageIndex]="pageIndex" [pageSizeOptions]="[10, 25, 50]"
+    (page)="onPageChange($event)"></mat-paginator>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-flat-button color="primary" (click)="cerrarDialogo()">Cerrar</button>
+</mat-dialog-actions>

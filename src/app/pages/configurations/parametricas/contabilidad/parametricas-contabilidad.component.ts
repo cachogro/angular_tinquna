@@ -6,6 +6,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { EntidadFinancieraFormDialogComponent } from '../entidad-financiera/entidad-financiera-form-dialog.component';
 import { CajaFormDialogComponent } from '../caja/caja-form-dialog.component';
+import { DestinoGastoFormDialogComponent } from '../destino-gasto/destino-gasto-form-dialog.component';
 
 @Component({
   selector: 'app-parametricas-contabilidad',
@@ -26,6 +27,14 @@ export class ParametricasContabilidadComponent {
   abrirNuevaEntidadFinanciera(): void {
     this.dialog.open(EntidadFinancieraFormDialogComponent, {
       width: '1000px',
+      maxWidth: '95vw',
+      autoFocus: false,
+    });
+  }
+
+  abrirNuevoDestinoGasto(): void {
+    this.dialog.open(DestinoGastoFormDialogComponent, {
+      width: '900px',
       maxWidth: '95vw',
       autoFocus: false,
     });

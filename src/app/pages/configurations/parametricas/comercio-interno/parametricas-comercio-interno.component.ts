@@ -7,6 +7,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { CodificacionFormDialogComponent } from '../codificaciones/codificacion-form-dialog.component';
 import { CotizacionFormDialogComponent } from '../cotizacion/cotizacion-form-dialog.component';
 import { LaboratorioFormDialogComponent } from '../laboratorio/laboratorio-form-dialog.component';
+import { CodificacionLoteFormDialogComponent } from '../codificacion-lote/codificacion-lote-form-dialog.component';
 import { EntidadAporteFormDialogComponent } from '../entidad-aporte/entidad-aporte-form-dialog.component';
 import { MineralFormDialogComponent } from '../mineral/mineral-form-dialog.component';
 import { EscalaPrecioFormDialogComponent } from '../escala-precio/escala-precio-form-dialog.component';
@@ -46,6 +47,14 @@ export class ParametricasComercioInternoComponent {
   abrirNuevaCotizacion(): void {
     this.dialog.open(CotizacionFormDialogComponent, {
       width: '1000px',
+      maxWidth: '95vw',
+      autoFocus: false,
+    });
+  }
+
+  abrirNuevaCodificacionLote(): void {
+    this.dialog.open(CodificacionLoteFormDialogComponent, {
+      width: '900px',
       maxWidth: '95vw',
       autoFocus: false,
     });

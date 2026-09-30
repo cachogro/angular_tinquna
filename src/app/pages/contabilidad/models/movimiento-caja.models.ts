@@ -1,6 +1,6 @@
 // src/app/pages/contabilidad/models/movimiento-caja.models.ts
 // Caja de flujo: registro maestro de la empresa. Mismo mecanismo que
-// LibretaBanco, pero por (caja, moneda) — una caja opera en BOB y USD a la
+// LibretaBanco, pero por (caja, moneda) — una caja opera en BS y USD a la
 // vez, cada una con su propia cadena de períodos y saldo. Un recibo puede
 // generar hasta dos movimientos acá (un INGRESO por lo aplicado a kardex y
 // un EGRESO por la porción EFECTIVO). El back devuelve los montos como
@@ -63,6 +63,8 @@ export interface MovimientoCaja {
   destinoGasto?: DestinoGasto | string | null;
   /** Presente cuando el movimiento nace de generar un recibo. */
   idRecibo?: string | null;
+  /** Presente cuando el movimiento nace de un traspaso caja↔banco. */
+  idTraspaso?: string | null;
   /** = entrada de efectivo. */
   ingreso: string;
   /** = salida de efectivo. */

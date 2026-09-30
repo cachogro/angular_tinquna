@@ -1,0 +1,51 @@
+.logo-loader {
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+  animation: logo-pulse 1.6s ease-in-out infinite;
+}
+.logo-loader img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+/* Destello que cruza el logo de izquierda a derecha */
+.logo-loader::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.75) 50%,
+    transparent 65%
+  );
+  transform: translateX(-100%);
+  animation: logo-shine 1.6s ease-in-out infinite;
+}
+@keyframes logo-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.97);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes logo-shine {
+  0% {
+    transform: translateX(-100%);
+  }
+  60%,
+  100% {
+    transform: translateX(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .logo-loader,
+  .logo-loader::after {
+    animation: none;
+  }
+}
