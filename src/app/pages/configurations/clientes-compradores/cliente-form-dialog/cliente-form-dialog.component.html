@@ -1,4 +1,4 @@
-<div class="blue_theme">
+<div class="blue_theme tema-configuracion">
   <app-parametrica-dialog-shell [titulo]="modoEdicion ? 'Modificar cliente' : 'Nuevo cliente'">
 
     <!-- ==================== FORMULARIO ==================== -->
@@ -79,6 +79,19 @@
           </mat-error>
         </mat-form-field>
       </div>
+
+      <!-- Modalidad de venta: define cómo se le cobran los lotes -->
+      <mat-form-field appearance="outline">
+        <mat-label>Modalidad de venta</mat-label>
+        <mat-select formControlName="modalidadVenta">
+          <mat-option *ngFor="let m of modalidadesVenta" [value]="m.valor">{{ m.nombre }}</mat-option>
+        </mat-select>
+        <mat-hint>
+          {{ form.get('modalidadVenta')?.value === 'EXPORTACION'
+          ? 'Se cobra lote por lote (el total o por partes)'
+          : 'Cuenta corriente: sus anticipos van pagando los lotes a medida que se liquidan' }}
+        </mat-hint>
+      </mat-form-field>
 
       <!-- Fila 3: municipio -->
       <div class="fila-tres">

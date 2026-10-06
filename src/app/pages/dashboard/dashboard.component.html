@@ -1,0 +1,662 @@
+<div class="db">
+
+  <!-- Encabezado + período -->
+  <mat-card class="cardWithShadow db-cabecera">
+    <mat-card-content>
+      <div class="db-cabecera__fila">
+        <div>
+          <h1 class="db-titulo">Resumen del negocio</h1>
+          @if (datos(); as d) {
+          <p class="db-subtitulo">
+            Del {{ fecha(d.periodo.desde) }} al {{ fecha(d.periodo.hasta) }}
+            · comparado con {{ fecha(d.periodoAnterior.desde) }} – {{ fecha(d.periodoAnterior.hasta) }}
+          </p>
+          }
+        </div>
+        <button mat-stroked-button (click)="cargar()" [disabled]="cargando()" class="db-actualizar">
+          <mat-icon>refresh</mat-icon> Actualizar
+        </button>
+      </div>
+      <app-rango-fechas [desde]="fechaDesdeControl" [hasta]="fechaHastaControl" [max]="hoy" />
+    </mat-card-content>
+  </mat-card>
+
+  @if (error()) {
+  <div class="db-error">
+    <mat-icon>cloud_off</mat-icon>
+    <span>{{ error() }}</span>
+    <button mat-button (click)="cargar()">Reintentar</button>
+  </div>
+  }
+
+  @if (!datos() && cargando()) {
+  <div class="db-cargando">
+    <mat-spinner diameter="40"></mat-spinner>
+    <span>Preparando el resumen…</span>
+  </div>
+  }
+
+  @if (datos(); as d) {
+  <div class="db-contenido" [class.db-contenido--recargando]="cargando()">
+
+    <!-- ================= ALERTAS ================= -->
+    @if (d.alertas.length) {
+    <section class="db-alertas" aria-label="Alertas y pendientes">
+      @for (a of d.alertas; track a.titulo) {
+      <a class="db-alerta" [ngClass]="['db-alerta--' + a.nivel, temaModulo(a.modulo)]" [routerLink]="a.ruta">
+        <mat-icon class="db-alerta__icono">{{ iconoAlerta(a) }}</mat-icon>
+        <div class="db-alerta__texto">
+          <strong>{{ a.titulo }} <span class="db-alerta__cantidad">{{ a.cantidad }}</span></strong>
+          <small>{{ a.detalle }}</small>
+        </div>
+        <mat-icon class="db-alerta__ir">chevron_right</mat-icon>
+      </a>
+      }
+    </section>
+    } @else {
+    <div class="db-todo-ok">
+      <mat-icon>verified</mat-icon> Sin pendientes críticos: cotizaciones vigentes, meses cerrados y recibos procesados.
+    </div>
+    }
+
+    <!-- ================= INDICADORES ================= -->
+    <section class="db-kpis">
+      <!-- Mineral recibido -->
+      <a class="db-kpi tema-comercio" routerLink="/ui-components/recepcion-minerales">
+        <div class="db-kpi__cabecera">
+          <span class="db-kpi__icono"><mat-icon>scale</mat-icon></span>
+          <span class="db-kpi__etiqueta">Mineral recibido</span>
+        </div>
+        <div class="db-kpi__valor">{{ compacto(d.indicadores.mineralRecibido.kgNeto) }} <small>kg</small></div>
+        <div class="db-kpi__detalle">
+          {{ plural(d.indicadores.mineralRecibido.lotes, 'lote') }} · {{ plural(d.indicadores.mineralRecibido.sacos, 'saco') }} ·
+          {{ plural(d.indicadores.mineralRecibido.proveedores, 'proveedor', 'proveedores') }}
+        </div>
+        @let vRec = variacion(d.indicadores.mineralRecibido.kgNeto, d.indicadores.mineralRecibido.anterior.kgNeto);
+        <div class="db-kpi__variacion" [class.sube]="vRec.sube === true" [class.baja]="vRec.sube === false">
+          {{ vRec.texto }}
+        </div>
+      </a>
+
+      <!-- Valorizado -->
+      <a class="db-kpi tema-comercio" routerLink="/ui-components/valorizacion">
+        <div class="db-kpi__cabecera">
+          <span class="db-kpi__icono"><mat-icon>calculate</mat-icon></span>
+          <span class="db-kpi__etiqueta">Valorizado (Total Liquidación)</span>
+        </div>
+        <div class="db-kpi__valor"><small>Bs</small> {{ compacto(d.indicadores.valorizado.totalLiquidacionBs) }}</div>
+        <div class="db-kpi__detalle">
+          {{ plural(d.indicadores.valorizado.cantidad, 'valorización', 'valorizaciones') }} ·
+          pagado {{ bs(d.indicadores.pagadoValorizaciones.montoBs) }}
+        </div>
+        @let vVal = variacion(d.indicadores.valorizado.totalLiquidacionBs, d.indicadores.valorizado.anterior.totalLiquidacionBs);
+        <div class="db-kpi__variacion" [class.sube]="vVal.sube === true" [class.baja]="vVal.sube === false">
+          {{ vVal.texto }}
+        </div>
+      </a>
+
+      <!-- Liquidez -->
+      <a class="db-kpi tema-contabilidad" routerLink="/contabilidad/caja-flujo">
+        <div class="db-kpi__cabecera">
+          <span class="db-kpi__icono"><mat-icon>account_balance_wallet</mat-icon></span>
+          <span class="db-kpi__etiqueta">Liquidez (caja + bancos)</span>
+        </div>
+        <div class="db-kpi__valor"><small>Bs</small> {{ compacto(liquidezTotalBs()) }}</div>
+        <div class="db-kpi__detalle">
+          Caja {{ bs(d.indicadores.liquidez.cajaBs) }} · Bancos {{ bs(d.indicadores.liquidez.bancosBs) }}
+        </div>
+        <div class="db-kpi__variacion">
+          @if (liquidezTotalUsd()) { + {{ usd(liquidezTotalUsd()) }} en dólares } @else { saldo al día de hoy }
+        </div>
+      </a>
+
+      <!-- Por cobrar -->
+      <a class="db-kpi tema-contabilidad" routerLink="/contabilidad/kardex">
+        <div class="db-kpi__cabecera">
+          <span class="db-kpi__icono"><mat-icon>request_quote</mat-icon></span>
+          <span class="db-kpi__etiqueta">Por cobrar (kardex)</span>
+        </div>
+        <div class="db-kpi__valor"><small>Bs</small> {{ compacto(d.indicadores.kardex.porCobrarBs) }}</div>
+        <div class="db-kpi__detalle">
+          {{ plural(d.indicadores.kardex.deudores, 'deudor', 'deudores') }}
+          @if (d.indicadores.kardex.porPagarBs) { · por pagar {{ bs(d.indicadores.kardex.porPagarBs) }} }
+        </div>
+        <div class="db-kpi__variacion">
+          cobrado por ventas en el período: {{ bs(d.indicadores.cobradoVentas.montoBs) }}
+        </div>
+      </a>
+    </section>
+
+    <!-- ================= FLUJO DE DINERO + GANANCIA ESTIMADA ================= -->
+    @if (errorFlujo()) {
+    <div class="db-vacio"><mat-icon>cloud_off</mat-icon> No se pudo cargar el flujo de dinero.</div>
+    }
+    @if (flujo(); as fl) {
+    <section class="db-fila db-fila--7-5">
+      <mat-card class="cardWithShadow db-panel tema-contabilidad">
+        <div class="db-panel__cabecera">
+          <div>
+            <h2>Dinero que entró y salió</h2>
+            <small>
+              Caja de flujo + todas las cuentas bancarias
+              @if (fl.traspasosExcluidos) { · sin contar {{ plural(fl.traspasosExcluidos, 'traspaso interno', 'traspasos internos') }} }
+            </small>
+          </div>
+          <div class="db-conmutador" role="group" aria-label="Qué días mostrar">
+            <button type="button" [class.activo]="vistaFlujo() === 'hoy'" (click)="vistaFlujo.set('hoy')">
+              Hoy
+            </button>
+            <button type="button" [class.activo]="vistaFlujo() === 'periodo'" (click)="vistaFlujo.set('periodo')">
+              Período
+            </button>
+          </div>
+        </div>
+
+        @if (flujoVista(); as fv) {
+        <div class="db-flujo-totales">
+          <div>
+            <small>Ingresos</small>
+            <strong class="db-flujo--entra">{{ bs(fv.ingresoBs) }}</strong>
+          </div>
+          <div>
+            <small>Egresos</small>
+            <strong class="db-flujo--sale">{{ bs(fv.egresoBs) }}</strong>
+          </div>
+          <div>
+            <small>Neto {{ vistaFlujo() === 'hoy' ? 'de hoy (' + fecha(fl.hoy) + ')' : 'del período' }}</small>
+            <strong [class.db-flujo--entra]="fv.netoBs > 0" [class.db-flujo--sale]="fv.netoBs < 0">
+              {{ bs(fv.netoBs) }}
+            </strong>
+          </div>
+        </div>
+
+        @if (!fv.movimientos) {
+        <div class="db-vacio">
+          <mat-icon>savings</mat-icon>
+          {{ vistaFlujo() === 'hoy' ? 'Hoy todavía no hay movimientos de caja ni de bancos.' : 'Sin movimientos en el período.' }}
+        </div>
+        } @else {
+        <div class="db-tabla-scroll">
+          <table class="db-tabla">
+            <thead>
+              <tr>
+                <th>Dónde</th>
+                <th class="num">Ingresos</th>
+                <th class="num">Egresos</th>
+                <th class="num">Neto</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (f of filasFlujo(); track f.etiqueta + f.simbolo) {
+              <tr>
+                <td>{{ f.etiqueta }} <span class="db-chip">{{ f.simbolo }}</span></td>
+                <td class="num">{{ monto(f.simbolo, f.ingreso) }}</td>
+                <td class="num">{{ monto(f.simbolo, f.egreso) }}</td>
+                <td class="num" [class.db-flujo--entra]="f.neto > 0" [class.db-flujo--sale]="f.neto < 0">
+                  <strong>{{ monto(f.simbolo, f.neto) }}</strong>
+                </td>
+              </tr>
+              }
+              <tr class="db-tabla__total">
+                <td>Total en Bs</td>
+                <td class="num">{{ bs(fv.ingresoBs) }}</td>
+                <td class="num">{{ bs(fv.egresoBs) }}</td>
+                <td class="num" [class.db-flujo--entra]="fv.netoBs > 0" [class.db-flujo--sale]="fv.netoBs < 0">
+                  <strong>{{ bs(fv.netoBs) }}</strong>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        @if (fv.usdSinTipoCambio.ingreso || fv.usdSinTipoCambio.egreso) {
+        <small class="db-texto-alerta">
+          Hay dólares sin tipo de cambio registrado (ingresos {{ usd(fv.usdSinTipoCambio.ingreso) }}, egresos
+          {{ usd(fv.usdSinTipoCambio.egreso) }}): se ven en su renglón en $us, pero no están en el total en Bs.
+        </small>
+        }
+        }
+        }
+
+        @if (fl.dias.length) {
+        <div class="db-subtitulo-panel">Día por día · {{ fecha(fl.periodo.desde) }} al {{ fecha(fl.periodo.hasta) }}</div>
+        <div class="db-tabla-scroll db-tabla-scroll--corta">
+          <table class="db-tabla">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th class="num">Efectivo (neto)</th>
+                <th class="num">Bancos (neto)</th>
+                <th class="num">Ingresos</th>
+                <th class="num">Egresos</th>
+                <th class="num">Neto</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (dia of fl.dias; track dia.fecha) {
+              <tr>
+                <td>
+                  {{ fecha(dia.fecha) }}
+                  @if (dia.fecha === fl.hoy) { <span class="db-chip">hoy</span> }
+                </td>
+                <td class="num">
+                  {{ bs(dia.efectivoBs.ingreso - dia.efectivoBs.egreso) }}
+                  @if (dia.efectivoUsd.ingreso || dia.efectivoUsd.egreso) {
+                  <small class="db-dias">{{ usd(dia.efectivoUsd.ingreso - dia.efectivoUsd.egreso) }}</small>
+                  }
+                </td>
+                <td class="num">
+                  {{ bs(dia.bancosBs.ingreso - dia.bancosBs.egreso) }}
+                  @if (dia.bancosUsd.ingreso || dia.bancosUsd.egreso) {
+                  <small class="db-dias">{{ usd(dia.bancosUsd.ingreso - dia.bancosUsd.egreso) }}</small>
+                  }
+                </td>
+                <td class="num">{{ bs(dia.ingresoBs) }}</td>
+                <td class="num">{{ bs(dia.egresoBs) }}</td>
+                <td class="num" [class.db-flujo--entra]="dia.netoBs > 0" [class.db-flujo--sale]="dia.netoBs < 0">
+                  <strong>{{ bs(dia.netoBs) }}</strong>
+                </td>
+              </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        }
+      </mat-card>
+
+      <mat-card class="cardWithShadow db-panel tema-contabilidad">
+        <div class="db-panel__cabecera">
+          <div>
+            <h2>Ganancia estimada del período</h2>
+            <small>No es lo mismo que el neto de caja: solo cuenta lo vendido y lo gastado</small>
+          </div>
+        </div>
+
+        <div class="db-ganancia" [class.db-ganancia--pierde]="fl.ganancia.gananciaEstimadaBs < 0">
+          <small>{{ fl.ganancia.gananciaEstimadaBs < 0 ? 'Pérdida estimada' : 'Ganancia estimada' }}</small>
+          <strong>{{ bs(fl.ganancia.gananciaEstimadaBs) }}</strong>
+        </div>
+
+        <div class="db-cuenta">
+          <div class="db-cuenta__linea">
+            <span>
+              Utilidad de lotes liquidados
+              <small>
+                {{ plural(fl.ganancia.lotesLiquidados, 'lote') }} · venta {{ bs(fl.ganancia.ventaLotesBs) }} − invertido
+                {{ bs(fl.ganancia.invertidoLotesBs) }}
+              </small>
+            </span>
+            <strong>{{ bs(fl.ganancia.utilidadLotesBs) }}</strong>
+          </div>
+          <div class="db-cuenta__linea">
+            <span>+ Otros ingresos</span>
+            <strong>{{ bs(fl.ganancia.otrosIngresosBs) }}</strong>
+          </div>
+          <div class="db-cuenta__linea">
+            <span>− Gastos operativos</span>
+            <strong>{{ bs(fl.ganancia.gastosOperativosBs) }}</strong>
+          </div>
+          <div class="db-cuenta__linea">
+            <span>− Sueldos</span>
+            <strong>{{ bs(fl.ganancia.sueldosBs) }}</strong>
+          </div>
+        </div>
+
+        @if (fl.ganancia.sinDestino.ingresoBs || fl.ganancia.sinDestino.egresoBs) {
+        <small class="db-texto-alerta">
+          Movimientos sin destino de gasto (no entran en la ganancia): ingresos
+          {{ bs(fl.ganancia.sinDestino.ingresoBs) }}, egresos {{ bs(fl.ganancia.sinDestino.egresoBs) }}.
+        </small>
+        }
+
+        @if (fueraDeGanancia().length) {
+        <div class="db-subtitulo-panel">Se movió, pero no es ganancia ni gasto</div>
+        <div class="db-cuenta db-cuenta--tenue">
+          @for (c of fueraDeGanancia(); track c.categoria) {
+          <div class="db-cuenta__linea">
+            <span>{{ c.nombre }}</span>
+            <span>
+              @if (c.ingresoBs) { <span class="db-flujo--entra">+{{ bs(c.ingresoBs) }}</span> }
+              @if (c.egresoBs) { <span class="db-flujo--sale">−{{ bs(c.egresoBs) }}</span> }
+            </span>
+          </div>
+          }
+        </div>
+        }
+
+        @if (fl.mayoresEgresos.length) {
+        <div class="db-subtitulo-panel">En qué se fue más dinero</div>
+        <div class="db-cuenta db-cuenta--tenue">
+          @for (m of fl.mayoresEgresos; track m.nombre) {
+          <div class="db-cuenta__linea">
+            <span>{{ m.nombre }} <small>{{ nombreCategoria(m.categoria) }}</small></span>
+            <strong>{{ bs(m.egresoBs) }}</strong>
+          </div>
+          }
+        </div>
+        }
+
+        <a mat-button routerLink="/configuraciones/parametricas" class="db-enlace-pie">
+          Revisar categorías de los destinos de gasto <mat-icon iconPositionEnd>chevron_right</mat-icon>
+        </a>
+      </mat-card>
+    </section>
+    }
+
+    <!-- ================= INGRESO MENSUAL + EN PROCESO ================= -->
+    <section class="db-fila db-fila--8-4">
+      <mat-card class="cardWithShadow db-panel tema-comercio">
+        <div class="db-panel__cabecera">
+          <div>
+            <h2>Ingreso de mineral por mes</h2>
+            <small>Kg netos · últimos 12 meses por codificación</small>
+          </div>
+          <button mat-button (click)="verTablaIngreso.set(!verTablaIngreso())">
+            <mat-icon>{{ verTablaIngreso() ? 'bar_chart' : 'table_rows' }}</mat-icon>
+            {{ verTablaIngreso() ? 'Gráfico' : 'Tabla' }}
+          </button>
+        </div>
+
+        @if (!hayIngreso()) {
+        <div class="db-vacio"><mat-icon>inventory_2</mat-icon> Sin recepciones en los últimos 12 meses.</div>
+        } @else if (verTablaIngreso()) {
+        <div class="db-tabla-scroll">
+          <table class="db-tabla">
+            <thead>
+              <tr>
+                <th>Mes</th>
+                @for (s of series(); track s.codigo) { <th class="num">{{ s.codigo }}</th> }
+                <th class="num">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (c of columnas(); track c.mes; let i = $index) {
+              <tr>
+                <td>{{ c.etiqueta }}</td>
+                @for (s of series(); track s.codigo) { <td class="num">{{ s.kg[i] ? kg(s.kg[i]) : '—' }}</td> }
+                <td class="num"><strong>{{ c.total ? kg(c.total) : '—' }}</strong></td>
+              </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        } @else {
+        <div class="db-leyenda">
+          @for (s of series(); track s.codigo) {
+          <span class="db-leyenda__item">
+            <span class="db-leyenda__muestra" [style.background]="colorSerie(s.slot)"></span>
+            {{ s.codigo }} <small>{{ kg(s.total) }}</small>
+          </span>
+          }
+        </div>
+        <div class="db-grafico" role="img" aria-label="Kg netos de mineral recibidos por mes y codificación">
+          @for (c of columnas(); track c.mes) {
+          <div class="db-grafico__col" [matTooltip]="c.tooltip" matTooltipClass="db-tooltip-multilinea"
+            matTooltipPosition="above">
+            <div class="db-grafico__area">
+              @if (c.total > 0) {
+              <span class="db-grafico__total">{{ compacto(c.total) }}</span>
+              }
+              <div class="db-grafico__barra" [style.height.%]="c.altura">
+                @for (seg of c.segmentos; track seg.codigo) {
+                <span class="db-grafico__seg" [style.flex-grow]="seg.porcentaje"
+                  [style.background]="colorSerie(seg.slot)"></span>
+                }
+              </div>
+            </div>
+            <span class="db-grafico__mes">{{ c.etiqueta }}</span>
+          </div>
+          }
+        </div>
+        }
+      </mat-card>
+
+      <mat-card class="cardWithShadow db-panel tema-comercio">
+        <div class="db-panel__cabecera">
+          <div>
+            <h2>Lotes en proceso</h2>
+            <small>Dónde está el trabajo pendiente</small>
+          </div>
+        </div>
+        <div class="db-proceso">
+          <a class="db-proceso__paso" routerLink="/ui-components/recepcion-minerales">
+            <span class="db-proceso__num">{{ d.enProceso.sinValorizar.cantidad }}</span>
+            <span class="db-proceso__nombre">Recibidos sin valorizar</span>
+            <small>
+              @if (d.enProceso.sinValorizar.cantidad) {
+              {{ kg(d.enProceso.sinValorizar.kg) }} · el más antiguo hace {{ d.enProceso.sinValorizar.diasMax }} días
+              } @else { al día }
+            </small>
+          </a>
+          <a class="db-proceso__paso" routerLink="/ui-components/valorizacion">
+            <span class="db-proceso__num">{{ d.enProceso.borradores.cantidad }}</span>
+            <span class="db-proceso__nombre">Valorizaciones en borrador</span>
+            <small>
+              @if (d.enProceso.borradores.cantidad) { la más antigua hace {{ d.enProceso.borradores.diasMax }} días }
+              @else { ninguna }
+            </small>
+          </a>
+          <a class="db-proceso__paso" routerLink="/ui-components/valorizacion">
+            <span class="db-proceso__num">{{ d.enProceso.preValorizados.cantidad }}</span>
+            <span class="db-proceso__nombre">Pre-valorizadas</span>
+            <small>
+              @if (d.enProceso.preValorizados.cantidad) { la más antigua hace {{ d.enProceso.preValorizados.diasMax }} días }
+              @else { ninguna }
+            </small>
+          </a>
+        </div>
+        <div class="db-ciclo">
+          <mat-icon>timer</mat-icon>
+          @if (d.enProceso.cicloPromedioDias != null) {
+          <span>Recepción → valorización en <strong>{{ d.enProceso.cicloPromedioDias }} días</strong> promedio</span>
+          } @else {
+          <span>Sin valorizaciones en el período para medir el ciclo</span>
+          }
+        </div>
+
+        @if (d.cotizaciones.length) {
+        <div class="db-cotizaciones">
+          <small class="db-cotizaciones__titulo">Cotizaciones vigentes hoy</small>
+          @for (c of d.cotizaciones; track c.idMineral) {
+          <div class="db-cotizacion" [class.db-cotizacion--sin]="c.cotizacionUsd == null">
+            <span class="db-cotizacion__simbolo">{{ c.simbolo }}</span>
+            <span class="db-cotizacion__nombre">{{ c.mineral }}</span>
+            @if (c.cotizacionUsd != null) {
+            <span class="db-cotizacion__valor">{{ usd(c.cotizacionUsd) }} <small>/{{ c.unidad }}</small></span>
+            } @else {
+            <span class="db-cotizacion__valor db-cotizacion__valor--sin"><mat-icon>error</mat-icon> sin vigencia</span>
+            }
+          </div>
+          }
+        </div>
+        }
+      </mat-card>
+    </section>
+
+    <!-- ================= DEUDORES + COBRANZAS ================= -->
+    <section class="db-fila db-fila--7-5">
+      <mat-card class="cardWithShadow db-panel tema-contabilidad">
+        <div class="db-panel__cabecera">
+          <div>
+            <h2>Recordatorio de deudores</h2>
+            <small>
+              {{ d.deudores.total }} kardex con saldo por cobrar · {{ bs(d.deudores.totalBs) }}
+              @if (d.deudores.inactivos) { · <span class="db-texto-alerta">{{ d.deudores.inactivos }} inactivos</span> }
+            </small>
+          </div>
+          <a mat-button routerLink="/contabilidad/kardex">Ver kardex <mat-icon iconPositionEnd>chevron_right</mat-icon></a>
+        </div>
+        @if (!d.deudores.lista.length) {
+        <div class="db-vacio"><mat-icon>celebration</mat-icon> Nadie debe: todos los kardex están al día.</div>
+        } @else {
+        <div class="db-tabla-scroll">
+          <table class="db-tabla db-tabla--click">
+            <thead>
+              <tr>
+                <th>Deudor</th>
+                <th>Tipo</th>
+                <th class="num">Último movimiento</th>
+                <th class="num">Saldo</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (x of d.deudores.lista; track x.idKardex) {
+              <tr (click)="abrirKardex(x)" tabindex="0" (keydown.enter)="abrirKardex(x)"
+                matTooltip="Abrir su kardex">
+                <td>
+                  <div class="db-deudor">
+                    <span class="db-punto" [class.db-punto--inactivo]="!x.activo"></span>
+                    {{ x.nombre }}
+                    @if (x.codigoKardex) {
+                    <small class="db-codigo">{{ x.codigoKardex }}</small>
+                    }
+                  </div>
+                </td>
+                <td><span class="db-chip">{{ tipoKardex[x.tipo] }}</span></td>
+                <td class="num">
+                  {{ fecha(x.ultimaActividad) }}
+                  @if (x.diasSinActividad != null) {
+                  <small class="db-dias" [class.db-dias--alerta]="!x.activo">{{ x.diasSinActividad === 0 ? 'hoy' : 'hace ' + x.diasSinActividad + ' d' }}</small>
+                  }
+                </td>
+                <td class="num"><strong>{{ bs(x.saldoBs) }}</strong></td>
+              </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        }
+      </mat-card>
+
+      <mat-card class="cardWithShadow db-panel tema-contabilidad">
+        <div class="db-panel__cabecera">
+          <div>
+            <h2>Cobranzas y dinero afuera</h2>
+            <small>Lo que falta recuperar o rendir</small>
+          </div>
+        </div>
+        <div class="db-afuera">
+          <a class="db-afuera__item" routerLink="/ui-components/ventas-lote">
+            <mat-icon>sell</mat-icon>
+            <div>
+              <span>Ventas de lote por cobrar</span>
+              <small>{{ d.cobranzas.ventasPorCobrar.cantidad }} liquidadas con saldo</small>
+            </div>
+            <strong>{{ bs(d.cobranzas.ventasPorCobrar.totalBs) }}</strong>
+          </a>
+          <a class="db-afuera__item" routerLink="/ui-components/ventas-lote">
+            <mat-icon>hourglass_top</mat-icon>
+            <div>
+              <span>Ventas abiertas (sin liquidar)</span>
+              <small>{{ d.cobranzas.ventasAbiertas.cantidad }} lotes · efectivo invertido</small>
+            </div>
+            <strong>{{ bs(d.cobranzas.ventasAbiertas.invertidoBs) }}</strong>
+          </a>
+          <a class="db-afuera__item" routerLink="/ui-components/recepcion-minerales">
+            <mat-icon>payments</mat-icon>
+            <div>
+              <span>Anticipos sin mineral valorizado</span>
+              <small>{{ d.cobranzas.anticiposSinValorizar.cantidad }} recepciones</small>
+            </div>
+            <strong>{{ bs(d.cobranzas.anticiposSinValorizar.montoBs) }}</strong>
+          </a>
+          <a class="db-afuera__item" routerLink="/contabilidad/fondo-rendir"
+            [class.db-afuera__item--alerta]="d.cobranzas.fondosRendir.vencidos">
+            <mat-icon>receipt_long</mat-icon>
+            <div>
+              <span>Fondos a rendir</span>
+              <small>
+                {{ plural(d.cobranzas.fondosRendir.cantidad, 'abierto') }}
+                @if (d.cobranzas.fondosRendir.vencidos) { · <b>{{ plural(d.cobranzas.fondosRendir.vencidos, 'vencido') }}</b> }
+              </small>
+            </div>
+            <strong>{{ bs(d.cobranzas.fondosRendir.porRendirBs) }}</strong>
+          </a>
+          <a class="db-afuera__item" routerLink="/contabilidad/prestamos">
+            <mat-icon>handshake</mat-icon>
+            <div>
+              <span>Préstamos al personal</span>
+              <small>{{ plural(d.cobranzas.prestamosPersonal.cantidad, 'vigente') }}</small>
+            </div>
+            <strong>{{ bs(d.cobranzas.prestamosPersonal.saldoBs) }}</strong>
+          </a>
+          <a class="db-afuera__item" routerLink="/contabilidad/kardex">
+            <mat-icon>two_wheeler</mat-icon>
+            <div>
+              <span>Bienes en dación de pago</span>
+              <small>{{ d.cobranzas.bienesDacion.cantidad }} en posesión · valor referencial</small>
+            </div>
+            <strong>{{ bs(d.cobranzas.bienesDacion.valorBs) }}</strong>
+          </a>
+        </div>
+      </mat-card>
+    </section>
+
+    <!-- ================= RANKINGS ================= -->
+    <section class="db-fila db-fila--6-6">
+      <mat-card class="cardWithShadow db-panel tema-comercio">
+        <div class="db-panel__cabecera">
+          <div>
+            <h2>Mejores proveedores</h2>
+            <small>Quienes más mineral entregaron en el período</small>
+          </div>
+        </div>
+        @if (!d.topProveedores.length) {
+        <div class="db-vacio"><mat-icon>person_search</mat-icon> Sin recepciones en el período.</div>
+        } @else {
+        <ol class="db-ranking">
+          @for (p of d.topProveedores; track $index; let i = $index) {
+          <li class="db-ranking__item">
+            <span class="db-ranking__pos">{{ i + 1 }}</span>
+            <div class="db-ranking__cuerpo">
+              <div class="db-ranking__linea">
+                <span class="db-ranking__nombre">{{ p.nombre }}</span>
+                <strong>{{ kg(p.kg) }}</strong>
+              </div>
+              <div class="db-ranking__pista">
+                <span class="db-ranking__barra" [style.width.%]="maxKgProveedor() ? (p.kg / maxKgProveedor()) * 100 : 0"></span>
+              </div>
+              <small>{{ plural(p.lotes, 'lote') }} · valorizado {{ bs(p.valorizadoBs) }} · anticipos {{ bs(p.anticiposBs) }}</small>
+            </div>
+          </li>
+          }
+        </ol>
+        }
+      </mat-card>
+
+      <mat-card class="cardWithShadow db-panel tema-comercio">
+        <div class="db-panel__cabecera">
+          <div>
+            <h2>Mejores compradores</h2>
+            <small>Ventas de lote del período (monto de venta o, si está abierta, lo invertido)</small>
+          </div>
+        </div>
+        @if (!d.topClientes.length) {
+        <div class="db-vacio"><mat-icon>storefront</mat-icon> Sin ventas de lote en el período.</div>
+        } @else {
+        <ol class="db-ranking">
+          @for (c of d.topClientes; track c.idCliente; let i = $index) {
+          <li class="db-ranking__item">
+            <span class="db-ranking__pos">{{ i + 1 }}</span>
+            <div class="db-ranking__cuerpo">
+              <div class="db-ranking__linea">
+                <span class="db-ranking__nombre">{{ c.nombre }}</span>
+                <strong>{{ bs(montoCliente(c)) }}</strong>
+              </div>
+              <div class="db-ranking__pista">
+                <span class="db-ranking__barra"
+                  [style.width.%]="maxMontoCliente() ? (montoCliente(c) / maxMontoCliente()) * 100 : 0"></span>
+              </div>
+              <small>
+                {{ plural(c.lotes, 'lote') }}
+                @if (c.ventasAbiertas) { · {{ plural(c.ventasAbiertas, 'abierta') }} (monto por definir) }
+              </small>
+            </div>
+          </li>
+          }
+        </ol>
+        }
+      </mat-card>
+    </section>
+  </div>
+  }
+</div>

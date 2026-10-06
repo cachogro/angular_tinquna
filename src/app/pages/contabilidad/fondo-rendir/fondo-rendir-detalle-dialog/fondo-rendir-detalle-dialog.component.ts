@@ -28,6 +28,12 @@ import {
   FondoRendirExcelDialogComponent,
   FondoRendirExcelDialogData,
 } from '../fondo-rendir-excel-dialog/fondo-rendir-excel-dialog.component';
+import {
+  FondoRendirReposicionDialogComponent,
+  FondoRendirReposicionDialogData,
+} from '../fondo-rendir-reposicion-dialog/fondo-rendir-reposicion-dialog.component';
+import { ReciboService } from '../../services/recibo.service';
+import { mensajeErrorBlob } from '../../../../shared/utils/descarga-archivo.util';
 
 export interface FondoRendirDetalleDialogData {
   id: string | number;
@@ -54,6 +60,7 @@ export class FondoRendirDetalleDialogComponent implements OnInit {
   );
   readonly data = inject<FondoRendirDetalleDialogData>(MAT_DIALOG_DATA);
   private readonly fondoRendirService = inject(FondoRendirService);
+  private readonly reciboService = inject(ReciboService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
 
@@ -221,6 +228,149 @@ export class FondoRendirDetalleDialogComponent implements OnInit {
             ),
         });
       });
+  }
+
+  // ---------- Marcar como rendido (sin comprobantes) ----------
+
+  rendirSinComprobantes(): void {
+    const f = this.fondo();
+    if (!f) return;
+    this.dialog
+      .open(ConfirmDialogComponent, {
+        data: {
+          title: 'Marcar como rendido',
+          message: `Se dará por rendido el saldo de ${this.num(f.saldoPendiente).toFixed(2)} sin registrar comprobantes y el fondo pasará a RENDIDO TOTAL. No se carga nada al kardex de ${this.nombreDestinatario(f)}. ¿Confirmas?`,
+          confirmLabel: 'Marcar como rendido',
+          cancelLabel: 'Cancelar',
+          icon: 'task_alt',
+        },
+      })
+      .afterClosed()
+      .subscribe((ok: boolean) => {
+        if (!ok) return;
+        this.fondoRendirService.rendirSinComprobantes(f.id).subscribe({
+          next: (fondo) => {
+            this.fondo.set(fondo);
+            this.huboCambios = true;
+            this.snackBar.open('Fondo marcado como rendido total', 'Cerrar', {
+              duration: 4000,
+            });
+          },
+          error: (err) =>
+            this.snackBar.open(
+              err?.error?.message ?? 'No se pudo marcar el fondo como rendido',
+              'Cerrar',
+              { duration: 5000 },
+            ),
+        });
+      });
+  }
+
+  // ---------- Excedente: reponer o saldo a favor ----------
+
+  /** true si el excedente ya se repuso con recibo o se aplicó a otro fondo:
+   *  el fondo queda congelado (no admite cambios en sus comprobantes). */
+  get excedenteSaldado(): boolean {
+    const f = this.fondo();
+    return !!f && (this.num(f.montoRepuesto) > 0 || this.num(f.montoCompensado) > 0);
+  }
+
+  get soloLectura(): boolean {
+    return this.fondo()?.estado === 'CERRADO_CON_DEUDA' || this.excedenteSaldado;
+  }
+
+  /** Devuelve el excedente con un recibo de egreso (caja o libreta). */
+  reponer(): void {
+    const f = this.fondo();
+    if (!f) return;
+    const data: FondoRendirReposicionDialogData = {
+      fondo: f,
+      destinatario: this.nombreDestinatario(f),
+    };
+    this.dialog
+      .open(FondoRendirReposicionDialogComponent, {
+        data,
+        width: '620px',
+        maxWidth: '95vw',
+        autoFocus: false,
+      })
+      .afterClosed()
+      .subscribe((fondo: FondoRendirCuentas | undefined) => {
+        if (!fondo) return;
+        this.fondo.set(fondo);
+        this.huboCambios = true;
+      });
+  }
+
+  /** Trae a este fondo, como ya justificado, lo que el destinatario tiene a
+   *  favor en fondos anteriores. */
+  aplicarSaldoFavor(): void {
+    const f = this.fondo();
+    if (!f) return;
+    this.dialog
+      .open(ConfirmDialogComponent, {
+        data: {
+          title: 'Aplicar saldo a favor',
+          message: `${this.nombreDestinatario(f)} tiene ${this.num(f.saldoFavorDisponible).toFixed(2)} a favor de fondos anteriores (justificó de más y no se le repuso). Entrará a este fondo como ya justificado y esos fondos quedarán como rendidos. No mueve dinero. ¿Confirmas?`,
+          confirmLabel: 'Aplicar',
+          cancelLabel: 'Cancelar',
+          icon: 'swap_horiz',
+        },
+      })
+      .afterClosed()
+      .subscribe((ok: boolean) => {
+        if (!ok) return;
+        this.fondoRendirService.aplicarSaldoFavor(f.id).subscribe({
+          next: (fondo) => {
+            this.fondo.set(fondo);
+            this.huboCambios = true;
+            this.snackBar.open('Saldo a favor aplicado como justificado', 'Cerrar', {
+              duration: 4000,
+            });
+          },
+          error: (err) =>
+            this.snackBar.open(
+              err?.error?.message ?? 'No se pudo aplicar el saldo a favor',
+              'Cerrar',
+              { duration: 5000 },
+            ),
+        });
+      });
+  }
+
+  /** "C-0007" — código del recibo de devolución del excedente. */
+  codigoReciboReposicion(f: FondoRendirCuentas): string {
+    const r = f.reciboReposicion;
+    return r ? `${r.serie}-${String(r.numero).padStart(4, '0')}` : '';
+  }
+
+  readonly descargandoPdf = signal(false);
+
+  verPdfReposicion(f: FondoRendirCuentas): void {
+    if (!f.idReciboReposicion || this.descargandoPdf()) return;
+    this.descargandoPdf.set(true);
+    this.reciboService.obtenerPdf(f.idReciboReposicion).subscribe({
+      next: (blob) => {
+        this.descargandoPdf.set(false);
+        const url = window.URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+      },
+      error: async (err) => {
+        this.descargandoPdf.set(false);
+        this.snackBar.open(
+          (await mensajeErrorBlob(err)) ?? 'No se pudo generar el PDF del recibo',
+          'Cerrar',
+          { duration: 5000 },
+        );
+      },
+    });
+  }
+
+  tipoLineaLabel(d: DetalleFondoRendir): string {
+    if (d.tipo === 'SALDO_FAVOR') return 'Saldo a favor';
+    if (d.tipo === 'SIN_COMPROBANTE') return 'Sin comprobante';
+    return '';
   }
 
   // ---------- Excel ----------

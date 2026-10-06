@@ -7,7 +7,10 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { montoDosDecimales } from '../../../../shared/utils/numero.util';
+import {
+  montoDosDecimales,
+  tipoCambioCuatroDecimales,
+} from '../../../../shared/utils/numero.util';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import {
@@ -25,6 +28,7 @@ import { forkJoin } from 'rxjs';
 import {
   DestinoGasto,
   MonedaCuentaBancaria,
+  SIMBOLO_MONEDA,
   etiquetaMonedaCuenta,
 } from '../../../configurations/parametricas/models/parametricas.models';
 import { ParametricasService } from '../../../configurations/services/parametricas.service';
@@ -38,6 +42,9 @@ import {
 } from '../../models/traspaso.models';
 import { TraspasoService } from '../../services/traspaso.service';
 import { FechaInputDirective } from '../../../../shared/directives/fecha-input.directive';
+import { MontoInputDirective } from '../../../../shared/directives/monto-input.directive';
+import { MayusculasDirective } from '../../../../shared/directives/mayusculas.directive';
+import { DestinoGastoFieldComponent } from '../../components/destino-gasto-field/destino-gasto-field.component';
 
 export interface TraspasoFormDialogData {
   tipo: TipoTraspaso;
@@ -57,6 +64,9 @@ interface CuentaOpcion {
   standalone: true,
   imports: [
     FechaInputDirective,
+    MontoInputDirective,
+    MayusculasDirective,
+    DestinoGastoFieldComponent,
     CommonModule,
     ReactiveFormsModule,
     MatDialogModule,
@@ -113,11 +123,14 @@ export class TraspasoFormDialogComponent implements OnInit {
       Validators.required,
       Validators.maxLength(255),
     ]),
-    monto: new FormControl<number | null>(null, [
+    monto: new FormControl<number | string | null>(null, [
       Validators.required,
       montoDosDecimales,
       Validators.min(0.01),
     ]),
+    // Bs por 1 USD; validadores dinámicos (obligatorio solo si la cuenta
+    // elegida es en USD).
+    tipoCambio: new FormControl<number | string | null>(null),
     // Quién autorizó el traspaso: obligatoria, del catálogo de autorizadas.
     idPersonaAutorizo: new FormControl<string | null>(null, [
       Validators.required,
@@ -134,6 +147,11 @@ export class TraspasoFormDialogComponent implements OnInit {
       const up = v.toUpperCase();
       if (up !== v) this.f.concepto.setValue(up, { emitEvent: false });
     });
+    // La moneda del traspaso es la de la cuenta: al cambiarla aparece o se
+    // limpia el tipo de cambio.
+    this.f.idCuentaBancaria.valueChanges.subscribe(() =>
+      this.sincronizarTipoCambio(),
+    );
 
     forkJoin({
       entidades: this.parametricasService.obtenerEntidadesFinancieras(),
@@ -182,6 +200,8 @@ export class TraspasoFormDialogComponent implements OnInit {
       idDestinoGasto: t.idDestinoGasto ?? null,
       concepto: t.concepto,
       monto: Number(t.monto),
+      // Traspasos en USD anteriores a la 084 vienen sin T.C.: hay que cargarlo.
+      tipoCambio: t.tipoCambio != null ? Number(t.tipoCambio) : null,
       // Traspasos anteriores a la 069 vienen sin autorizador: hay que elegirlo.
       idPersonaAutorizo: t.personaAutorizo?.id
         ? String(t.personaAutorizo.id)
@@ -189,6 +209,53 @@ export class TraspasoFormDialogComponent implements OnInit {
     });
     // Cuenta bancaria: no se puede cambiar en un update.
     this.form.controls.idCuentaBancaria.disable();
+    this.sincronizarTipoCambio();
+  }
+
+  // ---------- Moneda y tipo de cambio ----------
+
+  /** Moneda de la cuenta elegida; en edición, si la cuenta ya no está en el
+   *  catálogo (inactiva), vale la guardada en el traspaso. */
+  get moneda(): MonedaCuentaBancaria | null {
+    const id = this.f.idCuentaBancaria.value;
+    const cuenta = this.cuentas().find((c) => c.idCuenta === id);
+    return cuenta?.moneda ?? (id != null ? this.data.traspaso?.moneda : null) ?? null;
+  }
+
+  get esUsd(): boolean {
+    return this.moneda === 'USD';
+  }
+
+  /** "Bs" o "$us" cuando ya hay cuenta elegida, para la etiqueta del monto. */
+  get simbolo(): string {
+    return this.moneda ? SIMBOLO_MONEDA[this.moneda] : '';
+  }
+
+  private sincronizarTipoCambio(): void {
+    const tc = this.f.tipoCambio;
+    if (this.esUsd) {
+      tc.setValidators([
+        Validators.required,
+        tipoCambioCuatroDecimales,
+        Validators.min(0.0001),
+      ]);
+    } else {
+      tc.clearValidators();
+      tc.setValue(null, { emitEvent: false });
+    }
+    tc.updateValueAndValidity({ emitEvent: false });
+  }
+
+  tipoCambio(): number {
+    const v = Number(this.f.tipoCambio.value);
+    return Number.isFinite(v) && v > 0 ? v : 0;
+  }
+
+  /** Referencial: lo que representa el traspaso en Bs (monto × T.C.). */
+  equivalenteBs(): number {
+    const monto = Number(this.f.monto.value);
+    if (!Number.isFinite(monto) || monto <= 0) return 0;
+    return Math.round(monto * this.tipoCambio() * 100) / 100;
   }
 
   /** Autorizadas activas; en edición se suma el autorizador guardado si ya
@@ -249,6 +316,7 @@ export class TraspasoFormDialogComponent implements OnInit {
       monto: Number(v.monto),
       idPersonaAutorizo: v.idPersonaAutorizo!,
     };
+    if (this.esUsd) request.tipoCambio = Number(v.tipoCambio);
 
     const nroComprobante = (v.nroComprobante ?? '').trim();
     if (nroComprobante) request.nroComprobante = nroComprobante;

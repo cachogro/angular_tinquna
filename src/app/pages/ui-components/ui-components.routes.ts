@@ -85,6 +85,14 @@ export const UiComponentsRoutes: Routes = [
       },
 
       {
+        path: 'reportes-promedios',
+        loadComponent: () =>
+          import('./reportes/reporte-promedio/reporte-promedio.component').then(
+            (m) => m.ReportePromedioComponent,
+          ),
+      },
+
+      {
         path: 'reportes-valorizacion',
         loadComponent: () =>
           import('./reportes/reporte-valorizacion.component').then(

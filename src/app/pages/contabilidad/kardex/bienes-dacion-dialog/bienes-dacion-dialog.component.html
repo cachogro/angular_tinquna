@@ -7,6 +7,7 @@
       <mat-select [(ngModel)]="estado" (selectionChange)="onEstadoChange()">
         <mat-option value="">Todos</mat-option>
         <mat-option value="EN_POSESION">En posesión</mat-option>
+        <mat-option value="TOMADO_EN_PAGO">Tomado en pago</mat-option>
         <mat-option value="VENDIDO">Vendido</mat-option>
         <mat-option value="DEVUELTO">Devuelto</mat-option>
       </mat-select>
@@ -22,7 +23,8 @@
   @if (!data.tieneKardexAbierto) {
   <div class="bd-aviso">
     <mat-icon>info</mat-icon>
-    <span>No hay kardex abierto: puedes consultar, vender o devolver los bienes, pero no registrar nuevos.</span>
+    <span>No hay kardex abierto: puedes consultar y devolver los bienes, y vender los ya tomados en pago. Para
+      registrar, tomar en pago o vender directo hace falta un kardex abierto (ahí se abona la deuda).</span>
   </div>
   }
 
@@ -50,7 +52,7 @@
       </ng-container>
 
       <ng-container matColumnDef="valorReferencial">
-        <th mat-header-cell *matHeaderCellDef class="bd-num">Valor ref. (Bs)</th>
+        <th mat-header-cell *matHeaderCellDef class="bd-num">Valor acordado (Bs)</th>
         <td mat-cell *matCellDef="let b" class="bd-num">
           {{ num(b.valorReferencial) ? (num(b.valorReferencial) | number:'1.2-2') : '—' }}
         </td>
@@ -60,9 +62,24 @@
         <th mat-header-cell *matHeaderCellDef>Estado</th>
         <td mat-cell *matCellDef="let b">
           <span class="bd-badge" [class.bd-badge--vendido]="b.estado === 'VENDIDO'"
+            [class.bd-badge--tomado]="b.estado === 'TOMADO_EN_PAGO'"
             [class.bd-badge--devuelto]="b.estado === 'DEVUELTO'">
             {{ estadoLabel(b.estado) }}
           </span>
+        </td>
+      </ng-container>
+
+      <!-- Lo que le costó el bien a la empresa: lo abonado al kardex + gastos. -->
+      <ng-container matColumnDef="costo">
+        <th mat-header-cell *matHeaderCellDef class="bd-num">Amortizado + gastos (Bs)</th>
+        <td mat-cell *matCellDef="let b" class="bd-num">
+          @if (b.costoTotal != null) {
+          <span [matTooltip]="'Amortizado a su kardex ' + (num(b.montoAmortizado) | number:'1.2-2') + ' + gastos ' + (num(b.totalGastos) | number:'1.2-2')">
+            {{ num(b.costoTotal) | number:'1.2-2' }}
+          </span>
+          } @else {
+          —
+          }
         </td>
       </ng-container>
 
@@ -76,6 +93,13 @@
             · {{ b.recibo.serie }}-{{ ('0000' + b.recibo.numero).slice(-4) }}
           </small>
           }
+          @if (b.resultadoVenta != null && num(b.resultadoVenta) !== 0) {
+          <small class="bd-resultado" [class.bd-resultado--perdida]="num(b.resultadoVenta) < 0">
+            · {{ num(b.resultadoVenta) > 0 ? 'ganancia' : 'pérdida' }} {{ abs(num(b.resultadoVenta)) | number:'1.2-2' }}
+          </small>
+          }
+          } @else if (b.estado === 'TOMADO_EN_PAGO') {
+          <small>Tomado el {{ fechaFmt(b.fechaTomaPago) }}</small>
           } @else if (b.estado === 'DEVUELTO') {
           {{ fechaFmt(b.fechaDevolucion) }}
           } @else {
@@ -94,19 +118,35 @@
       <ng-container matColumnDef="acciones">
         <th mat-header-cell *matHeaderCellDef>Acciones</th>
         <td mat-cell *matCellDef="let b">
-          <button mat-icon-button color="primary" matTooltip="Vender"
-            [disabled]="b.estado !== 'EN_POSESION'" (click)="vender(b)">
+          @if (b.estado === 'EN_POSESION') {
+          <button mat-icon-button color="primary" [disabled]="!puedeTomarEnPago(b)" (click)="tomarEnPago(b)"
+            matTooltip="Tomar en pago: la empresa se queda con el bien y se abona a su kardex">
+            <mat-icon>handshake</mat-icon>
+          </button>
+          }
+          @if (b.estado === 'TOMADO_EN_PAGO' || (b.estado === 'VENDIDO' && tieneGastos(b))) {
+          <button mat-icon-button color="primary" (click)="gastos(b)"
+            [matTooltip]="b.estado === 'VENDIDO' ? 'Ver gastos del bien' : 'Gastos del bien (arreglos, trámites)'">
+            <mat-icon>build</mat-icon>
+          </button>
+          }
+          @if (b.estado === 'EN_POSESION' || b.estado === 'TOMADO_EN_PAGO') {
+          <button mat-icon-button color="primary" matTooltip="Vender" [disabled]="!puedeVender(b)"
+            (click)="vender(b)">
             <mat-icon>sell</mat-icon>
           </button>
-          <button mat-icon-button color="warn" matTooltip="Devolver"
-            [disabled]="b.estado !== 'EN_POSESION'" (click)="devolver(b)">
+          }
+          @if (b.estado === 'EN_POSESION') {
+          <button mat-icon-button color="warn" matTooltip="Devolver (no genera nada)" (click)="devolver(b)">
             <mat-icon>undo</mat-icon>
           </button>
+          }
         </td>
       </ng-container>
 
       <tr mat-header-row *matHeaderRowDef="columnas"></tr>
-      <tr mat-row *matRowDef="let b; columns: columnas" [class.bd-row-cerrada]="b.estado !== 'EN_POSESION'"></tr>
+      <tr mat-row *matRowDef="let b; columns: columnas"
+        [class.bd-row-cerrada]="b.estado === 'VENDIDO' || b.estado === 'DEVUELTO'"></tr>
     </table>
   </div>
   }

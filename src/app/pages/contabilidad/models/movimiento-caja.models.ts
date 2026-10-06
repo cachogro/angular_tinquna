@@ -106,7 +106,8 @@ export interface GuardarMovimientoCajaRequest {
   /** Persona CI elegida de la lista. Sin `idPersona` = texto libre. */
   idPersona?: string;
   concepto: string;
-  destinoGasto?: string;
+  /** Id del catálogo de destinos de gasto (parametrica.destino_gasto). */
+  idDestinoGasto?: number;
   tipo: TipoMovimientoCaja;
   /** > 0, hasta 2 decimales. */
   monto: number;

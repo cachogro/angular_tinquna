@@ -103,11 +103,11 @@ export class GestionUsuariosComponent implements OnInit {
   readonly rolControl = new FormControl<string | null>(null);
   readonly estadoControl = new FormControl<string | null>(null); // 'true' | 'false' | null
 
-  readonly opcionesOrden: OpcionOrden[] = [
-    { value: 'id', label: 'ID' },
-    { value: 'usuario', label: 'Usuario' },
-    { value: 'nombres', label: 'Nombres' },
-  ];
+  // readonly opcionesOrden: OpcionOrden[] = [
+  //   { value: 'id', label: 'ID' },
+  //   { value: 'usuario', label: 'Usuario' },
+  //   { value: 'nombres', label: 'Nombres' },
+  // ];
   readonly orderByControl = new FormControl<string>('id');
   readonly orderDirectionControl = new FormControl<'ASC' | 'DESC'>('DESC');
 

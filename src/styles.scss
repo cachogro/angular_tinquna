@@ -59,3 +59,10 @@ mat-sidenav-content {
     color: var(--mat-sys-on-primary, #fff);
   }
 }
+
+/* Tooltip de varias líneas (gráfico del Dashboard): respeta los saltos \n. */
+.db-tooltip-multilinea .mdc-tooltip__surface {
+  white-space: pre-line;
+  text-align: left;
+  max-width: 260px;
+}

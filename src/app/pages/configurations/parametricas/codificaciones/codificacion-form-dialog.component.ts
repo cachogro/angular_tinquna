@@ -22,7 +22,6 @@ import { MatDialog } from '@angular/material/dialog';
 
 import {
   Codificacion,
-  CodificacionMineralRequest,
   Mineral,
 } from '../models/parametricas.models';
 import { ParametricaDialogShellComponent } from '../shared/parametrica-dialog-shell.component';
@@ -146,19 +145,9 @@ export class CodificacionFormDialogComponent implements OnInit {
     this.guardando = true;
     const { codigo, nombre, minerales: idsMinerales } =
       this.form.getRawValue();
-    // El request manda el mineral completo (id, descripción, símbolo), no
-    // solo el id: así el backend guarda el símbolo anidado en la
-    // codificación y no hay que ir a buscarlo al catálogo aparte.
-    const minerales: CodificacionMineralRequest[] = (
-      idsMinerales as number[]
-    ).map((id) => {
-      const mineral = this.minerales.find((m) => m.id === id);
-      return {
-        id,
-        descripcion: mineral?.descripcion ?? '',
-        simbolo: mineral?.simbolo,
-      };
-    });
+    // El request manda solo los ids: el backend valida que existan y guarda
+    // él mismo la descripción y el símbolo anidados en la codificación.
+    const minerales = idsMinerales as number[];
     const request$ =
       this.modoEdicion && this.codificacionEditando
         ? this.parametricasService.actualizarCodificacion({

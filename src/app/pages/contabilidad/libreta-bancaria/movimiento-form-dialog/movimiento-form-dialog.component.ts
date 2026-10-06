@@ -8,7 +8,10 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { montoDosDecimales } from '../../../../shared/utils/numero.util';
+import {
+  montoDosDecimales,
+  tipoCambioCuatroDecimales,
+} from '../../../../shared/utils/numero.util';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
@@ -34,6 +37,8 @@ import { ParametricasService } from '../../../configurations/services/parametric
 import {
   Cliente,
   FormaPago,
+  MonedaCuenta,
+  SIMBOLO_MONEDA,
 } from '../../../configurations/parametricas/models/parametricas.models';
 import {
   GuardarMovimientoBancoRequest,
@@ -44,9 +49,14 @@ import {
 import { LibretaBancoService } from '../../services/libreta-banco.service';
 import { ReciboService } from '../../services/recibo.service';
 import { FechaInputDirective } from '../../../../shared/directives/fecha-input.directive';
+import { MontoInputDirective } from '../../../../shared/directives/monto-input.directive';
+import { MayusculasDirective } from '../../../../shared/directives/mayusculas.directive';
 
 export interface MovimientoFormDialogData {
   idCuentaBancaria: number;
+  /** Moneda de la cuenta: en USD el monto va en $us y se pide el tipo de
+   *  cambio. Sin esto se asume Bs. */
+  moneda?: MonedaCuenta;
   movimiento?: MovimientoBanco | null;
   /** "YYYY-MM-DD" a proponer cuando se crea desde un mes filtrado. */
   fechaSugerida?: string;
@@ -62,6 +72,8 @@ type ContraparteTipo = 'PERSONA' | 'ACTOR' | 'CLIENTE' | 'TEXTO';
   standalone: true,
   imports: [
     FechaInputDirective,
+    MontoInputDirective,
+    MayusculasDirective,
     CommonModule,
     ReactiveFormsModule,
     MatDialogModule,
@@ -117,6 +129,31 @@ export class MovimientoFormDialogComponent implements OnInit {
     return !!this.data.movimiento;
   }
 
+  // ---------- Moneda y tipo de cambio ----------
+
+  /** La moneda es la de la cuenta: no cambia mientras el diálogo está abierto. */
+  readonly esUsd = this.data.moneda === 'USD';
+
+  /** "Bs" o "$us", para la etiqueta del monto. */
+  readonly simbolo = SIMBOLO_MONEDA[this.data.moneda ?? 'BS'];
+
+  /** Movimiento en USD guardado sin tipo de cambio (anterior a la 086). */
+  get faltaTipoCambio(): boolean {
+    return this.esEdicion && this.data.movimiento?.tipoCambio == null;
+  }
+
+  tipoCambio(): number {
+    const v = Number(this.f.tipoCambio.value);
+    return Number.isFinite(v) && v > 0 ? v : 0;
+  }
+
+  /** Referencial: lo que representa el movimiento en Bs (monto × T.C.). */
+  equivalenteBs(): number {
+    const monto = Number(this.f.monto.value);
+    if (!Number.isFinite(monto) || monto <= 0) return 0;
+    return Math.round(monto * this.tipoCambio() * 100) / 100;
+  }
+
   readonly form = new FormGroup({
     fecha: new FormControl<Date | null>(null, [Validators.required]),
     tipo: new FormControl<TipoMovimientoBanco | null>(null, [
@@ -127,6 +164,13 @@ export class MovimientoFormDialogComponent implements OnInit {
       montoDosDecimales,
       Validators.min(0.01),
     ]),
+    // Bs por 1 USD: obligatorio solo si la cuenta es en USD.
+    tipoCambio: new FormControl<number | string | null>(
+      null,
+      this.esUsd
+        ? [Validators.required, tipoCambioCuatroDecimales, Validators.min(0.0001)]
+        : [],
+    ),
     concepto: new FormControl('', [Validators.required, Validators.maxLength(255)]),
     tipoTransaccion: new FormControl<string | null>(null, [Validators.required]),
     nroTransaccion: new FormControl('', [Validators.maxLength(30)]),
@@ -220,6 +264,8 @@ export class MovimientoFormDialogComponent implements OnInit {
         fecha: this.parseFecha(m.fecha),
         tipo: debe > 0 ? 'DEBE' : 'HABER',
         monto: debe > 0 ? debe : Number(m.haber),
+        tipoCambio:
+          this.esUsd && m.tipoCambio != null ? Number(m.tipoCambio) : null,
         concepto: m.concepto,
         tipoTransaccion: m.tipoTransaccion ?? null,
         nroTransaccion: m.nroTransaccion ?? '',
@@ -366,33 +412,6 @@ export class MovimientoFormDialogComponent implements OnInit {
     this.dialogRef.close();
   }
 
-  restringirEntradaNumerica(event: KeyboardEvent): void {
-    const target = event.target;
-    if (!(target instanceof HTMLInputElement)) return;
-    if (event.ctrlKey || event.metaKey) return;
-    const teclasControl = [
-      'Backspace',
-      'Delete',
-      'Tab',
-      'Escape',
-      'Enter',
-      'ArrowLeft',
-      'ArrowRight',
-      'ArrowUp',
-      'ArrowDown',
-      'Home',
-      'End',
-    ];
-    if (teclasControl.includes(event.key)) return;
-    if (event.key === '.') {
-      if (target.value.includes('.')) event.preventDefault();
-      return;
-    }
-    if (!/^\d$/.test(event.key)) {
-      event.preventDefault();
-    }
-  }
-
   guardar(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -415,6 +434,7 @@ export class MovimientoFormDialogComponent implements OnInit {
       tipo: v.tipo!,
       monto: Number(v.monto),
     };
+    if (this.esUsd) request.tipoCambio = Number(v.tipoCambio);
 
     const nroTransaccion = (v.nroTransaccion ?? '').trim();
     if (nroTransaccion) request.nroTransaccion = nroTransaccion;

@@ -34,7 +34,7 @@
 }
 
 .reporte-toolbar__clear {
-  color: rgba(0, 0, 0, 0.5);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.5);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -60,20 +60,20 @@
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  color: rgba(0, 0, 0, 0.5);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.5);
   font-weight: 600;
 }
 
 .resumen-card__valor {
   font-size: 20px;
   font-weight: 700;
-  color: #0d6efd;
+  color: var(--mat-sys-primary);
 }
 
 .reporte-resumen__nota {
   margin: -4px 0 0;
   font-size: 12px;
-  color: rgba(0, 0, 0, 0.45);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.45);
 }
 
 .reporte-table-wrapper {
@@ -88,7 +88,7 @@
   justify-content: center;
   gap: 12px;
   padding: 56px 24px;
-  color: rgba(0, 0, 0, 0.45);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.45);
 }
 
 .reporte-table {
@@ -97,15 +97,15 @@
 
 .proveedor-doc {
   font-size: 12px;
-  color: rgba(0, 0, 0, 0.5);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.5);
 }
 
 .reporte-table .mat-mdc-header-row {
-  background-color: #0d6efd !important;
+  background-color: var(--mat-sys-primary) !important;
 }
 
 .reporte-table th.mat-mdc-header-cell {
-  background-color: #0d6efd !important;
-  color: #ffffff !important;
+  background-color: var(--mat-sys-primary) !important;
+  color: var(--mat-sys-on-primary) !important;
   font-weight: bold !important;
 }

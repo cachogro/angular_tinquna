@@ -17,6 +17,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { AuthService } from 'src/app/core/auth/services/auth.service';
@@ -43,6 +44,7 @@ import { FechaInputDirective } from '../../../../shared/directives/fecha-input.d
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    MatTooltipModule,
   ],
   templateUrl: './panel-user-form.component.html',
   styleUrl: './panel-user-form.component.scss',
@@ -302,6 +304,36 @@ export class PanelUserFormComponent implements OnInit {
         },
       });
     }
+  }
+
+  /** Primera palabra en minúsculas y sin acentos (la ñ se conserva: el patrón
+   *  de usuario la acepta). "LEANDRO JOSÉ" → "leandro". */
+  private primeraPalabraUsuario(texto: string | null): string {
+    const palabra = (texto ?? '').trim().split(/\s+/)[0] ?? '';
+    return palabra
+      .toLowerCase()
+      .replace(/ñ/g, '\u0000')
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/\u0000/g, 'ñ')
+      .replace(/[^a-zñ]/g, '');
+  }
+
+  puedeGenerarUsuario(): boolean {
+    return (
+      !!this.primeraPalabraUsuario(this.f.nombres.value) &&
+      !!this.primeraPalabraUsuario(this.f.apellidoPaterno.value)
+    );
+  }
+
+  /** Usuario = primer nombre + "." + primer apellido, en minúsculas.
+   *  GROVER LEANDRO / CHOQUE → grover.choque */
+  generarUsuario(): void {
+    const nombre = this.primeraPalabraUsuario(this.f.nombres.value);
+    const apellido = this.primeraPalabraUsuario(this.f.apellidoPaterno.value);
+    if (!nombre || !apellido) return;
+    this.f.usuario.setValue(`${nombre}.${apellido}`);
+    this.f.usuario.markAsTouched();
   }
 
   private formatFecha(fecha: Date): string {

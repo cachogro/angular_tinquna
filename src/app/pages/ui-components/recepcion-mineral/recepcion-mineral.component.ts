@@ -1,11 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -13,29 +11,46 @@ import { MatInputModule } from '@angular/material/input';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatRadioModule } from '@angular/material/radio';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router, RouterModule } from '@angular/router';
-import { debounceTime, distinctUntilChanged } from 'rxjs';
+import { debounceTime, distinctUntilChanged, merge } from 'rxjs';
 import { AuthService } from 'src/app/core/auth/services/auth.service';
 import { RolCodigo } from 'src/app/core/auth/models/auth.models';
 import {
   ESTADOS_OPERACION,
+  ESTADO_CANCELADO_ID,
   ESTADO_LIQUIDADO_ID,
+  ESTADO_TRANZADO_ID,
   FiltrosRegistroMineral,
   OrdenDireccion,
   RegistroMineral,
+  detalleProveedorRecepcion,
+  leyesTextoRecepcion,
+  nombreProveedorRecepcion,
+  recepcionImprimible,
 } from '../models/registro-mineral.models';
 import { RegistroMineralService } from '../services/registro-mineral.service';
-import { abrirReciboAnticipo, faltaReciboAnticipo } from './recibo-anticipo.util';
+import {
+  abrirProcesarBorradorAnticipo,
+  abrirReciboAnticipo,
+  anticipoSinProcesar,
+} from './recibo-anticipo.util';
 import { ReciboService } from '../../contabilidad/services/recibo.service';
-import { VerRecepcionDialogComponent } from './ver-recepcion-dialog/ver-recepcion-dialog.component';
+import { formatFechaIso } from '../../contabilidad/components/personal-interno.util';
+import {
+  VerRecepcionDialogComponent,
+  VerRecepcionDialogData,
+} from './ver-recepcion-dialog/ver-recepcion-dialog.component';
 import { ValorizacionMineralService } from '../services/valorizacion-mineral.service';
 import { RangoFechasComponent } from '../../../shared/components/rango-fechas/rango-fechas.component';
-import { formatNumeroConMiles } from 'src/app/shared/utils/numero.util';interface OpcionOrden {
+import { abrirBlobEnPestana } from 'src/app/shared/utils/descarga-archivo.util';
+import { horaFechaDeIso } from 'src/app/shared/utils/fecha-bolivia.util';
+import { formatNumeroConMiles } from 'src/app/shared/utils/numero.util';
+
+interface OpcionOrden {
   value: string;
   label: string;
 }
@@ -45,16 +60,13 @@ import { formatNumeroConMiles } from 'src/app/shared/utils/numero.util';interfac
   imports: [
     RangoFechasComponent,
     CommonModule,
-    FormsModule,
     ReactiveFormsModule,
     RouterModule,
     MatFormFieldModule,
     MatSelectModule,
-    MatRadioModule,
     MatButtonModule,
     MatCardModule,
     MatInputModule,
-    MatCheckboxModule,
     MatTableModule,
     MatPaginatorModule,
     MatIconModule,
@@ -62,7 +74,6 @@ import { formatNumeroConMiles } from 'src/app/shared/utils/numero.util';interfac
     MatMenuModule,
     MatTooltipModule,
     MatProgressSpinnerModule,
-    MatDatepickerModule,
   ],
   templateUrl: './recepcion-mineral.component.html',
   styleUrl: './recepcion-mineral.component.scss',
@@ -78,18 +89,10 @@ export class RecepcionMineralComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly reciboService = inject(ReciboService);
 
-  /** Estados en los que ya se puede imprimir el PDF de la recepción. */
-  private readonly ESTADOS_CON_IMPRESION = new Set([2, 3, 5, 6]); // APROBADO, RECHAZADO A TOL, TRANZADO, REMUESTREO
   /** Estados desde los que una recepción puede pasar a valorización. */
   private readonly ESTADOS_VALORIZABLES = new Set([2, 3, 6]); // APROBADO, RECHAZADO A TOL, REMUESTREO
   /** Ids de recepción para los que ya se está creando el borrador de valorización (evita doble clic). */
   readonly procesandoValorizacion = signal<Set<string>>(new Set());
-
-  /** Id de estado CANCELADO: transición reservada a ADMINISTRADOR. */
-  private readonly ESTADO_CANCELADO_ID = 4;
-  /** Id de estado TRANZADO: una vez tranzada, la recepción ya no se edita
-   *  (la valorización asociada ya quedó confirmada). */
-  private readonly ESTADO_TRANZADO_ID = 5;
 
   /**
    * Transiciones de estado permitidas, según las reglas de negocio:
@@ -126,7 +129,6 @@ export class RecepcionMineralComponent implements OnInit {
     'acciones',
   ];
   readonly estados = ESTADOS_OPERACION;
-  readonly ESTADO_LIQUIDADO_ID = ESTADO_LIQUIDADO_ID;
 
   readonly registros = signal<RegistroMineral[]>([]);
   readonly total = signal(0);
@@ -152,6 +154,13 @@ export class RecepcionMineralComponent implements OnInit {
   readonly orderByControl = new FormControl<string>('id');
   readonly orderDirectionControl = new FormControl<OrdenDireccion>('DESC');
 
+  // Presentación (usados desde el template).
+  readonly formatFechaTabla = horaFechaDeIso;
+  readonly formatNumero = formatNumeroConMiles;
+  readonly nombreProveedor = nombreProveedorRecepcion;
+  readonly detalleProveedor = detalleProveedorRecepcion;
+  readonly leyesTexto = leyesTextoRecepcion;
+
   /** ADMINISTRADOR y OPERADOR pueden editar y cambiar estado; TÉCNICO solo lista y crea. */
   get puedeGestionar(): boolean {
     return this.authService.hasRole(
@@ -161,29 +170,21 @@ export class RecepcionMineralComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.searchControl.valueChanges
-      .pipe(debounceTime(400), distinctUntilChanged())
-      .subscribe(() => this.reiniciarYcargar());
+    // Los textos esperan a que se deje de escribir; el resto filtra al instante.
+    const textos = [
+      this.searchControl,
+      this.codigoControl,
+      this.documentoControl,
+    ].map((c) => c.valueChanges.pipe(debounceTime(400), distinctUntilChanged()));
 
-    this.codigoControl.valueChanges
-      .pipe(debounceTime(400), distinctUntilChanged())
-      .subscribe(() => this.reiniciarYcargar());
-
-    this.documentoControl.valueChanges
-      .pipe(debounceTime(400), distinctUntilChanged())
-      .subscribe(() => this.reiniciarYcargar());
-
-    this.estadoControl.valueChanges.subscribe(() => this.reiniciarYcargar());
-    this.fechaDesdeControl.valueChanges.subscribe(() =>
-      this.reiniciarYcargar(),
-    );
-    this.fechaHastaControl.valueChanges.subscribe(() =>
-      this.reiniciarYcargar(),
-    );
-    this.orderByControl.valueChanges.subscribe(() => this.reiniciarYcargar());
-    this.orderDirectionControl.valueChanges.subscribe(() =>
-      this.reiniciarYcargar(),
-    );
+    merge(
+      ...textos,
+      this.estadoControl.valueChanges,
+      this.fechaDesdeControl.valueChanges,
+      this.fechaHastaControl.valueChanges,
+      this.orderByControl.valueChanges,
+      this.orderDirectionControl.valueChanges,
+    ).subscribe(() => this.reiniciarYcargar());
 
     this.cargarRegistros();
   }
@@ -193,14 +194,31 @@ export class RecepcionMineralComponent implements OnInit {
     return !!r.recibos?.length;
   }
 
-  /** Anticipo > 0 y sin recibo vigente. */
-  puedeGenerarReciboAnticipo(r: RegistroMineral): boolean {
-    return faltaReciboAnticipo(r) && r.idEstado !== this.ESTADO_CANCELADO_ID;
+  /** El anticipo aún no salió de caja/banco: sin recibo (se salió antes de
+   *  generarlo) o con el recibo todavía en BORRADOR. */
+  anticipoSinProcesar(r: RegistroMineral): boolean {
+    return anticipoSinProcesar(r) && r.idEstado !== ESTADO_CANCELADO_ID;
   }
 
-  generarReciboAnticipo(r: RegistroMineral): void {
-    abrirReciboAnticipo(this.dialog, r).subscribe((recibo) => {
+  /** Abre directo "Procesar recibo": sobre el borrador si ya existe, o
+   *  creando y procesando el recibo en un solo paso si todavía no hay. */
+  procesarReciboAnticipo(r: RegistroMineral): void {
+    const refrescar = (recibo: unknown) => {
       if (recibo) this.cargarRegistros();
+    };
+    const borrador = r.recibos?.[0];
+    if (!borrador) {
+      abrirReciboAnticipo(this.dialog, r, 'PROCESAR').subscribe(refrescar);
+      return;
+    }
+    // La recepción trae solo un resumen del recibo: procesar necesita el completo.
+    this.reciboService.obtener(borrador.id).subscribe({
+      next: (completo) =>
+        abrirProcesarBorradorAnticipo(this.dialog, completo).subscribe(refrescar),
+      error: (err) =>
+        this.avisar(
+          err?.error?.message ?? 'No se pudo cargar el recibo de anticipo',
+        ),
     });
   }
 
@@ -208,18 +226,16 @@ export class RecepcionMineralComponent implements OnInit {
     const recibo = r.recibos?.[0];
     if (!recibo) return;
     this.reciboService.obtenerPdf(recibo.id).subscribe({
-      next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        window.open(url, '_blank');
-        setTimeout(() => window.URL.revokeObjectURL(url), 60000);
-      },
+      next: (blob) => abrirBlobEnPestana(blob),
       error: (err) =>
-        this.snackBar.open(
+        this.avisar(
           err?.error?.message ?? 'No se pudo generar el PDF del recibo',
-          'Cerrar',
-          { duration: 4000 },
         ),
     });
+  }
+
+  private avisar(mensaje: string, duration = 4000): void {
+    this.snackBar.open(mensaje, 'Cerrar', { duration });
   }
 
   private reiniciarYcargar(): void {
@@ -227,26 +243,8 @@ export class RecepcionMineralComponent implements OnInit {
     this.cargarRegistros();
   }
 
-  private formatFecha(fecha: Date | null): string | undefined {
-    if (!fecha) return undefined;
-    const anio = fecha.getFullYear();
-    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
-    const dia = String(fecha.getDate()).padStart(2, '0');
-    return `${anio}-${mes}-${dia}`;
-  }
-
-  /**
-   * Formatea la fecha/hora de recepción para la bandeja: 'HH:mm - dd-MM-yyyy'.
-   * Se extraen los componentes directamente del ISO string (con su propio offset,
-   * ej. '2026-07-24T04:38:00-04:00') en lugar de convertir con Date, para que la
-   * hora mostrada sea siempre la de la recepción y no la del huso horario del navegador.
-   */
-  formatFechaTabla(fecha: string | null | undefined): string {
-    if (!fecha) return '—';
-    const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(fecha);
-    if (!match) return fecha;
-    const [, anio, mes, dia, hora, minuto] = match;
-    return `${hora}:${minuto} - ${dia}-${mes}-${anio}`;
+  private fechaFiltro(fecha: Date | null): string | undefined {
+    return fecha ? formatFechaIso(fecha) : undefined;
   }
 
   cargarRegistros(): void {
@@ -260,8 +258,8 @@ export class RecepcionMineralComponent implements OnInit {
         codigoOperacion: this.codigoControl.value || undefined,
         numeroDocumento: this.documentoControl.value || undefined,
         idEstado: this.estadoControl.value ?? undefined,
-        fechaDesde: this.formatFecha(this.fechaDesdeControl.value),
-        fechaHasta: this.formatFecha(this.fechaHastaControl.value),
+        fechaDesde: this.fechaFiltro(this.fechaDesdeControl.value),
+        fechaHasta: this.fechaFiltro(this.fechaHastaControl.value),
         orderBy: (this.orderByControl.value as FiltrosRegistroMineral['orderBy']) ?? undefined,
         orderDirection: this.orderDirectionControl.value ?? undefined,
       })
@@ -270,18 +268,10 @@ export class RecepcionMineralComponent implements OnInit {
           this.registros.set(res.data);
           this.total.set(res.total);
           this.loading.set(false);
-
-          console.log('Registros cargados:', res.data);
         },
         error: () => {
           this.loading.set(false);
-          this.snackBar.open(
-            'No se pudo cargar el listado de recepciones',
-            'Cerrar',
-            {
-              duration: 4000,
-            },
-          );
+          this.avisar('No se pudo cargar el listado de recepciones');
         },
       });
   }
@@ -322,43 +312,19 @@ export class RecepcionMineralComponent implements OnInit {
       : this.total() - offset;
   }
 
-  nombreProveedor(registro: RegistroMineral): string {
-    const p = registro.persona;
-    if (!p) return '—';
-    return `${p.nombres} ${p.apellidoPaterno} ${p.apellidoMaterno}`.trim();
-  }
-
-  leyesTexto(registro: RegistroMineral): string {
-    if (!registro.detalles?.length) return '';
-    return registro.detalles
-      .map(
-        (d) =>
-          `${d.mineral?.simbolo ?? 'Mineral ' + d.idMineral} ${formatNumeroConMiles(d.ley)}%`,
-      )
-      .join(' · ');
-  }
-
-  formatNumero(valor: number | string | null | undefined): string {
-    return formatNumeroConMiles(valor);
-  }
-
-  estaLiquidado(registro: RegistroMineral): boolean {
-    return registro.idEstado === ESTADO_LIQUIDADO_ID;
-  }
-
   /** Editable en cualquier estado salvo TRANZADO y CANCELADO: ambos son
-   *  terminales (ver ESTADOS_EDITABLES/transiciones más arriba), así que la
-   *  recepción no debe tocarse una vez llegada a cualquiera de los dos. */
+   *  terminales (ver TRANSICIONES_VALIDAS), así que la recepción no debe
+   *  tocarse una vez llegada a cualquiera de los dos. */
   puedeEditar(registro: RegistroMineral): boolean {
     return (
-      registro.idEstado !== this.ESTADO_TRANZADO_ID &&
-      registro.idEstado !== this.ESTADO_CANCELADO_ID
+      registro.idEstado !== ESTADO_TRANZADO_ID &&
+      registro.idEstado !== ESTADO_CANCELADO_ID
     );
   }
 
-  /** APROBADO, RECHAZADO A TOL, TRANZADO y REMUESTREO ya tienen PDF para imprimir. */
+  /** Toda recepción no cancelada tiene comprobante RM- para imprimir. */
   puedeImprimir(registro: RegistroMineral): boolean {
-    return this.ESTADOS_CON_IMPRESION.has(registro.idEstado);
+    return recepcionImprimible(registro.idEstado);
   }
 
   /** APROBADO, RECHAZADO A TOL y REMUESTREO ya pueden pasar a valorización. */
@@ -371,6 +337,15 @@ export class RecepcionMineralComponent implements OnInit {
     return this.procesandoValorizacion().has(registro.id);
   }
 
+  private marcarValorizando(id: string, enCurso: boolean): void {
+    this.procesandoValorizacion.update((actual) => {
+      const nuevo = new Set(actual);
+      if (enCurso) nuevo.add(id);
+      else nuevo.delete(id);
+      return nuevo;
+    });
+  }
+
   /**
    * Crea el borrador de valorización a partir de esta recepción y navega al
    * formulario de valorización. Una recepción solo puede tener una
@@ -380,33 +355,23 @@ export class RecepcionMineralComponent implements OnInit {
   valorizar(registro: RegistroMineral): void {
     if (!this.puedeGestionar || this.valorizando(registro)) return;
 
-    this.procesandoValorizacion.update((set) => new Set(set).add(registro.id));
+    this.marcarValorizando(registro.id, true);
 
     this.valorizacionMineralService.crearBorrador(registro.id).subscribe({
       next: (valorizacion) => {
-        this.procesandoValorizacion.update((set) => {
-          const nuevo = new Set(set);
-          nuevo.delete(registro.id);
-          return nuevo;
-        });
-        this.snackBar.open('Borrador de valorización creado', 'Cerrar', {
-          duration: 3000,
-        });
-        this.router.navigate(
-          ['/ui-components/valorizacion/editar', valorizacion.id],
-          { state: { valorizacion } },
-        );
+        this.marcarValorizando(registro.id, false);
+        this.avisar('Borrador de valorización creado', 3000);
+        this.router.navigate([
+          '/ui-components/valorizacion/editar',
+          valorizacion.id,
+        ]);
       },
       error: (err) => {
-        this.procesandoValorizacion.update((set) => {
-          const nuevo = new Set(set);
-          nuevo.delete(registro.id);
-          return nuevo;
-        });
-        const mensaje =
+        this.marcarValorizando(registro.id, false);
+        this.avisar(
           err?.error?.message ??
-          'No se pudo crear la valorización para esta recepción';
-        this.snackBar.open(mensaje, 'Cerrar', { duration: 4000 });
+            'No se pudo crear la valorización para esta recepción',
+        );
       },
     });
   }
@@ -417,7 +382,7 @@ export class RecepcionMineralComponent implements OnInit {
   transicionesDisponibles(registro: RegistroMineral): typeof ESTADOS_OPERACION {
     let idsValidos = this.TRANSICIONES_VALIDAS[registro.idEstado] ?? [];
     if (!this.authService.isAdmin()) {
-      idsValidos = idsValidos.filter((id) => id !== this.ESTADO_CANCELADO_ID);
+      idsValidos = idsValidos.filter((id) => id !== ESTADO_CANCELADO_ID);
     }
     return this.estados.filter((e) => idsValidos.includes(e.id));
   }
@@ -430,10 +395,10 @@ export class RecepcionMineralComponent implements OnInit {
         return 'estado-chip--aprobado'; // APROBADO
       case 3:
         return 'estado-chip--rechazado'; // RECHAZADO A TOL
-      case 4:
-        return 'estado-chip--cancelado'; // CANCELADO
-      case 5:
-        return 'estado-chip--tranzado'; // TRANZADO
+      case ESTADO_CANCELADO_ID:
+        return 'estado-chip--cancelado';
+      case ESTADO_TRANZADO_ID:
+        return 'estado-chip--tranzado';
       case 6:
         return 'estado-chip--remuestreo'; // REMUESTREO
       case ESTADO_LIQUIDADO_ID:
@@ -445,42 +410,33 @@ export class RecepcionMineralComponent implements OnInit {
 
   /** Abre el visualizador de datos de la recepción. */
   verDetalle(registro: RegistroMineral): void {
+    const data: VerRecepcionDialogData = {
+      registro,
+      puedeImprimir: this.puedeImprimir(registro),
+    };
     this.dialog.open(VerRecepcionDialogComponent, {
       width: '640px',
       maxWidth: '95vw',
-      data: {
-        registro,
-        puedeImprimir: this.puedeImprimir(registro),
-        autoImprimir: false,
-      },
+      data,
     });
   }
 
-  /** Abre el visualizador y dispara la impresión (el usuario podrá "Guardar como PDF"). */
-  imprimir(registro: RegistroMineral): void {
-    this.dialog.open(VerRecepcionDialogComponent, {
-      width: '640px',
-      maxWidth: '95vw',
-      data: {
-        registro,
-        puedeImprimir: this.puedeImprimir(registro),
-        autoImprimir: true,
-      },
+  /** Abre el comprobante RM- (PDF del back) en otra pestaña. */
+  imprimirComprobante(registro: RegistroMineral): void {
+    this.registroMineralService.obtenerPdf(registro.id).subscribe({
+      next: (blob) => abrirBlobEnPestana(blob),
+      error: (err) =>
+        this.avisar(
+          err?.error?.message ??
+            'No se pudo generar el comprobante de la recepción',
+        ),
     });
-  }
-
-  imprimir2(id: number) {
-    console.log('este es el id ', id);
-    this.registroMineralService.descargarPdf(id);
   }
 
   cambiarEstado(registro: RegistroMineral, nuevoEstadoId: number): void {
     const idsValidos = this.TRANSICIONES_VALIDAS[registro.idEstado] ?? [];
     if (!this.puedeGestionar || !idsValidos.includes(nuevoEstadoId)) return;
-    if (
-      nuevoEstadoId === this.ESTADO_CANCELADO_ID &&
-      !this.authService.isAdmin()
-    ) {
+    if (nuevoEstadoId === ESTADO_CANCELADO_ID && !this.authService.isAdmin()) {
       return;
     }
 
@@ -491,15 +447,10 @@ export class RecepcionMineralComponent implements OnInit {
           this.registros.update((lista) =>
             lista.map((r) => (r.id === registro.id ? actualizado : r)),
           );
-          this.snackBar.open('Estado actualizado correctamente', 'Cerrar', {
-            duration: 3000,
-          });
+          this.avisar('Estado actualizado correctamente', 3000);
         },
-        error: () => {
-          this.snackBar.open('No se pudo cambiar el estado', 'Cerrar', {
-            duration: 4000,
-          });
-        },
+        error: (err) =>
+          this.avisar(err?.error?.message ?? 'No se pudo cambiar el estado'),
       });
   }
 }

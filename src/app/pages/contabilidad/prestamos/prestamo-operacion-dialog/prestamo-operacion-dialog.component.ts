@@ -25,6 +25,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { Observable } from 'rxjs';
 import { montoDosDecimales } from '../../../../shared/utils/numero.util';
 import { FechaInputDirective } from '../../../../shared/directives/fecha-input.directive';
+import { MayusculasDirective } from '../../../../shared/directives/mayusculas.directive';
 import { MontoInputDirective } from '../../../../shared/directives/monto-input.directive';
 import { PrestamoPersonal } from '../../models/prestamo-personal.models';
 import { PrestamoPersonalService } from '../../services/prestamo-personal.service';
@@ -53,6 +54,7 @@ export interface PrestamoOperacionDialogData {
     MatDatepickerModule,
     MatProgressSpinnerModule,
     FechaInputDirective,
+    MayusculasDirective,
     MontoInputDirective,
     DatosPagoFieldsComponent,
   ],

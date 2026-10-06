@@ -51,6 +51,9 @@
     <div class="td-tile td-tile--destacado">
       <small>Monto</small>
       <strong>{{ moneda(t) }} {{ num(t.monto) | number:'1.2-2' }}</strong>
+      @if (t.moneda === 'USD' && num(t.tipoCambio) > 0) {
+      <small>T.C. {{ num(t.tipoCambio) | number:'1.2-4' }} = Bs {{ equivalenteBs(t) | number:'1.2-2' }}</small>
+      }
     </div>
   </div>
 

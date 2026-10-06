@@ -48,6 +48,9 @@ export interface Traspaso {
   caja?: CajaEnTraspaso | null;
   /** Derivada de la cuenta bancaria elegida (BS o USD). */
   moneda: MonedaCuenta;
+  /** Bs por 1 USD; null en BS y en los traspasos en USD anteriores a la 084.
+   *  Solo referencial: caja y banco se mueven en la moneda de la cuenta. */
+  tipoCambio?: string | number | null;
   idCuentaBancaria: number;
   cuentaBancaria?: CuentaBancariaEnTraspaso | null;
   nroComprobante?: string | null;
@@ -83,6 +86,9 @@ export interface GuardarTraspasoRequest {
   concepto: string;
   /** > 0, hasta 2 decimales. */
   monto: number;
+  /** Bs por 1 USD (> 0, hasta 4 decimales). Obligatorio si la cuenta
+   *  bancaria es en USD, también al editar; en BS no se envía. */
+  tipoCambio?: number;
   /** Debe salir de `GET /comercio_interno/persona_ci/autorizadas` (existe,
    *  activa y autorizada). En edición, si llega el mismo id el back conserva
    *  los datos originales; con otro id guarda los del nuevo autorizador. */

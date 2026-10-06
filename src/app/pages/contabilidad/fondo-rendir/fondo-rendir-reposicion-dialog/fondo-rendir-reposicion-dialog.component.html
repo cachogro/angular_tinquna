@@ -1,0 +1,45 @@
+<h2 mat-dialog-title>Reponer excedente del fondo N° {{ data.fondo.id }}</h2>
+
+<mat-dialog-content>
+  <p class="frr-resumen">
+    <strong>{{ data.destinatario }}</strong> · {{ data.fondo.concepto }}<br />
+    Justificó más de lo entregado. Se le devuelve:
+    <strong class="frr-monto">Bs {{ monto | number: '1.2-2' }}</strong>
+  </p>
+
+  <form [formGroup]="form" class="frr-form">
+    <mat-form-field appearance="outline">
+      <mat-label>Fecha de la devolución</mat-label>
+      <input matInput class="input-fecha" [matDatepicker]="picker" [max]="hoy" formControlName="fecha" />
+      <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+      <mat-datepicker #picker></mat-datepicker>
+      @if (form.controls.fecha.hasError('matDatepickerParse') && form.controls.fecha.touched) {
+      <mat-error>Fecha inválida (dd/mm/aaaa)</mat-error>
+      } @else if (form.controls.fecha.hasError('required') && form.controls.fecha.touched) {
+      <mat-error>Obligatorio (dd/mm/aaaa)</mat-error>
+      } @else if (form.controls.fecha.hasError('matDatepickerMax') && form.controls.fecha.touched) {
+      <mat-error>No puede ser una fecha futura</mat-error>
+      }
+    </mat-form-field>
+  </form>
+
+  <h3 class="frr-sub">Datos de pago (sale de caja o banco)</h3>
+  <app-datos-pago-fields [form]="pago" [esEgreso]="true" [idDestinoPorDefecto]="data.fondo.idDestinoGasto" />
+
+  <p class="frr-nota">
+    Se genera un recibo de egreso con el concepto "DEVOLUCIÓN POR EXCESO EN RENDICIÓN" y el fondo
+    queda como rendido total.
+  </p>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-stroked-button (click)="cancelar()" [disabled]="guardando()">Cancelar</button>
+  <button mat-flat-button color="primary" (click)="guardar()" [disabled]="guardando()">
+    @if (guardando()) {
+    <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
+    <span>Guardando...</span>
+    } @else {
+    <span>Reponer Bs {{ monto | number: '1.2-2' }}</span>
+    }
+  </button>
+</mat-dialog-actions>

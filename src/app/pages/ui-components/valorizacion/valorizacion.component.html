@@ -89,7 +89,7 @@
             <th mat-header-cell *matHeaderCellDef>Proveedor</th>
             <td mat-cell *matCellDef="let v">
               <div class="proveedor-cell__nombre">{{ nombreProveedor(v) }}</div>
-              <div class="proveedor-cell__doc">{{ v.recepcionMineral?.persona?.numeroDocumento ?? '—' }}</div>
+              <div class="proveedor-cell__doc">{{ detalleProveedor(v) }}</div>
             </td>
           </ng-container>
 
@@ -115,7 +115,7 @@
             <th mat-header-cell *matHeaderCellDef class="acciones-header">Acciones</th>
             <td mat-cell *matCellDef="let v" class="acciones-cell">
               @if (puedeGestionar) {
-              @if (puedeVerImprimir(v)) {
+              @if (pasoDeBorrador(v)) {
               <button mat-icon-button (click)="visualizar(v)" matTooltip="Visualizar">
                 <mat-icon>visibility</mat-icon>
               </button>
@@ -123,9 +123,13 @@
                 <mat-icon>print</mat-icon>
               </button>
               }
-              @if (puedeGenerarRecibo(v)) {
-              <button mat-icon-button (click)="generarRecibo(v)" matTooltip="Generar recibo de pago">
-                <mat-icon>receipt_long</mat-icon>
+              @if (puedeRegistrarPago(v)) {
+              <button mat-icon-button (click)="abrirPago(v)" matTooltip="Registrar pago (sin recibo)">
+                <mat-icon>payments</mat-icon>
+              </button>
+              } @else if (v.pagos?.length) {
+              <button mat-icon-button color="primary" (click)="abrirPago(v)" matTooltip="Ver pago registrado">
+                <mat-icon>paid</mat-icon>
               </button>
               } @else if (v.recibos?.length) {
               <button mat-icon-button (click)="verPdfRecibo(v)"
@@ -133,7 +137,7 @@
                 <mat-icon>receipt</mat-icon>
               </button>
               }
-              @if (puedeMarcarEntregado(v)) {
+              @if (pasoDeBorrador(v)) {
               <button mat-icon-button (click)="toggleEntregado(v)"
                 [color]="v.entregado ? 'primary' : undefined"
                 [matTooltip]="v.entregado ? 'Entregada — clic para revertir la marca' : 'Marcar como entregada'">

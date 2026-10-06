@@ -1,0 +1,160 @@
+<h2 mat-dialog-title>Gastos del bien tomado en pago</h2>
+
+<mat-dialog-content class="bg-content">
+  @let b = bien();
+
+  <div class="bg-bien">
+    <mat-icon>inventory_2</mat-icon>
+    <div>
+      <strong>{{ b.descripcion }}</strong>
+      <small>
+        Recibido de {{ data.nombreDestinatario }}
+        @if (b.fechaTomaPago) { · tomado en pago el {{ fechaFmt(b.fechaTomaPago) }} }
+      </small>
+    </div>
+  </div>
+
+  <div class="bg-tiles">
+    <div class="bg-tile">
+      <small>Amortizado a su kardex</small>
+      <strong>{{ num(b.montoAmortizado) | number:'1.2-2' }}</strong>
+    </div>
+    <div class="bg-tile">
+      <small>Gastos invertidos</small>
+      <strong>{{ num(b.totalGastos) | number:'1.2-2' }}</strong>
+    </div>
+    <div class="bg-tile bg-tile--destacado">
+      <small>Costo total del bien</small>
+      <strong>{{ num(b.costoTotal) | number:'1.2-2' }}</strong>
+    </div>
+    @if (b.estado === 'VENDIDO') {
+    <div class="bg-tile" [class.bg-tile--ganancia]="num(b.resultadoVenta) > 0"
+      [class.bg-tile--perdida]="num(b.resultadoVenta) < 0">
+      <small>{{ num(b.resultadoVenta) < 0 ? 'Pérdida en la venta' : 'Ganancia en la venta' }}</small>
+      <strong>{{ (num(b.resultadoVenta) < 0 ? -num(b.resultadoVenta) : num(b.resultadoVenta)) | number:'1.2-2' }}</strong>
+      <small>Vendido en {{ num(b.montoVenta) | number:'1.2-2' }}</small>
+    </div>
+    }
+  </div>
+
+  <div class="bg-head">
+    <span>Gastos registrados</span>
+    @if (editable && !agregando()) {
+    <button mat-stroked-button color="primary" (click)="nuevoGasto()">
+      <mat-icon>add</mat-icon> Agregar gasto
+    </button>
+    }
+  </div>
+
+  @if (agregando()) {
+  <div class="bg-alta">
+    <form [formGroup]="form" class="bg-form">
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha</mat-label>
+        <input matInput class="input-fecha" [matDatepicker]="picker" [min]="minFecha" [max]="hoy" formControlName="fecha" />
+        <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+        <mat-datepicker #picker></mat-datepicker>
+        @if (form.controls.fecha.hasError('required') && form.controls.fecha.touched) {
+        <mat-error>Obligatorio</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Monto (Bs)</mat-label>
+        <input matInput appMonto formControlName="monto" />
+        @if (form.controls.monto.hasError('required') && form.controls.monto.touched) {
+        <mat-error>Obligatorio</mat-error>
+        }
+        @if (form.controls.monto.hasError('pattern') && form.controls.monto.touched) {
+        <mat-error>Máximo 2 decimales</mat-error>
+        }
+        @if (form.controls.monto.hasError('min') && form.controls.monto.touched) {
+        <mat-error>Debe ser mayor a 0</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="bg-form__full">
+        <mat-label>Concepto del gasto</mat-label>
+        <input matInput appMayusculas formControlName="concepto" maxlength="255"
+          placeholder="Ej: ARREGLO DE LLANTA, CAMBIO DE NOMBRE, PINTURA" />
+        @if (form.controls.concepto.hasError('required') && form.controls.concepto.touched) {
+        <mat-error>Obligatorio</mat-error>
+        }
+      </mat-form-field>
+    </form>
+
+    <h3 class="bg-sub">Datos de pago (sale de caja o banco)</h3>
+    <app-datos-pago-fields [form]="pago" [esEgreso]="true" />
+
+    <div class="bg-alta__acciones">
+      <button mat-stroked-button (click)="cancelarAlta()" [disabled]="guardando()">Cancelar</button>
+      <button mat-flat-button color="primary" (click)="guardar()" [disabled]="guardando()">
+        @if (guardando()) {
+        <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
+        <span>Guardando...</span>
+        } @else {
+        <span>Registrar gasto</span>
+        }
+      </button>
+    </div>
+  </div>
+  }
+
+  @if (gastos.length === 0) {
+  <p class="bg-empty">
+    {{ editable ? 'Todavía no se cargó ningún gasto a este bien.' : 'Este bien no tuvo gastos.' }}
+  </p>
+  } @else {
+  <div class="bg-tabla-scroll">
+    <table mat-table [dataSource]="gastos" class="bg-tabla mat-elevation-z1">
+      <ng-container matColumnDef="fecha">
+        <th mat-header-cell *matHeaderCellDef class="col-fecha">Fecha</th>
+        <td mat-cell *matCellDef="let g" class="col-fecha">{{ fechaFmt(g.fecha) }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="concepto">
+        <th mat-header-cell *matHeaderCellDef>Concepto</th>
+        <td mat-cell *matCellDef="let g">{{ g.concepto }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="destino">
+        <th mat-header-cell *matHeaderCellDef>Destino del gasto</th>
+        <td mat-cell *matCellDef="let g">{{ g.destinoGasto?.nombre || '—' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="medio">
+        <th mat-header-cell *matHeaderCellDef>Salió de</th>
+        <td mat-cell *matCellDef="let g">{{ medio(g) }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="monto">
+        <th mat-header-cell *matHeaderCellDef class="bg-num">Monto (Bs)</th>
+        <td mat-cell *matCellDef="let g" class="bg-num">{{ num(g.monto) | number:'1.2-2' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="acciones">
+        <th mat-header-cell *matHeaderCellDef></th>
+        <td mat-cell *matCellDef="let g">
+          @if (editable && g.activo !== false) {
+          <button mat-icon-button color="warn" matTooltip="Anular gasto" (click)="anular(g)">
+            <mat-icon>block</mat-icon>
+          </button>
+          }
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+      <tr mat-row *matRowDef="let g; columns: columnas" [class.bg-row-anulada]="g.activo === false"></tr>
+    </table>
+  </div>
+  }
+
+  <p class="bg-nota">
+    Estos gastos son internos de la empresa: salen de la caja de flujo o de la libreta bancaria y no modifican el
+    kardex de {{ data.nombreDestinatario }}.
+  </p>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-flat-button color="primary" (click)="cerrar()">Cerrar</button>
+</mat-dialog-actions>

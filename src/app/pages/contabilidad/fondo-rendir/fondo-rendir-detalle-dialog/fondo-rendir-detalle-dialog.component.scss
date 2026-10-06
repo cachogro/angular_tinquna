@@ -6,7 +6,7 @@
   justify-content: center;
   gap: 10px;
   padding: 32px 16px;
-  color: rgba(0, 0, 0, 0.45);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.45);
   text-align: center;
 }
 
@@ -50,7 +50,7 @@
 .fdd-concepto,
 .fdd-destino {
   margin: 2px 0 0;
-  color: rgba(0, 0, 0, 0.6);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.6);
   font-size: 13px;
 }
 
@@ -64,32 +64,32 @@
 
 .fdd-estado--pendiente {
   background: color-mix(in srgb, #f9a825 18%, transparent);
-  color: #a06a00;
+  color: var(--tk-ambar, #a06a00);
 }
 
 .fdd-estado--rendido_parcial {
-  background: color-mix(in srgb, #1565c0 15%, transparent);
-  color: #1565c0;
+  background: color-mix(in srgb, var(--tk-azul, #1565c0) 15%, transparent);
+  color: var(--tk-azul, #1565c0);
 }
 
 .fdd-estado--rendido_total {
-  background: color-mix(in srgb, #2e7d32 15%, transparent);
-  color: #2e7d32;
+  background: color-mix(in srgb, var(--tk-verde, #2e7d32) 15%, transparent);
+  color: var(--tk-verde, #2e7d32);
 }
 
 .fdd-estado--rendido_en_exceso {
-  background: color-mix(in srgb, #ef6c00 18%, transparent);
-  color: #e65100;
+  background: color-mix(in srgb, var(--tk-naranja, #ef6c00) 18%, transparent);
+  color: var(--tk-naranja, #e65100);
 }
 
 .fdd-reponer {
-  color: #e65100;
+  color: var(--tk-naranja, #e65100);
   font-weight: 600;
 }
 
 .fdd-estado--cerrado_con_deuda {
-  background: color-mix(in srgb, #c62828 15%, transparent);
-  color: #c62828;
+  background: color-mix(in srgb, var(--tk-rojo, #c62828) 15%, transparent);
+  color: var(--tk-rojo, #c62828);
 }
 
 /* ===== Tiles ===== */
@@ -106,11 +106,11 @@
   gap: 2px;
   padding: 8px 12px;
   border-radius: 8px;
-  background: rgba(0, 0, 0, 0.03);
+  background: rgb(var(--tk-ink, 0 0 0) / 0.03);
 }
 
 .fdd-tile small {
-  color: rgba(0, 0, 0, 0.5);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.5);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.03em;
@@ -121,18 +121,18 @@
 }
 
 .fdd-pos {
-  color: #2e7d32;
+  color: var(--tk-verde, #2e7d32);
 }
 
 .fdd-neg {
-  color: #c62828;
+  color: var(--tk-rojo, #c62828);
 }
 
 /* ===== Detalles ===== */
 .fdd-detalles {
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  border-top: 1px solid rgb(var(--tk-ink, 0 0 0) / 0.08);
 }
 
 .fdd-detalles__head {
@@ -154,8 +154,8 @@
 }
 
 .fdd-tabla .mat-mdc-header-row {
-  background: #0d6efd !important;
-  color: #ffffff !important;
+  background: var(--mat-sys-primary) !important;
+  color: var(--mat-sys-on-primary) !important;
   font-weight: 600;
   letter-spacing: .2px;
   position: sticky;
@@ -222,16 +222,51 @@
 }
 
 .fdd-aviso--deuda {
-  background: color-mix(in srgb, #c62828 10%, transparent);
-  color: #c62828;
+  background: color-mix(in srgb, var(--tk-rojo, #c62828) 10%, transparent);
+  color: var(--tk-rojo, #c62828);
 }
 
 .fdd-aviso--reponer {
-  background: color-mix(in srgb, #ef6c00 12%, transparent);
-  color: #e65100;
+  background: color-mix(in srgb, var(--tk-naranja, #ef6c00) 12%, transparent);
+  color: var(--tk-naranja, #e65100);
 }
 
-.fdd-aviso mat-icon {
+.fdd-aviso--ok {
+  background: color-mix(in srgb, var(--tk-verde, #2e7d32) 10%, transparent);
+  color: var(--tk-verde, #2e7d32);
+}
+
+.fdd-aviso--favor {
+  background: color-mix(in srgb, var(--tk-azul, #1565c0) 10%, transparent);
+  color: var(--tk-azul, #1565c0);
+}
+
+.fdd-aviso > span {
+  flex: 1;
+}
+
+.fdd-aviso > button {
+  flex: none;
+}
+
+/* Etiqueta de las líneas que genera el sistema */
+.fdd-tipo {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: rgb(var(--tk-ink, 0 0 0) / 0.08);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.6);
+}
+
+.fdd-tipo--favor {
+  background: color-mix(in srgb, var(--tk-azul, #1565c0) 15%, transparent);
+  color: var(--tk-azul, #1565c0);
+}
+
+.fdd-aviso > mat-icon {
   font-size: 18px;
   width: 18px;
   height: 18px;

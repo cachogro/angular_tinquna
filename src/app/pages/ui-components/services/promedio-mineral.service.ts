@@ -1,11 +1,13 @@
 // src/app/pages/ui-components/services/promedio-mineral.service.ts
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { APP_CONFIG } from 'src/app/config';
+import { aHttpParams } from 'src/app/shared/utils/http-params.util';
 import {
   CodificacionLote,
   FiltrosDisponibles,
+  FiltroReportePromedio,
   FiltrosPromedio,
   GuardarPromedioRequest,
   Paginado,
@@ -18,16 +20,6 @@ import {
 export class PromedioMineralService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${APP_CONFIG.apiUrl}/comercio_interno/promedio_mineral`;
-
-  private toParams(obj: Record<string, unknown>): HttpParams {
-    let params = new HttpParams();
-    for (const [k, v] of Object.entries(obj)) {
-      if (v !== undefined && v !== null && v !== '') {
-        params = params.set(k, String(v));
-      }
-    }
-    return params;
-  }
 
   /** Solo activas (paramétrica `codificacion-lote`); reemplaza a
    *  `promedio_mineral/codificaciones_lote`, que el back mantiene por compatibilidad. */
@@ -42,13 +34,13 @@ export class PromedioMineralService {
   ): Observable<Paginado<ValorizacionDisponible>> {
     return this.http.get<Paginado<ValorizacionDisponible>>(
       `${this.baseUrl}/disponibles`,
-      { params: this.toParams({ ...filtros }) },
+      { params: aHttpParams(filtros) },
     );
   }
 
   listar(filtros: FiltrosPromedio): Observable<PromediosPaginados> {
     return this.http.get<PromediosPaginados>(this.baseUrl, {
-      params: this.toParams({ ...filtros }),
+      params: aHttpParams(filtros),
     });
   }
 
@@ -71,5 +63,17 @@ export class PromedioMineralService {
 
   anular(id: string): Observable<PromedioMineral> {
     return this.http.delete<PromedioMineral>(`${this.baseUrl}/${id}`);
+  }
+
+  /** Excel de promedios. Se pide la respuesta completa para leer el nombre
+   *  del archivo del header Content-Disposition. */
+  descargarReporteExcel(
+    filtros: FiltroReportePromedio,
+  ): Observable<HttpResponse<Blob>> {
+    return this.http.get(`${this.baseUrl}/reporte/excel`, {
+      params: aHttpParams(filtros),
+      responseType: 'blob',
+      observe: 'response',
+    });
   }
 }

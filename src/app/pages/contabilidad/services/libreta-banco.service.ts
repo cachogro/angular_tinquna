@@ -11,6 +11,7 @@ import {
   PeriodoBanco,
   PeriodoBancoAccionRequest,
 } from '../models/libreta-banco.models';
+import { FormatoReporte } from '../../../shared/utils/descarga-archivo.util';
 
 @Injectable({ providedIn: 'root' })
 export class LibretaBancoService {
@@ -36,8 +37,11 @@ export class LibretaBancoService {
     idCuentaBancaria: number,
     gestion?: number | null,
     mes?: number | null,
+    formato: FormatoReporte = 'EXCEL',
   ): Observable<Blob> {
-    let params = new HttpParams().set('idCuentaBancaria', idCuentaBancaria);
+    let params = new HttpParams()
+      .set('idCuentaBancaria', idCuentaBancaria)
+      .set('formato', formato);
     if (gestion != null) {
       params = params.set('gestion', gestion);
       if (mes != null) params = params.set('mes', mes);
@@ -79,28 +83,35 @@ export class LibretaBancoService {
   }
 
   cerrarMes(body: PeriodoBancoAccionRequest): Observable<PeriodoBanco> {
-    return this.http.post<PeriodoBanco>(`${this.baseUrl}/periodo/cerrar`, body);
+    return this.accionPeriodo('cerrar', 'MES', body);
   }
 
   reabrirMes(body: PeriodoBancoAccionRequest): Observable<PeriodoBanco> {
-    return this.http.post<PeriodoBanco>(`${this.baseUrl}/periodo/reabrir`, body);
+    return this.accionPeriodo('reabrir', 'MES', body);
   }
 
   cerrarGestion(
     body: Omit<PeriodoBancoAccionRequest, 'mes'>,
   ): Observable<PeriodoBanco> {
-    return this.http.post<PeriodoBanco>(
-      `${this.baseUrl}/periodo/cerrar-gestion`,
-      body,
-    );
+    return this.accionPeriodo('cerrar', 'GESTION', body);
   }
 
   reabrirGestion(
     body: Omit<PeriodoBancoAccionRequest, 'mes'>,
   ): Observable<PeriodoBanco> {
-    return this.http.post<PeriodoBanco>(
-      `${this.baseUrl}/periodo/reabrir-gestion`,
-      body,
-    );
+    return this.accionPeriodo('reabrir', 'GESTION', body);
+  }
+
+  /** Una sola ruta para los cuatro cierres: la acción va en la URL y el
+   *  alcance (mes o gestión) en el cuerpo. */
+  private accionPeriodo(
+    accion: 'cerrar' | 'reabrir',
+    alcance: 'MES' | 'GESTION',
+    body: PeriodoBancoAccionRequest,
+  ): Observable<PeriodoBanco> {
+    return this.http.post<PeriodoBanco>(`${this.baseUrl}/periodo/${accion}`, {
+      ...body,
+      alcance,
+    });
   }
 }

@@ -1,10 +1,10 @@
 <mat-toolbar class="topbar gap-8">
   <!-- Mobile Menu -->
-  <!-- @if(!showToggle) { -->
-  <button mat-icon-button (click)="toggleMobileNav.emit()" class="d-flex justify-content-center">
+  <!-- En escritorio colapsa a solo iconos; en móvil abre/cierra el drawer. -->
+  <button mat-icon-button (click)="showToggle ? toggleCollapsed.emit() : toggleMobileNav.emit()"
+    class="d-flex justify-content-center">
     <i class="iconify icon-20 d-flex" data-icon="solar:hamburger-menu-line-duotone"></i>
   </button>
-  <!-- } -->
   <!-- --------------------------------------------------------------- -->
   <!-- Notification Dropdown -->
   <!-- --------------------------------------------------------------- -->

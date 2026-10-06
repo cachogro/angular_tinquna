@@ -36,7 +36,7 @@
 
       <mat-form-field appearance="outline">
         <mat-label>Monto</mat-label>
-        <input matInput type="number" step="0.01" min="0.01" class="input-monto" formControlName="monto" />
+        <input matInput appMonto formControlName="monto" />
         @if (f.monto.hasError('required') && f.monto.touched) {
         <mat-error>Obligatorio</mat-error>
         }
@@ -51,7 +51,7 @@
 
     <mat-form-field appearance="outline" class="fd-form__full">
       <mat-label>Concepto</mat-label>
-      <input matInput formControlName="concepto" maxlength="255" />
+      <input matInput appMayusculas formControlName="concepto" maxlength="255" />
       @if (f.concepto.hasError('required') && f.concepto.touched) {
       <mat-error>Obligatorio</mat-error>
       }
@@ -60,24 +60,17 @@
     <div class="fd-form__row2">
       <mat-form-field appearance="outline">
         <mat-label>N° de comprobante (opcional)</mat-label>
-        <input matInput formControlName="nroComprobante" maxlength="30" class="nro-cpte" />
+        <input matInput appMayusculas formControlName="nroComprobante" maxlength="30" class="nro-cpte" />
       </mat-form-field>
 
       <mat-form-field appearance="outline">
         <mat-label>Factura/recibo (opcional)</mat-label>
-        <input matInput formControlName="facturaRecibo" maxlength="30" />
+        <input matInput appMayusculas formControlName="facturaRecibo" maxlength="30" />
       </mat-form-field>
     </div>
 
-    <mat-form-field appearance="outline" class="fd-form__full">
-      <mat-label>Destino del gasto (opcional)</mat-label>
-      <mat-select formControlName="idDestinoGasto">
-        <mat-option [value]="null">— Igual al de la cabecera —</mat-option>
-        @for (d of destinosGasto(); track d.id) {
-        <mat-option [value]="d.id">{{ d.nombre }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
+    <app-destino-gasto-field class="fd-form__full" [control]="f.idDestinoGasto" [opciones]="destinosGasto()"
+      hint="Vacío = igual al de la cabecera" />
   </form>
   }
 </mat-dialog-content>

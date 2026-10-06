@@ -10,7 +10,12 @@
 }
 
 .branding {
-  padding: 11px 20px;
+  // Ocupa todo el ancho del sidebar (está dentro de un flex con el botón de
+  // cerrar en móvil) para que la tarjeta del usuario se estire; 18px alinea
+  // con el padding de la lista de menús.
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 11px 18px;
 }
 
 .sidebar-list {
@@ -82,11 +87,11 @@
         box-shadow: 0 17px 20px -8px rgba(77, 91, 236, 0.231372549);
 
         .mdc-list-item__primary-text {
-          color: $white !important;
+          color: var(--mat-sys-on-primary, #fff) !important;
         }
 
         .mat-mdc-list-item-icon {
-          color: $white !important;
+          color: var(--mat-sys-on-primary, #fff) !important;
         }
       }
 
@@ -146,4 +151,60 @@
 
 .side-img {
   margin-right: -30px;
+}
+// ============================================================
+// Sidebar mini: colapsado a solo iconos (botón hamburguesa en
+// escritorio/tablet). La clase la pone FullComponent en el container.
+// ============================================================
+.sidebarNav-mini {
+  .mat-drawer.sidebarNav {
+    width: $sidenav-mini;
+  }
+
+  .branding {
+    width: 100%;
+    padding: 8px 0;
+  }
+
+  .sidebar-list.mdc-list {
+    width: $sidenav-mini;
+    padding: 0 12px;
+
+    // Los títulos de sección se reemplazan por una línea corta.
+    .nav-caption {
+      font-size: 0;
+      line-height: 0;
+      padding: 12px 0;
+
+      &::after {
+        content: "";
+        display: block;
+        width: 24px;
+        height: 1px;
+        margin: 0 auto;
+        background: var(--mat-sys-outline-variant);
+      }
+    }
+
+    .menu-list-item {
+      justify-content: center;
+      padding: 11px 0 !important;
+
+      .mdc-list-item__start {
+        margin: 0 auto !important;
+      }
+
+      .hide-menu,
+      .arrow-icon,
+      .item-chip {
+        display: none;
+      }
+
+      .mdc-list-item__content {
+        flex: 0 0 0;
+        width: 0;
+        overflow: hidden;
+      }
+    }
+  }
 }

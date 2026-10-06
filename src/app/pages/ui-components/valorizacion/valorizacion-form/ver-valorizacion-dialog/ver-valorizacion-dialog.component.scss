@@ -7,9 +7,9 @@
 }
 
 .ticket {
-  border: 2px solid rgba(0, 0, 0, 0.75);
+  border: 2px solid rgb(var(--tk-ink, 0 0 0) / 0.75);
   font-size: 13px;
-  color: rgba(0, 0, 0, 0.87);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.87);
 }
 
 .ticket__encabezado {
@@ -18,7 +18,7 @@
   justify-content: center;
   gap: 24px;
   padding: 10px 12px;
-  border-bottom: 2px solid rgba(0, 0, 0, 0.75);
+  border-bottom: 2px solid rgb(var(--tk-ink, 0 0 0) / 0.75);
   font-weight: 700;
 }
 
@@ -31,7 +31,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  border: 1px solid rgba(0, 0, 0, 0.5);
+  border: 1px solid rgb(var(--tk-ink, 0 0 0) / 0.5);
   padding: 2px 10px;
   border-radius: 4px;
 }
@@ -39,7 +39,7 @@
 .ticket__datos {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  border-bottom: 2px solid rgba(0, 0, 0, 0.75);
+  border-bottom: 2px solid rgb(var(--tk-ink, 0 0 0) / 0.75);
 }
 
 .ticket__datos-col {
@@ -49,7 +49,7 @@
   gap: 4px;
 
   &:first-child {
-    border-right: 1px solid rgba(0, 0, 0, 0.3);
+    border-right: 1px solid rgb(var(--tk-ink, 0 0 0) / 0.3);
   }
 }
 
@@ -69,7 +69,7 @@
 }
 
 .ticket__valor {
-  color: rgba(0, 0, 0, 0.75);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.75);
 }
 
 .ticket__cuerpo {
@@ -90,7 +90,7 @@
   border-collapse: collapse;
 
   td {
-    border: 1px solid rgba(0, 0, 0, 0.3);
+    border: 1px solid rgb(var(--tk-ink, 0 0 0) / 0.3);
     padding: 4px 8px;
   }
 }
@@ -109,7 +109,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border: 2px solid rgba(0, 0, 0, 0.75);
+  border: 2px solid rgb(var(--tk-ink, 0 0 0) / 0.75);
   padding: 8px 12px;
   font-weight: 700;
 }
@@ -127,24 +127,24 @@
 .ticket__tabla-descuentos {
   width: 100%;
   border-collapse: collapse;
-  border: 1px solid rgba(0, 0, 0, 0.3);
+  border: 1px solid rgb(var(--tk-ink, 0 0 0) / 0.3);
 
   th {
     text-align: center;
     font-weight: 700;
     padding: 6px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.3);
-    background: rgba(0, 0, 0, 0.04);
+    border-bottom: 1px solid rgb(var(--tk-ink, 0 0 0) / 0.3);
+    background: rgb(var(--tk-ink, 0 0 0) / 0.04);
   }
 
   td {
     padding: 4px 8px;
-    border-top: 1px solid rgba(0, 0, 0, 0.15);
+    border-top: 1px solid rgb(var(--tk-ink, 0 0 0) / 0.15);
   }
 
   tfoot td {
     font-weight: 700;
-    border-top: 2px solid rgba(0, 0, 0, 0.5);
+    border-top: 2px solid rgb(var(--tk-ink, 0 0 0) / 0.5);
   }
 }
 
@@ -165,7 +165,7 @@
 .ticket__td-vacio {
   text-align: center;
   font-style: italic;
-  color: rgba(0, 0, 0, 0.5);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.5);
   padding: 12px 8px;
 }
 
@@ -174,7 +174,7 @@
   grid-template-columns: 1fr 1fr;
   gap: 24px;
   padding: 24px 16px 12px;
-  border-top: 2px solid rgba(0, 0, 0, 0.75);
+  border-top: 2px solid rgb(var(--tk-ink, 0 0 0) / 0.75);
 }
 
 .ticket__firma {
@@ -187,7 +187,7 @@
 
 .ticket__firma-linea {
   width: 100%;
-  border-top: 1px dashed rgba(0, 0, 0, 0.5);
+  border-top: 1px dashed rgb(var(--tk-ink, 0 0 0) / 0.5);
   margin-top: 24px;
 }
 

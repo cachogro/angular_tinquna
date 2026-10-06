@@ -17,19 +17,19 @@
   border-radius: 10px;
   font-size: 11px;
   font-weight: 600;
-  background: rgba(0, 0, 0, 0.08);
+  background: rgb(var(--tk-ink, 0 0 0) / 0.08);
 }
 .vd-estado--liq {
   background: rgba(25, 118, 210, 0.15);
-  color: #0d47a1;
+  color: var(--tk-azul, #0d47a1);
 }
 .vd-estado--pagada {
   background: rgba(46, 125, 50, 0.15);
-  color: #1b5e20;
+  color: var(--tk-verde, #1b5e20);
 }
 .vd-estado--anulada {
   background: rgba(198, 40, 40, 0.12);
-  color: #b71c1c;
+  color: var(--tk-rojo, #b71c1c);
 }
 .vd-tiles {
   display: grid;
@@ -47,10 +47,46 @@
 }
 .vd-tile small {
   font-size: 11px;
-  color: rgba(0, 0, 0, 0.55);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.55);
 }
 .vd-tile strong {
   font-size: 15px;
+}
+.vd-estimado-valor,
+.vd-estimado-edit {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.vd-estimado-edit span {
+  font-size: 13px;
+}
+.vd-estimado-input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  padding: 3px 6px;
+  font: inherit;
+  font-size: 14px;
+  color: inherit;
+  background: transparent;
+  border: 1px solid rgb(var(--tk-ink, 0 0 0) / 0.3);
+  border-radius: 6px;
+}
+.vd-estimado-input:focus {
+  outline: 2px solid var(--mat-sys-primary);
+  outline-offset: -1px;
+}
+.vd-tile ::ng-deep .mat-mdc-icon-button {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  flex: none;
+}
+.vd-tile ::ng-deep .mat-mdc-icon-button .mat-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
 }
 .vd-avance {
   display: flex;
@@ -58,6 +94,13 @@
   gap: 4px;
   margin-bottom: 12px;
   font-size: 12px;
+}
+.vd-nota {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  background: rgb(var(--tk-ink, 0 0 0) / 0.05);
 }
 .vd-acciones {
   display: flex;
@@ -92,7 +135,7 @@
 }
 .vd-tabla td {
   padding: 3px 8px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  border-bottom: 1px solid rgb(var(--tk-ink, 0 0 0) / 0.08);
 }
 .vd-tabla ::ng-deep .mat-mdc-icon-button {
   width: 28px;
@@ -110,16 +153,16 @@
 }
 .vd-anulado td {
   text-decoration: line-through;
-  color: rgba(0, 0, 0, 0.4);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.4);
 }
 .vd-apagado {
-  color: rgba(0, 0, 0, 0.45);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.45);
 }
 .vd-negativo {
-  color: #c62828;
+  color: var(--tk-rojo, #c62828);
 }
 .vd-positivo {
-  color: #2e7d32;
+  color: var(--tk-verde, #2e7d32);
 }
 .vd-obs {
   margin-top: 10px;

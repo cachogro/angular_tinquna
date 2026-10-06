@@ -22,10 +22,16 @@ import {
   FiltrosRegistroMineral,
   OrdenDireccion,
   RegistroMineral,
+  detalleProveedorRecepcion,
+  nombreProveedorRecepcion,
 } from '../models/registro-mineral.models';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { RegistroMineralService } from '../services/registro-mineral.service';
+import { descargarBlob } from 'src/app/shared/utils/descarga-archivo.util';
+import { horaFechaDeIso } from 'src/app/shared/utils/fecha-bolivia.util';
 import { formatNumeroSinCeros } from 'src/app/shared/utils/numero.util';
+import { formatFechaIso } from '../../contabilidad/components/personal-interno.util';
+import { MESES } from './meses';
 import { RangoFechasComponent } from '../../../shared/components/rango-fechas/rango-fechas.component';
 
 interface OpcionOrden {
@@ -34,21 +40,6 @@ interface OpcionOrden {
 }
 
 type ModoPeriodo = 'fechas' | 'mes' | 'semana';
-
-const MESES = [
-  { value: 1, label: 'Enero' },
-  { value: 2, label: 'Febrero' },
-  { value: 3, label: 'Marzo' },
-  { value: 4, label: 'Abril' },
-  { value: 5, label: 'Mayo' },
-  { value: 6, label: 'Junio' },
-  { value: 7, label: 'Julio' },
-  { value: 8, label: 'Agosto' },
-  { value: 9, label: 'Septiembre' },
-  { value: 10, label: 'Octubre' },
-  { value: 11, label: 'Noviembre' },
-  { value: 12, label: 'Diciembre' },
-];
 
 @Component({
   selector: 'app-reporte-recepcion-mineral',
@@ -195,27 +186,19 @@ export class ReporteRecepcionMineralComponent implements OnInit {
     this.cargarRegistros();
   }
 
-  private formatFecha(fecha: Date | null): string | undefined {
-    if (!fecha) return undefined;
-    const anio = fecha.getFullYear();
-    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
-    const dia = String(fecha.getDate()).padStart(2, '0');
-    return `${anio}-${mes}-${dia}`;
+  private fechaFiltro(fecha: Date | null): string | undefined {
+    return fecha ? formatFechaIso(fecha) : undefined;
   }
 
   /** 'HH:mm - dd-MM-yyyy', tomando los componentes directo del ISO string. */
-  formatFechaTabla(fecha: string | null | undefined): string {
-    if (!fecha) return '—';
-    const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(fecha);
-    if (!match) return fecha;
-    const [, anio, mes, dia, hora, minuto] = match;
-    return `${hora}:${minuto} - ${dia}-${mes}-${anio}`;
-  }
+  readonly formatFechaTabla = horaFechaDeIso;
 
   nombreProveedor(registro: RegistroMineral): string {
-    const p = registro.persona;
-    if (!p) return '—';
-    return `${p.nombres} ${p.apellidoPaterno} ${p.apellidoMaterno}`.trim();
+    return nombreProveedorRecepcion(registro);
+  }
+
+  detalleProveedor(registro: RegistroMineral): string {
+    return detalleProveedorRecepcion(registro);
   }
 
   formatNumero(valor: number | string | null | undefined): string {
@@ -247,8 +230,8 @@ export class ReporteRecepcionMineralComponent implements OnInit {
         filtros.semana = this.semanaControl.value ?? undefined;
         break;
       default:
-        filtros.fechaDesde = this.formatFecha(this.fechaDesdeControl.value);
-        filtros.fechaHasta = this.formatFecha(this.fechaHastaControl.value);
+        filtros.fechaDesde = this.fechaFiltro(this.fechaDesdeControl.value);
+        filtros.fechaHasta = this.fechaFiltro(this.fechaHastaControl.value);
     }
 
     return filtros;
@@ -326,16 +309,13 @@ export class ReporteRecepcionMineralComponent implements OnInit {
       .subscribe({
         next: (blob) => {
           this.exportando.set(false);
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `recepcion-mineral-${this.formatFecha(new Date()) ?? 'reporte'}.xlsx`;
-          a.click();
-          window.URL.revokeObjectURL(url);
+          descargarBlob(
+            blob,
+            `recepcion-mineral-${formatFechaIso(new Date())}.xlsx`,
+          );
         },
-        error: (error) => {
+        error: () => {
           this.exportando.set(false);
-          console.error(error);
           this.snackBar.open('No se pudo generar el Excel', 'Cerrar', {
             duration: 4000,
           });
@@ -350,16 +330,13 @@ export class ReporteRecepcionMineralComponent implements OnInit {
       .subscribe({
         next: (blob) => {
           this.exportandoPdf.set(false);
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `recepcion-mineral-${this.formatFecha(new Date()) ?? 'reporte'}.pdf`;
-          a.click();
-          window.URL.revokeObjectURL(url);
+          descargarBlob(
+            blob,
+            `recepcion-mineral-${formatFechaIso(new Date())}.pdf`,
+          );
         },
-        error: (error) => {
+        error: () => {
           this.exportandoPdf.set(false);
-          console.error(error);
           this.snackBar.open('No se pudo generar el PDF', 'Cerrar', {
             duration: 4000,
           });

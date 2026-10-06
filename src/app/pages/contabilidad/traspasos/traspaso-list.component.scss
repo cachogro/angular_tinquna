@@ -6,7 +6,7 @@
   justify-content: center;
   gap: 10px;
   padding: 40px 16px;
-  color: rgba(0, 0, 0, 0.45);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.45);
   text-align: center;
 }
 
@@ -72,8 +72,8 @@
 }
 
 .tl-tabla .mat-mdc-header-row {
-  background: #0d6efd !important;
-  color: #ffffff !important;
+  background: var(--mat-sys-primary) !important;
+  color: var(--mat-sys-on-primary) !important;
   font-weight: 600;
   letter-spacing: .2px;
   position: sticky;
@@ -134,8 +134,8 @@
   font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
-  background: color-mix(in srgb, #2e7d32 15%, transparent);
-  color: #2e7d32;
+  background: color-mix(in srgb, var(--tk-verde, #2e7d32) 15%, transparent);
+  color: var(--tk-verde, #2e7d32);
 }
 
 /* Textos largos en una sola línea (el completo sale al pasar el mouse):
@@ -153,8 +153,8 @@
 }
 
 .tl-tipo--retiro {
-  background: color-mix(in srgb, #1565c0 15%, transparent);
-  color: #1565c0;
+  background: color-mix(in srgb, var(--tk-azul, #1565c0) 15%, transparent);
+  color: var(--tk-azul, #1565c0);
 }
 
 .tl-row-inactiva {

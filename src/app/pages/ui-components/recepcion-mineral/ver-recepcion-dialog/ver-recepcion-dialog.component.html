@@ -24,8 +24,8 @@
       <span class="detalle-item__valor">{{ nombreProveedor() }}</span>
     </div>
     <div class="detalle-item">
-      <span class="detalle-item__label">N° de documento</span>
-      <span class="detalle-item__valor">{{ registro.persona?.numeroDocumento || '—' }}</span>
+      <span class="detalle-item__label">Documento / tipo</span>
+      <span class="detalle-item__valor">{{ detalleProveedor() }}</span>
     </div>
     <div class="detalle-item">
       <span class="detalle-item__label">Codificación</span>
@@ -64,6 +64,10 @@
       <span class="detalle-item__label">Lugar de acopio</span>
       <span class="detalle-item__valor">{{ registro.lugarAcopio || '—' }}</span>
     </div>
+    <div class="detalle-item">
+      <span class="detalle-item__label">Laboratorio</span>
+      <span class="detalle-item__valor">{{ registro.laboratorio?.nombre || '—' }}</span>
+    </div>
 
     @if (leyesTexto()) {
     <div class="detalle-item detalle-item--full">
@@ -81,7 +85,7 @@
 
 <mat-dialog-actions align="end">
   @if (data.puedeImprimir) {
-  <button mat-stroked-button color="primary" (click)="imprimir2(registro.id)">
+  <button mat-stroked-button color="primary" (click)="imprimirComprobante()">
     <mat-icon>print</mat-icon>
     Imprimir PDF
   </button>

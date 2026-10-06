@@ -10,7 +10,7 @@
   justify-content: center;
   gap: 10px;
   padding: 40px 16px;
-  color: rgba(0, 0, 0, 0.45);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.45);
   text-align: center;
 }
 
@@ -68,12 +68,12 @@
 }
 
 .cf-aviso--warn mat-icon {
-  color: #e65100;
+  color: var(--tk-naranja, #e65100);
 }
 
 /* ===== Período ===== */
 .cf-periodo {
-  border: 1px solid var(--mat-sys-outline-variant, #e0e0e0);
+  border: 1px solid var(--mat-sys-outline-variant, var(--tk-borde, #e0e0e0));
   border-radius: 12px;
   padding: 14px 16px;
   margin-bottom: 16px;
@@ -93,13 +93,13 @@
   font-size: 11px;
   font-weight: 700;
   letter-spacing: .3px;
-  background: color-mix(in srgb, #2e7d32 15%, transparent);
-  color: #2e7d32;
+  background: color-mix(in srgb, var(--tk-verde, #2e7d32) 15%, transparent);
+  color: var(--tk-verde, #2e7d32);
 }
 
 .cf-badge--cerrado {
-  background: color-mix(in srgb, #9e9e9e 22%, transparent);
-  color: #616161;
+  background: color-mix(in srgb, var(--tk-texto-tenue, #9e9e9e) 22%, transparent);
+  color: var(--tk-texto-fuerte, #616161);
 }
 
 .cf-tiles {
@@ -119,7 +119,7 @@
 }
 
 .cf-tile small {
-  color: rgba(0, 0, 0, 0.55);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.55);
   font-size: 11px;
 }
 
@@ -144,7 +144,7 @@
 
 .cf-cerrado-info {
   font-size: 12px;
-  color: rgba(0, 0, 0, 0.55);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.55);
 }
 
 /* ===== Tabla ===== */
@@ -163,8 +163,8 @@
 }
 
 .cf-tabla .mat-mdc-header-row {
-  background: #0d6efd !important;
-  color: #ffffff !important;
+  background: var(--mat-sys-primary) !important;
+  color: var(--mat-sys-on-primary) !important;
   font-weight: 600;
   letter-spacing: .2px;
   position: sticky;
@@ -226,11 +226,11 @@
 }
 
 .cf-pos {
-  color: #2e7d32;
+  color: var(--tk-verde, #2e7d32);
 }
 
 .cf-neg {
-  color: #c62828;
+  color: var(--tk-rojo, #c62828);
 }
 
 .cf-row-inactiva {
@@ -239,7 +239,7 @@
 }
 
 .cf-lock {
-  color: rgba(0, 0, 0, 0.35);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.35);
   font-size: 15px;
   width: 15px;
   height: 15px;
@@ -264,7 +264,7 @@
 }
 
 .cf-traspaso-ico {
-  color: #1565c0;
+  color: var(--tk-azul, #1565c0);
   font-size: 13px;
   width: 13px;
   height: 13px;
@@ -274,7 +274,7 @@
 
 .cf-cpte-nro {
   display: block;
-  color: rgba(0, 0, 0, 0.5);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.5);
 }
 
 /* ===== Responsive ===== */

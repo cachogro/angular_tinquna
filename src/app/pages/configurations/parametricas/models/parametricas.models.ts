@@ -38,26 +38,19 @@ export interface Codificacion {
   fechaRegistro?: string;
 }
 
-/** Mineral tal como va anidado en el request de codificación: además del id
- *  se manda descripción y símbolo para que el backend los persista junto a
- *  la codificación (antes solo se guardaba el id, y el símbolo se perdía). */
-export interface CodificacionMineralRequest {
-  id: number;
-  descripcion: string;
-  simbolo?: string;
-}
-
+/** POST /parametricas/codificacion — sin `id` crea, con `id` actualiza.
+ *  `minerales` son solo los ids: el backend guarda descripción y símbolo. */
 export interface CrearCodificacionRequest {
   codigo: string;
   nombre: string;
-  minerales: CodificacionMineralRequest[];
+  minerales: number[];
 }
 
 export interface ActualizarCodificacionRequest {
   id: string;
   codigo: string;
   nombre: string;
-  minerales: CodificacionMineralRequest[];
+  minerales: number[];
 }
 
 // ==========================================================
@@ -282,9 +275,33 @@ export interface ActoresProductivosMinerosPaginados {
 // CLIENTE (compradores del mineral)
 // ==========================================================
 
+/** Cómo se le cobra a un cliente comprador.
+ *  COMERCIO_INTERNO: cuenta corriente — sus anticipos van pagando los lotes
+ *  a medida que se liquidan. EXPORTACION: se cobra lote por lote. */
+export type ModalidadVentaCliente = 'COMERCIO_INTERNO' | 'EXPORTACION';
+
+export const MODALIDADES_VENTA_CLIENTE: ReadonlyArray<{
+  valor: ModalidadVentaCliente;
+  nombre: string;
+}> = [
+  { valor: 'COMERCIO_INTERNO', nombre: 'Comercio interno' },
+  { valor: 'EXPORTACION', nombre: 'Exportación' },
+];
+
+/** Tipo de actor "TRADING": al elegirlo en el formulario del cliente se
+ *  sugiere la modalidad EXPORTACION (queda editable). */
+export const ID_TIPO_ACTOR_TRADING = '6';
+
+export function esClienteExportacion(
+  cliente: Pick<Cliente, 'modalidadVenta'>,
+): boolean {
+  return cliente.modalidadVenta === 'EXPORTACION';
+}
+
 export interface Cliente {
   id: string;
   nombre: string;
+  modalidadVenta: ModalidadVentaCliente;
   direccion?: string | null;
   telefono?: string | null;
   idMunicipio?: number | null;
@@ -319,6 +336,7 @@ export interface GuardarClienteRequest {
   telefono?: string;
   idMunicipio?: number;
   idTipoActorProductivoMinero?: number | string;
+  modalidadVenta: ModalidadVentaCliente;
   nit?: string;
   observaciones?: string;
   /** "YYYY-MM-DD". Obligatoria en el front aunque el back la trate como
@@ -561,21 +579,24 @@ export interface FormaPago {
   activo?: boolean;
 }
 
-/** parametrica.lugar_acopio (solo lectura) */
+export interface GuardarFormaPagoRequest {
+  id?: number;
+  /** Solo se toma al crear: el back no lo cambia en una actualización. */
+  codigo: string;
+  nombre: string;
+  afectaFondo: boolean;
+}
+
+/** parametrica.lugar_acopio */
 export interface LugarAcopio {
   id: number;
   descripcion: string;
   activo: boolean;
 }
 
-/** parametrica.tipo_movimiento_kardex */
-export interface TipoMovimientoKardex {
-  id: number;
-  codigo: string;
-  nombre: string;
-  /** D (debe) | H (haber) — informativo, no fuerza el `tipo` de la línea. */
-  signo: 'D' | 'H';
-  activo?: boolean;
+export interface GuardarLugarAcopioRequest {
+  id?: number;
+  descripcion: string;
 }
 
 /** parametrica.kardex_subcuenta — catálogo extensible (PRINCIPAL, COMPRESORA...). */
@@ -588,11 +609,52 @@ export interface KardexSubcuenta {
 
 /** parametrica.destino_gasto — categoría contable del recibo.
  *  `esEgreso: true` → se ofrece en recibos de EGRESO; `false` → en INGRESO. */
+/** Cómo cuenta un destino en la ganancia estimada del dashboard: no todo lo
+ *  que sale es gasto ni todo lo que entra es ganancia. */
+export type CategoriaDestinoGasto =
+  | 'GASTO_OPERATIVO'
+  | 'SUELDOS'
+  | 'OTRO_INGRESO'
+  | 'COMPRA_MINERAL'
+  | 'VENTA_MINERAL'
+  | 'INVERSION'
+  | 'PRESTAMO_ANTICIPO'
+  | 'FINANCIERO';
+
+export interface CategoriaDestinoGastoOpcion {
+  valor: CategoriaDestinoGasto;
+  nombre: string;
+  /** Qué hace en la ganancia estimada. */
+  efecto: string;
+  /** Se ofrece para destinos de egreso, de ingreso, o ambos. */
+  paraEgreso: boolean;
+  paraIngreso: boolean;
+}
+
+export const CATEGORIAS_DESTINO_GASTO: ReadonlyArray<CategoriaDestinoGastoOpcion> = [
+  { valor: 'GASTO_OPERATIVO', nombre: 'Gasto operativo', efecto: 'Resta de la ganancia', paraEgreso: true, paraIngreso: false },
+  { valor: 'SUELDOS', nombre: 'Sueldos', efecto: 'Resta de la ganancia', paraEgreso: true, paraIngreso: false },
+  { valor: 'OTRO_INGRESO', nombre: 'Otro ingreso', efecto: 'Suma a la ganancia', paraEgreso: false, paraIngreso: true },
+  { valor: 'COMPRA_MINERAL', nombre: 'Compra de mineral', efecto: 'No cuenta: ya está en lo invertido de cada lote', paraEgreso: true, paraIngreso: false },
+  { valor: 'VENTA_MINERAL', nombre: 'Venta de mineral', efecto: 'No cuenta: ya está en la liquidación de cada lote', paraEgreso: false, paraIngreso: true },
+  { valor: 'INVERSION', nombre: 'Inversión (activos)', efecto: 'No cuenta: terrenos, vehículos, equipos', paraEgreso: true, paraIngreso: true },
+  { valor: 'PRESTAMO_ANTICIPO', nombre: 'Préstamo o anticipo', efecto: 'No cuenta: dinero que debe volver', paraEgreso: true, paraIngreso: true },
+  { valor: 'FINANCIERO', nombre: 'Financiero', efecto: 'No cuenta: bancos, deudas, cambios de cheque', paraEgreso: true, paraIngreso: true },
+];
+
+export function nombreCategoriaDestinoGasto(categoria: string | null | undefined): string {
+  return (
+    CATEGORIAS_DESTINO_GASTO.find((c) => c.valor === categoria)?.nombre ??
+    'Sin destino'
+  );
+}
+
 export interface DestinoGasto {
   id: number;
   /** Único (sin distinguir mayúsculas); repetido -> 409. */
   nombre: string;
   esEgreso: boolean;
+  categoria: CategoriaDestinoGasto;
   activo?: boolean;
   usuarioRegistro?: string | null;
   usuarioUltimaModificacion?: string | null;
@@ -604,6 +666,7 @@ export interface GuardarDestinoGastoRequest {
   id?: number;
   nombre: string;
   esEgreso: boolean;
+  categoria: CategoriaDestinoGasto;
 }
 
 // ==========================================================

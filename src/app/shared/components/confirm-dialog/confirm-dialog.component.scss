@@ -10,16 +10,16 @@
   align-items: center;
   justify-content: center;
   background: rgba(63, 81, 181, 0.1);
-  color: #3f51b5;
+  color: var(--tk-azul, #3f51b5);
   margin-bottom: 8px;
 }
 .confirm-dialog.tone-danger .confirm-dialog__icon {
   background: rgba(244, 67, 54, 0.1);
-  color: #f44336;
+  color: var(--tk-rojo, #f44336);
 }
 h2[mat-dialog-title] {
   margin-bottom: 4px;
 }
 mat-dialog-content {
-  color: rgba(0, 0, 0, 0.6);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.6);
 }

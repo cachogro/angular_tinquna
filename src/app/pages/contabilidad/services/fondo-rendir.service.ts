@@ -10,7 +10,10 @@ import {
   FondoRendirCuentas,
   FondosRendirPaginados,
   GuardarDetalleFondoRendirRequest,
+  ReponerFondoRendirRequest,
+  SaldoFavorFondoRendir,
 } from '../models/fondo-rendir.models';
+import { FormatoReporte } from '../../../shared/utils/descarga-archivo.util';
 
 @Injectable({ providedIn: 'root' })
 export class FondoRendirService {
@@ -72,10 +75,62 @@ export class FondoRendirService {
     );
   }
 
+  /** Da por rendido el fondo sin comprobantes: una línea por el saldo
+   *  pendiente lo deja en RENDIDO_TOTAL. Se deshace anulando esa línea. */
+  rendirSinComprobantes(id: string | number): Observable<FondoRendirCuentas> {
+    return this.http.post<FondoRendirCuentas>(
+      `${this.baseUrl}/${id}/rendir-sin-comprobantes`,
+      {},
+    );
+  }
+
+  /** Devuelve el excedente al destinatario con un recibo de egreso. */
+  reponer(
+    id: string | number,
+    data: ReponerFondoRendirRequest,
+  ): Observable<FondoRendirCuentas> {
+    return this.http.post<FondoRendirCuentas>(
+      `${this.baseUrl}/${id}/reponer`,
+      data,
+    );
+  }
+
+  /** Aplica a este fondo el saldo a favor de fondos anteriores del
+   *  destinatario (al entregar un fondo nuevo el back ya lo hace solo). */
+  aplicarSaldoFavor(id: string | number): Observable<FondoRendirCuentas> {
+    return this.http.post<FondoRendirCuentas>(
+      `${this.baseUrl}/${id}/aplicar-saldo-favor`,
+      {},
+    );
+  }
+
+  /** Saldo a favor del destinatario en sus fondos rendidos en exceso. */
+  saldoFavor(destinatario: {
+    idPersona?: string;
+    idActorProductivoMinero?: string;
+  }): Observable<SaldoFavorFondoRendir> {
+    let params = new HttpParams();
+    if (destinatario.idPersona)
+      params = params.set('idPersona', destinatario.idPersona);
+    if (destinatario.idActorProductivoMinero)
+      params = params.set(
+        'idActorProductivoMinero',
+        destinatario.idActorProductivoMinero,
+      );
+    return this.http.get<SaldoFavorFondoRendir>(`${this.baseUrl}/saldo-favor`, {
+      params,
+    });
+  }
+
   /** Excel de rendición de cuentas de un destinatario. Con `mes` es el
    *  reporte mensual; sin `mes`, el anual de toda la gestión. */
-  descargarExcel(filtro: ExcelFondoRendirRequest): Observable<Blob> {
-    let params = new HttpParams().set('gestion', filtro.gestion);
+  descargarExcel(
+    filtro: ExcelFondoRendirRequest,
+    formato: FormatoReporte = 'EXCEL',
+  ): Observable<Blob> {
+    let params = new HttpParams()
+      .set('gestion', filtro.gestion)
+      .set('formato', formato);
     if (filtro.idPersona) params = params.set('idPersona', filtro.idPersona);
     if (filtro.idActorProductivoMinero)
       params = params.set(

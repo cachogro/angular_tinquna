@@ -117,9 +117,14 @@ export class TraspasoDetalleDialogComponent implements OnInit {
     return `${dia}/${mes}/${anio} ${horas}:${minutos}`;
   }
 
-  num(v: string | null | undefined): number {
+  num(v: string | number | null | undefined): number {
     const n = Number(v);
     return Number.isFinite(n) ? n : 0;
+  }
+
+  /** Referencial: monto en USD × tipo de cambio. */
+  equivalenteBs(t: Traspaso): number {
+    return Math.round(this.num(t.monto) * this.num(t.tipoCambio) * 100) / 100;
   }
 
   cerrar(): void {

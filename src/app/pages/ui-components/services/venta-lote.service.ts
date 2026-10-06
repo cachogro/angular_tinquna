@@ -1,12 +1,15 @@
 // src/app/pages/ui-components/services/venta-lote.service.ts
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { APP_CONFIG } from 'src/app/config';
+import { aHttpParams } from 'src/app/shared/utils/http-params.util';
 import { PromedioMineral } from '../models/promedio-mineral.models';
 import {
   ActualizarVentaLoteRequest,
   CrearVentaLoteRequest,
+  CuentaClienteDetalle,
+  CuentaClienteFila,
   FiltrosVentaLote,
   LiquidarVentaLoteRequest,
   VentaLote,
@@ -18,28 +21,30 @@ export class VentaLoteService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${APP_CONFIG.apiUrl}/contabilidad/venta-lote`;
 
-  private toParams(obj: Record<string, unknown>): HttpParams {
-    let params = new HttpParams();
-    for (const [k, v] of Object.entries(obj)) {
-      if (v !== undefined && v !== null && v !== '') {
-        params = params.set(k, String(v));
-      }
-    }
-    return params;
-  }
-
   /** Promedios activos que todavía no se vendieron. */
   promediosDisponibles(busqueda?: string): Observable<PromedioMineral[]> {
     return this.http.get<PromedioMineral[]>(
       `${this.baseUrl}/promedios-disponibles`,
-      { params: this.toParams({ busqueda }) },
+      { params: aHttpParams({ busqueda }) },
     );
   }
 
   listar(filtros: FiltrosVentaLote): Observable<VentasLotePaginadas> {
     return this.http.get<VentasLotePaginadas>(this.baseUrl, {
-      params: this.toParams({ ...filtros }),
+      params: aHttpParams(filtros),
     });
+  }
+
+  /** Clientes compradores activos con su cuenta corriente. */
+  cuentasClientes(): Observable<CuentaClienteFila[]> {
+    return this.http.get<CuentaClienteFila[]>(`${this.baseUrl}/clientes`);
+  }
+
+  /** Cuenta de un cliente: resumen, lotes y movimientos con saldo corrido. */
+  cuentaCliente(idCliente: string): Observable<CuentaClienteDetalle> {
+    return this.http.get<CuentaClienteDetalle>(
+      `${this.baseUrl}/clientes/${idCliente}`,
+    );
   }
 
   obtener(id: string): Observable<VentaLote> {
@@ -52,6 +57,13 @@ export class VentaLoteService {
 
   actualizar(id: string, data: ActualizarVentaLoteRequest): Observable<VentaLote> {
     return this.http.patch<VentaLote>(`${this.baseUrl}/${id}`, data);
+  }
+
+  /** Registra o corrige el monto estimado propio; `null` lo quita. */
+  estimar(id: string, montoEstimado: number | null): Observable<VentaLote> {
+    return this.http.patch<VentaLote>(`${this.baseUrl}/${id}/monto-estimado`, {
+      montoEstimado,
+    });
   }
 
   liquidar(id: string, data: LiquidarVentaLoteRequest): Observable<VentaLote> {

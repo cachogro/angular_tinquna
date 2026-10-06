@@ -58,6 +58,9 @@
     <div class="md-tile md-tile--destacado">
       <small>{{ esHaber(m) ? 'HABER (ingreso)' : 'DEBE (egreso)' }}</small>
       <strong>{{ moneda(m) }} {{ monto(m) | number:'1.2-2' }}</strong>
+      @if (num(m.tipoCambio) > 0) {
+      <small>T.C. {{ num(m.tipoCambio) | number:'1.2-4' }} = Bs {{ monto(m) * num(m.tipoCambio) | number:'1.2-2' }}</small>
+      }
     </div>
     <div class="md-tile">
       <small>Saldo tras el movimiento</small>

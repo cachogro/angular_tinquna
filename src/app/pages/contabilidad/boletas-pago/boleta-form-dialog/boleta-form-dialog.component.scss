@@ -30,7 +30,7 @@
 h3 {
   font-size: 13px;
   font-weight: 600;
-  color: rgba(0, 0, 0, 0.6);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.6);
   margin: 10px 0 8px;
 }
 
@@ -39,7 +39,7 @@ h3 {
   align-items: center;
   gap: 10px;
   padding: 12px 0;
-  color: rgba(0, 0, 0, 0.55);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.55);
   font-size: 13px;
 }
 
@@ -56,12 +56,12 @@ h3 {
 
 .bf-aviso {
   background: color-mix(in srgb, #f9a825 18%, transparent);
-  color: #8a6d00;
+  color: var(--tk-ambar, #8a6d00);
 }
 
 .bf-error {
-  background: color-mix(in srgb, #c62828 12%, transparent);
-  color: #c62828;
+  background: color-mix(in srgb, var(--tk-rojo, #c62828) 12%, transparent);
+  color: var(--tk-rojo, #c62828);
 }
 
 .bf-aviso mat-icon,
@@ -73,7 +73,7 @@ h3 {
 
 .bf-nota {
   font-size: 12px;
-  color: rgba(0, 0, 0, 0.55);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.55);
   margin: 4px 0 8px;
 }
 
@@ -95,7 +95,7 @@ h3 {
 
 .bf-prestamos td {
   padding: 2px 8px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  border-bottom: 1px solid rgb(var(--tk-ink, 0 0 0) / 0.08);
   height: 30px;
 }
 
@@ -121,14 +121,14 @@ h3 {
 .bf-input {
   width: 110px;
   padding: 4px 6px;
-  border: 1px solid rgba(0, 0, 0, 0.25);
+  border: 1px solid rgb(var(--tk-ink, 0 0 0) / 0.25);
   border-radius: 6px;
   font-size: 12px;
   text-align: right;
 }
 
 .bf-input--error {
-  border-color: #c62828;
+  border-color: var(--tk-rojo, #c62828);
 }
 
 .bf-resumen {
@@ -144,11 +144,11 @@ h3 {
   gap: 2px;
   padding: 8px 10px;
   border-radius: 8px;
-  background: rgba(0, 0, 0, 0.04);
+  background: rgb(var(--tk-ink, 0 0 0) / 0.04);
 }
 
 .bf-resumen small {
-  color: rgba(0, 0, 0, 0.55);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.55);
   font-size: 11px;
 }
 

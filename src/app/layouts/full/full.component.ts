@@ -27,6 +27,18 @@ import { AuthService } from 'src/app/core/auth/services/auth.service';
 import { OverlayContainer } from '@angular/cdk/overlay'; // <-- Importado para los diálogos
 import { FilterByRolePipe } from 'src/app/shared/pipes/filter-by-role.pipe';
 
+type TemaModulo = 'tema-comercio' | 'tema-contabilidad' | 'tema-configuracion';
+
+const CLAVE_MODO_OSCURO = 'tk-modo-oscuro';
+
+function leerModoOscuro(): boolean {
+  try {
+    return localStorage.getItem(CLAVE_MODO_OSCURO) === '1';
+  } catch {
+    return false;
+  }
+}
+
 const MOBILE_VIEW = 'screen and (max-width: 768px)';
 const TABLET_VIEW = 'screen and (min-width: 769px) and (max-width: 1024px)';
 
@@ -51,7 +63,10 @@ export class FullComponent implements OnInit {
   navItems = navItems;
 
   //------------tema obscuro-------------------
-  isDarkMode = signal<boolean>(false);
+  isDarkMode = signal<boolean>(leerModoOscuro());
+
+  // Color del módulo según la ruta (ver themecolors/_modulos.scss).
+  temaModulo = signal<TemaModulo | null>(null);
 
   @ViewChild('leftsidenav')
   public sidenav: MatSidenav;
@@ -60,6 +75,7 @@ export class FullComponent implements OnInit {
   @ViewChild('content', { static: true }) content!: MatSidenavContent;
   //get options from service
   options = this.settings.getOptions();
+  sidebarMini = this.settings.sidebarMini;
   private layoutChangesSubscription = Subscription.EMPTY;
   private isMobileScreen = false;
   private isContentWidthFixed = true;
@@ -92,6 +108,23 @@ export class FullComponent implements OnInit {
         containerElement.classList.add('light-theme');
         containerElement.classList.remove('dark-theme');
       }
+
+      // Scrollbars y controles nativos acompañan al tema; la preferencia
+      // se recuerda entre sesiones.
+      this.htmlElement.style.colorScheme = darkActive ? 'dark' : 'light';
+      try {
+        localStorage.setItem(CLAVE_MODO_OSCURO, darkActive ? '1' : '0');
+      } catch {}
+    });
+
+    // Los diálogos heredan el color del módulo desde el que se abren.
+    effect(() => {
+      const tema = this.temaModulo();
+      const containerElement = this.overlayContainer.getContainerElement();
+      containerElement.classList.remove('tema-comercio', 'tema-contabilidad', 'tema-configuracion');
+      if (tema) {
+        containerElement.classList.add(tema);
+      }
     });
     // =======================================================
 
@@ -104,28 +137,54 @@ export class FullComponent implements OnInit {
         if (this.options.sidenavCollapsed == false) {
           this.options.sidenavCollapsed = state.breakpoints[TABLET_VIEW];
         }
+        this.actualizarMini();
       });
 
     // Initialize project theme with options
+
+    this.temaModulo.set(this.temaPorUrl(this.router.url));
 
     // This is for scroll to top
     this.router.events
       .pipe(filter((event) => event instanceof NavigationEnd))
       .subscribe((e) => {
         this.content.scrollTo({ top: 0 });
+        this.temaModulo.set(this.temaPorUrl(e.urlAfterRedirects));
       });
+  }
+
+  private temaPorUrl(url: string): TemaModulo | null {
+    if (url.startsWith('/ui-components')) return 'tema-comercio';
+    if (url.startsWith('/contabilidad')) return 'tema-contabilidad';
+    if (url.startsWith('/configuraciones')) return 'tema-configuracion';
+    return null;
   }
 
   ngOnInit(): void {}
 
   ngOnDestroy() {
     this.layoutChangesSubscription.unsubscribe();
+    this.htmlElement.style.colorScheme = ''; // el login queda en claro
   }
 
   toggleCollapsed() {
     this.isContentWidthFixed = false;
     this.options.sidenavCollapsed = !this.options.sidenavCollapsed;
+    this.actualizarMini();
     this.resetCollapsedState();
+  }
+
+  // En móvil el drawer va en modo 'over' y se oculta entero; el modo mini
+  // (solo iconos) aplica únicamente cuando el sidebar está fijo al costado.
+  private actualizarMini() {
+    this.sidebarMini.set(this.options.sidenavCollapsed && !this.isOver);
+  }
+
+  // Al elegir un ítem solo se cierra el drawer si está superpuesto (móvil).
+  cerrarSiSuperpuesto() {
+    if (this.isOver) {
+      this.sidenav.close();
+    }
   }
 
   resetCollapsedState(timer = 400) {

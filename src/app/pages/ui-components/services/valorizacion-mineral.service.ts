@@ -1,8 +1,9 @@
 // src/app/pages/ui-components/services/valorizacion-mineral.service.ts
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, shareReplay } from 'rxjs';
 import { APP_CONFIG } from 'src/app/config';
+import { aHttpParams } from 'src/app/shared/utils/http-params.util';
 import {
   ActualizarValorizacionRequest,
   CambiarEstadoValorizacionRequest,
@@ -94,42 +95,27 @@ export class ValorizacionMineralService {
     );
   }
 
-  /**
-   * TODO: confirmar con backend el endpoint y los query params exactos de
-   * listado. Por ahora se asume la misma convención que
-   * RegistroMineralService.listarRegistros (GET al recurso, con
-   * page/limit/filtros como query params).
-   */
   listarValorizaciones(
     filtros: FiltrosValorizacionMineral,
   ): Observable<ValorizacionesMineralPaginadas> {
-    const params = this.construirParams(filtros);
-
     return this.http.get<ValorizacionesMineralPaginadas>(
       `${this.baseUrl}/valorizacion_mineral`,
-      { params },
+      { params: aHttpParams(filtros) },
     );
   }
 
-  /** TODO: confirmar con backend el endpoint de detalle por id. */
   obtenerPorId(id: string): Observable<ValorizacionMineral> {
     return this.http.get<ValorizacionMineral>(
       `${this.baseUrl}/valorizacion_mineral/${id}`,
     );
   }
 
-  /** Descarga el PDF de la valorización (generado por el backend) y lo abre
-   *  en una pestaña nueva. El nombre del "Liquidador" en el PDF sale del
-   *  usuario autenticado (token), no de este llamado. */
-  descargarPdf(id: string): void {
-    this.http
-      .get(`${this.baseUrl}/valorizacion_mineral/pdf/${id}`, {
-        responseType: 'blob',
-      })
-      .subscribe((blob) => {
-        const url = window.URL.createObjectURL(blob);
-        window.open(url, '_blank');
-      });
+  /** PDF de la valorización (generado por el backend). El nombre del
+   *  "Liquidador" en el PDF sale del usuario autenticado (token). */
+  obtenerPdf(id: string): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/valorizacion_mineral/pdf/${id}`, {
+      responseType: 'blob',
+    });
   }
 
   /** Descarga el Excel del reporte de valorizaciones con los filtros dados.
@@ -137,46 +123,9 @@ export class ValorizacionMineralService {
    *  la descarga (el nombre real del archivo lo fija el backend). Las 3
    *  formas de acotar por fecha son excluyentes (ver FiltroReporteValorizacion). */
   descargarReporteExcel(filtros: FiltroReporteValorizacion): Observable<Blob> {
-    let params = new HttpParams();
-    const set = (clave: string, valor: string | number | undefined): void => {
-      if (valor !== undefined && valor !== null && valor !== '')
-        params = params.set(clave, valor);
-    };
-    set('estado', filtros.estado);
-    set('entregado', filtros.entregado);
-    set('idCodificacion', filtros.idCodificacion);
-    set('fechaDesde', filtros.fechaDesde);
-    set('fechaHasta', filtros.fechaHasta);
-    set('anio', filtros.anio);
-    set('mes', filtros.mes);
-    set('semana', filtros.semana);
-
     return this.http.get(
       `${this.baseUrl}/reportes/valorizacion_mineral/excel`,
-      { params, responseType: 'blob' },
+      { params: aHttpParams(filtros), responseType: 'blob' },
     );
-  }
-
-  private construirParams(filtros: FiltrosValorizacionMineral): HttpParams {
-    let params = new HttpParams()
-      .set('page', filtros.page)
-      .set('limit', filtros.limit);
-
-    if (filtros.busqueda) params = params.set('busqueda', filtros.busqueda);
-    if (filtros.codigoOperacion)
-      params = params.set('codigoOperacion', filtros.codigoOperacion);
-    if (filtros.numeroDocumento)
-      params = params.set('numeroDocumento', filtros.numeroDocumento);
-    if (filtros.idEstadoValorizacion)
-      params = params.set('idEstadoValorizacion', filtros.idEstadoValorizacion);
-    if (filtros.fechaDesde)
-      params = params.set('fechaDesde', filtros.fechaDesde);
-    if (filtros.fechaHasta)
-      params = params.set('fechaHasta', filtros.fechaHasta);
-    if (filtros.orderBy) params = params.set('orderBy', filtros.orderBy);
-    if (filtros.orderDirection)
-      params = params.set('orderDirection', filtros.orderDirection);
-
-    return params;
   }
 }

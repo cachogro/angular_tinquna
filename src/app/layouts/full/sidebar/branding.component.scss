@@ -73,3 +73,30 @@
     height: 13px;
   }
 }
+
+// ---- Sidebar mini (solo iconos) ----
+.branding-logo--mini {
+  display: flex;
+  justify-content: center;
+  padding: 10px 0 12px;
+}
+
+.branding-logo__icono {
+  width: 58px;
+  height: auto;
+}
+
+.user-avatar {
+  width: 38px;
+  height: 38px;
+  margin: 0 auto 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
+  cursor: default;
+}

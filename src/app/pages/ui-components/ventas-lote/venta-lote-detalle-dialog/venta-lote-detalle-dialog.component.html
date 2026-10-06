@@ -31,10 +31,66 @@
       <strong>Bs {{ v.totalEfectivoInvertido | number:'1.2-2' }}</strong>
     </div>
     <div class="vd-tile">
+      @if (cuentaCorriente(v)) {
+      <small>Pagado con anticipos del cliente</small>
+      <strong>Bs {{ v.cobradoBolivianos | number:'1.2-2' }}</strong>
+      @if (v.estado === 'ABIERTA') {
+      <small>Se paga al liquidar · disponible Bs {{ v.anticipoDisponibleClienteBolivianos | number:'1.2-2' }}</small>
+      }
+      } @else {
       <small>Cobrado ({{ v.cantidadCobros }} {{ v.cantidadCobros === 1 ? 'recibo' : 'recibos' }})</small>
       <strong>Bs {{ v.cobradoBolivianos | number:'1.2-2' }}</strong>
       @if (v.cobradoUsd > 0) {
       <small>incluye $us {{ v.cobradoUsd | number:'1.2-2' }}</small>
+      }
+      @if (v.cobradoAnticiposClienteBolivianos > 0) {
+      <small>incluye Bs {{ v.cobradoAnticiposClienteBolivianos | number:'1.2-2' }} de anticipos sin lote</small>
+      }
+      }
+    </div>
+    <div class="vd-tile">
+      <small>Estimado propio (valorización)</small>
+      @if (editandoEstimado()) {
+      <div class="vd-estimado-edit">
+        <span>{{ simbolo(v) }}</span>
+        <input appMonto class="vd-estimado-input" [formControl]="estimadoControl" (keydown.enter)="guardarEstimado(v)"
+          (keydown.escape)="cancelarEstimado(); $event.stopPropagation()" aria-label="Monto estimado" />
+        <button mat-icon-button matTooltip="Guardar" [disabled]="guardandoEstimado()" (click)="guardarEstimado(v)">
+          <mat-icon>check</mat-icon>
+        </button>
+        <button mat-icon-button matTooltip="Cancelar" [disabled]="guardandoEstimado()" (click)="cancelarEstimado()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      } @else {
+      <div class="vd-estimado-valor">
+        @if (v.montoEstimado != null) {
+        <strong>{{ simbolo(v) }} {{ v.montoEstimado | number:'1.2-2' }}</strong>
+        } @else {
+        <strong class="vd-apagado">Sin estimar</strong>
+        }
+        @if (v.estado !== 'ANULADA') {
+        <button mat-icon-button [matTooltip]="v.montoEstimado != null ? 'Corregir estimado' : 'Registrar estimado'"
+          (click)="editarEstimado(v)">
+          <mat-icon>edit</mat-icon>
+        </button>
+        }
+      </div>
+      }
+      <!-- Leyenda: mientras se edita se recalcula con lo tecleado. -->
+      @if (editandoEstimado() && estimadoControl.invalid) {
+      <small class="vd-negativo">Número mayor a 0, con hasta 2 decimales</small>
+      } @else if (diferenciaEstimado(v); as dif) {
+      <small [class.vd-negativo]="dif < 0" [class.vd-positivo]="dif > 0">
+        Liquidaron {{ simbolo(v) }} {{ (dif < 0 ? -dif : dif) | number:'1.2-2' }}
+        {{ dif < 0 ? 'menos' : 'más' }} ({{ diferenciaPorcentaje(v) | number:'1.0-1' }}%)
+      </small>
+      } @else if (diferenciaEstimado(v) === 0) {
+      <small>La liquidación coincide con lo estimado</small>
+      } @else if (editandoEstimado()) {
+      <small>{{ estimadoControl.value ? 'Se compara al registrar la liquidación' : 'Vacío = quitar la estimación' }}</small>
+      } @else if (v.montoEstimado != null) {
+      <small>Se compara al registrar la liquidación</small>
       }
     </div>
     <div class="vd-tile">
@@ -72,9 +128,10 @@
     </div>
   </div>
 
+  @if (!cuentaCorriente(v) || v.estado === 'LIQUIDADA') {
   <div class="vd-avance">
     <small>
-      Cobrado {{ avance(v) | number:'1.0-1' }}% de
+      {{ cuentaCorriente(v) ? 'Pagado' : 'Cobrado' }} {{ avance(v) | number:'1.0-1' }}% de
       {{ v.estado === 'LIQUIDADA' ? 'la venta' : 'lo invertido' }}
     </small>
     <mat-progress-bar mode="determinate" [value]="avance(v)"></mat-progress-bar>
@@ -82,8 +139,22 @@
     <small class="vd-apagado">+ Bs {{ v.pendienteBolivianos | number:'1.2-2' }} en recibos borrador (aún sin cobrar)</small>
     }
   </div>
+  }
+
+  @if (cuentaCorriente(v)) {
+  <p class="vd-nota">
+    <mat-icon inline>account_balance_wallet</mat-icon>
+    Comercio interno: este lote no se cobra por separado. Los anticipos de {{ v.cliente?.nombre }} pagan sus lotes
+    liquidados, del más antiguo al más nuevo; mientras el lote no esté liquidado no recibe nada.
+  </p>
+  }
 
   <div class="vd-acciones">
+    @if (cuentaCorriente(v) && v.estado !== 'ANULADA') {
+    <button mat-flat-button color="primary" (click)="registrarAnticipoCliente(v)">
+      <mat-icon>call_received</mat-icon> Registrar anticipo del cliente
+    </button>
+    }
     @if (puedeCobrar(v)) {
     <button mat-flat-button color="primary" (click)="registrarCobro(v)">
       <mat-icon>call_received</mat-icon>
@@ -102,9 +173,13 @@
     }
   </div>
 
-  <h3 class="vd-sub">Cobros del lote</h3>
+  @if (!cuentaCorriente(v) || v.recibos?.length) {
+  <h3 class="vd-sub">{{ cuentaCorriente(v) ? 'Recibos registrados con este lote' : 'Cobros del lote' }}</h3>
+  }
   @if (!(v.recibos?.length)) {
+  @if (!cuentaCorriente(v)) {
   <p class="vd-apagado">Todavía no hay anticipos ni pagos registrados.</p>
+  }
   } @else {
   <div class="vd-scroll">
     <table class="vd-tabla">

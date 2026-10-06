@@ -1,10 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -16,7 +15,12 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterModule } from '@angular/router';
-import { debounceTime, distinctUntilChanged } from 'rxjs';
+import { debounceTime, distinctUntilChanged, merge } from 'rxjs';
+import { abrirBlobEnPestana } from 'src/app/shared/utils/descarga-archivo.util';
+import {
+  fechaDeIso,
+  horaFechaDeIso,
+} from 'src/app/shared/utils/fecha-bolivia.util';
 import { formatNumeroConMiles } from 'src/app/shared/utils/numero.util';
 import { RolCodigo } from 'src/app/core/auth/models/auth.models';
 import { AuthService } from 'src/app/core/auth/services/auth.service';
@@ -31,6 +35,7 @@ import {
 import {
   ESTADOS_VALORIZACION,
   ESTADO_VALORIZACION_BORRADOR_ID,
+  ESTADO_VALORIZACION_PREVALORIZADO_ID,
   ESTADO_VALORIZACION_VALORIZADO_ID,
   EntidadAporte,
   FiltrosValorizacionMineral,
@@ -38,12 +43,19 @@ import {
   ValorizacionMineral,
   codificacionEfectiva,
 } from '../models/valorizacion-mineral.models';
+import {
+  actorProveedorRecepcion,
+  detalleProveedorRecepcion,
+  leyesTextoRecepcion,
+  nombreProveedorRecepcion,
+} from '../models/registro-mineral.models';
 import { ValorizacionMineralService } from '../services/valorizacion-mineral.service';
 import { ReciboService } from '../../contabilidad/services/recibo.service';
+import { formatFechaIso } from '../../contabilidad/components/personal-interno.util';
 import {
-  abrirReciboValorizacion,
-  faltaReciboValorizacion,
-} from './recibo-valorizacion.util';
+  abrirPagoValorizacion,
+  faltaPagoValorizacion,
+} from './pago-valorizacion.util';
 import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog/confirm-dialog.component';
 import { RangoFechasComponent } from '../../../shared/components/rango-fechas/rango-fechas.component';
 
@@ -57,7 +69,6 @@ interface OpcionOrden {
   imports: [
     RangoFechasComponent,
     CommonModule,
-    FormsModule,
     ReactiveFormsModule,
     RouterModule,
     MatFormFieldModule,
@@ -71,7 +82,6 @@ interface OpcionOrden {
     MatChipsModule,
     MatTooltipModule,
     MatProgressSpinnerModule,
-    MatDatepickerModule,
   ],
   templateUrl: './valorizacion.component.html',
   styleUrl: './valorizacion.component.scss',
@@ -103,8 +113,6 @@ export class ValorizacionComponent implements OnInit {
     'acciones',
   ];
   readonly estados = ESTADOS_VALORIZACION;
-  readonly ESTADO_VALORIZACION_BORRADOR_ID = ESTADO_VALORIZACION_BORRADOR_ID;
-  readonly ESTADO_VALORIZACION_VALORIZADO_ID = ESTADO_VALORIZACION_VALORIZADO_ID;
 
   readonly registros = signal<ValorizacionMineral[]>([]);
   readonly total = signal(0);
@@ -131,6 +139,10 @@ export class ValorizacionComponent implements OnInit {
   readonly orderDirectionControl =
     new FormControl<OrdenDireccionValorizacion>('DESC');
 
+  /** Igual que en recepción: hora/fecha directo del ISO string, sin depender
+   *  del huso horario del navegador. */
+  readonly formatFechaTabla = horaFechaDeIso;
+
   /** Solo ADMINISTRADOR y OPERADOR tienen acceso al módulo de valorización. */
   get puedeGestionar(): boolean {
     return this.authService.hasRole(
@@ -140,29 +152,21 @@ export class ValorizacionComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.searchControl.valueChanges
-      .pipe(debounceTime(400), distinctUntilChanged())
-      .subscribe(() => this.reiniciarYcargar());
+    // Los textos esperan a que se deje de escribir; el resto filtra al instante.
+    const textos = [
+      this.searchControl,
+      this.codigoControl,
+      this.documentoControl,
+    ].map((c) => c.valueChanges.pipe(debounceTime(400), distinctUntilChanged()));
 
-    this.codigoControl.valueChanges
-      .pipe(debounceTime(400), distinctUntilChanged())
-      .subscribe(() => this.reiniciarYcargar());
-
-    this.documentoControl.valueChanges
-      .pipe(debounceTime(400), distinctUntilChanged())
-      .subscribe(() => this.reiniciarYcargar());
-
-    this.estadoControl.valueChanges.subscribe(() => this.reiniciarYcargar());
-    this.fechaDesdeControl.valueChanges.subscribe(() =>
-      this.reiniciarYcargar(),
-    );
-    this.fechaHastaControl.valueChanges.subscribe(() =>
-      this.reiniciarYcargar(),
-    );
-    this.orderByControl.valueChanges.subscribe(() => this.reiniciarYcargar());
-    this.orderDirectionControl.valueChanges.subscribe(() =>
-      this.reiniciarYcargar(),
-    );
+    merge(
+      ...textos,
+      this.estadoControl.valueChanges,
+      this.fechaDesdeControl.valueChanges,
+      this.fechaHastaControl.valueChanges,
+      this.orderByControl.valueChanges,
+      this.orderDirectionControl.valueChanges,
+    ).subscribe(() => this.reiniciarYcargar());
 
     this.parametricasService
       .obtenerMinerales()
@@ -174,27 +178,17 @@ export class ValorizacionComponent implements OnInit {
     this.cargarRegistros();
   }
 
+  private avisar(mensaje: string, duration = 4000): void {
+    this.snackBar.open(mensaje, 'Cerrar', { duration });
+  }
+
   private reiniciarYcargar(): void {
     this.pageIndex = 0;
     this.cargarRegistros();
   }
 
-  private formatFecha(fecha: Date | null): string | undefined {
-    if (!fecha) return undefined;
-    const anio = fecha.getFullYear();
-    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
-    const dia = String(fecha.getDate()).padStart(2, '0');
-    return `${anio}-${mes}-${dia}`;
-  }
-
-  /** Igual que en recepción: extrae hora/fecha directo del ISO string para no
-   *  depender del huso horario del navegador. */
-  formatFechaTabla(fecha: string | null | undefined): string {
-    if (!fecha) return '—';
-    const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(fecha);
-    if (!match) return fecha;
-    const [, anio, mes, dia, hora, minuto] = match;
-    return `${hora}:${minuto} - ${dia}-${mes}-${anio}`;
+  private fechaFiltro(fecha: Date | null): string | undefined {
+    return fecha ? formatFechaIso(fecha) : undefined;
   }
 
   cargarRegistros(): void {
@@ -208,8 +202,8 @@ export class ValorizacionComponent implements OnInit {
         codigoOperacion: this.codigoControl.value || undefined,
         numeroDocumento: this.documentoControl.value || undefined,
         idEstadoValorizacion: this.estadoControl.value ?? undefined,
-        fechaDesde: this.formatFecha(this.fechaDesdeControl.value),
-        fechaHasta: this.formatFecha(this.fechaHastaControl.value),
+        fechaDesde: this.fechaFiltro(this.fechaDesdeControl.value),
+        fechaHasta: this.fechaFiltro(this.fechaHastaControl.value),
         orderBy: (this.orderByControl.value as FiltrosValorizacionMineral['orderBy']) ?? undefined,
         orderDirection: this.orderDirectionControl.value ?? undefined,
       })
@@ -221,11 +215,7 @@ export class ValorizacionComponent implements OnInit {
         },
         error: () => {
           this.loading.set(false);
-          this.snackBar.open(
-            'No se pudo cargar el listado de valorizaciones',
-            'Cerrar',
-            { duration: 4000 },
-          );
+          this.avisar('No se pudo cargar el listado de valorizaciones');
         },
       });
   }
@@ -267,9 +257,11 @@ export class ValorizacionComponent implements OnInit {
   }
 
   nombreProveedor(v: ValorizacionMineral): string {
-    const p = v.recepcionMineral?.persona;
-    if (!p) return '—';
-    return `${p.nombres} ${p.apellidoPaterno} ${p.apellidoMaterno}`.trim();
+    return nombreProveedorRecepcion(v.recepcionMineral);
+  }
+
+  detalleProveedor(v: ValorizacionMineral): string {
+    return detalleProveedorRecepcion(v.recepcionMineral);
   }
 
   detalleTexto(v: ValorizacionMineral): string {
@@ -279,28 +271,22 @@ export class ValorizacionComponent implements OnInit {
     return `${leyes ? leyes + ' · ' : ''}${formatNumeroConMiles(r.balanzaL)} kg`;
   }
 
+  private simboloMineral(idMineral: number): string {
+    const mineral = this.mineralesCatalogo().find(
+      (m) => Number(m.id) === idMineral,
+    );
+    return mineral?.simbolo ?? mineral?.descripcion ?? `Mineral #${idMineral}`;
+  }
+
   /** Leyes de la valorización (las laboratoriadas); si aún no tiene, las de la recepción. */
   private leyesTexto(v: ValorizacionMineral): string {
     const propias = (v.detalles ?? []).filter((d) => d['ley'] != null);
-    if (propias.length) {
-      return propias
-        .map((d) => {
-          const idMineral = Number(d['idMineral']);
-          const mineral = this.mineralesCatalogo().find(
-            (m) => Number(m.id) === idMineral,
-          );
-          const simbolo =
-            mineral?.simbolo ?? mineral?.descripcion ?? `Mineral #${idMineral}`;
-          const unidad = (d['leyUnidad'] as string) ?? '%';
-          return `${simbolo} ${formatNumeroConMiles(d['ley'] as number | string)}${unidad}`;
-        })
-        .join(' · ');
-    }
-    return (v.recepcionMineral?.detalles ?? [])
-      .map(
-        (d) =>
-          `${d.mineral?.simbolo ?? 'Mineral ' + d.idMineral} ${formatNumeroConMiles(d.ley)}${d.leyUnidad ?? '%'}`,
-      )
+    if (!propias.length) return leyesTextoRecepcion(v.recepcionMineral);
+    return propias
+      .map((d) => {
+        const unidad = (d['leyUnidad'] as string) ?? '%';
+        return `${this.simboloMineral(Number(d['idMineral']))} ${formatNumeroConMiles(d['ley'] as number | string)}${unidad}`;
+      })
       .join(' · ');
   }
 
@@ -309,15 +295,10 @@ export class ValorizacionComponent implements OnInit {
     return v.idEstadoValorizacion !== ESTADO_VALORIZACION_VALORIZADO_ID;
   }
 
-  /** Visualizar/Imprimir solo tienen sentido una vez que ya se guardó algo
-   *  más allá del borrador (PRE-VALORIZADO o VALORIZADO). */
-  puedeVerImprimir(v: ValorizacionMineral): boolean {
-    return v.idEstadoValorizacion !== ESTADO_VALORIZACION_BORRADOR_ID;
-  }
-
-  /** La marca "Entregado" solo tiene sentido una vez pre-valorizada o
-   *  valorizada (en BORRADOR el material sigue en el ingenio). */
-  puedeMarcarEntregado(v: ValorizacionMineral): boolean {
+  /** Visualizar, imprimir y la marca "Entregado" solo tienen sentido una vez
+   *  que ya se guardó algo más allá del borrador (PRE-VALORIZADO o
+   *  VALORIZADO): en BORRADOR el material sigue en el ingenio. */
+  pasoDeBorrador(v: ValorizacionMineral): boolean {
     return v.idEstadoValorizacion !== ESTADO_VALORIZACION_BORRADOR_ID;
   }
 
@@ -357,21 +338,17 @@ export class ValorizacionComponent implements OnInit {
                   : item,
               ),
             );
-            this.snackBar.open(
+            this.avisar(
               nuevoValor
                 ? 'Valorización marcada como entregada'
                 : 'Se quitó la marca de entregada',
-              'Cerrar',
-              { duration: 3000 },
+              3000,
             );
           },
-          error: () => {
-            this.snackBar.open(
-              'No se pudo actualizar la marca de entrega',
-              'Cerrar',
-              { duration: 4000 },
-            );
-          },
+          error: (err) =>
+            this.avisar(
+              err?.error?.message ?? 'No se pudo actualizar la marca de entrega',
+            ),
         });
     });
   }
@@ -382,19 +359,12 @@ export class ValorizacionComponent implements OnInit {
    *  edición). */
   visualizar(v: ValorizacionMineral): void {
     const leyesYPrecios: LeyPrecioVisualizacion[] = (v.detalles ?? []).map(
-      (d) => {
-        const idMineral = Number(d['idMineral']);
-        const mineral = this.mineralesCatalogo().find(
-          (m) => Number(m.id) === idMineral,
-        );
-        return {
-          simbolo:
-            mineral?.simbolo ?? mineral?.descripcion ?? `Mineral #${idMineral}`,
-          ley: (d['ley'] as number | string | null) ?? null,
-          leyUnidad: (d['leyUnidad'] as string) ?? '%',
-          precioPorKilo: Number(d['precioKilo'] ?? 0),
-        };
-      },
+      (d) => ({
+        simbolo: this.simboloMineral(Number(d['idMineral'])),
+        ley: (d['ley'] as number | string | null) ?? null,
+        leyUnidad: (d['leyUnidad'] as string) ?? '%',
+        precioPorKilo: Number(d['precioKilo'] ?? 0),
+      }),
     );
 
     const descuentos: DescuentoVisualizacion[] = (v.calculoAportes ?? [])
@@ -411,16 +381,20 @@ export class ValorizacionComponent implements OnInit {
         };
       });
 
+    const recepcion = v.recepcionMineral;
     const data: VerValorizacionDialogData = {
       numero: v.id,
-      producto: this.productosTexto(v),
+      producto:
+        (codificacionEfectiva(v)?.minerales ?? [])
+          .map((m) => m.descripcion)
+          .join(', ') || '—',
       cliente: this.nombreProveedor(v),
-      numeroDocumento: v.recepcionMineral?.persona?.numeroDocumento ?? '—',
-      lote: v.recepcionMineral?.codigoOperacion ?? '—',
-      fechaEntrega: this.formatFechaSolo(v.recepcionMineral?.fechaRecepcion),
-      fechaTransaccion: this.formatFechaTabla(v.fechaValorizacion),
-      cooperativa:
-        v.recepcionMineral?.persona?.actorProductivoMinero?.nombre ?? '—',
+      numeroDocumento: recepcion?.persona?.numeroDocumento ?? '—',
+      lote: recepcion?.codigoOperacion ?? '—',
+      fechaEntrega: fechaDeIso(recepcion?.fechaRecepcion),
+      // fechaValorizacion es una fecha sin hora ('YYYY-MM-DD').
+      fechaTransaccion: fechaDeIso(v.fechaValorizacion),
+      cooperativa: actorProveedorRecepcion(recepcion),
       pesoBruto: Number(v.pesoBrutoHumedoKilogramos ?? 0),
       pesoNeto: Number(v.pesoNetoSecoKilogramos ?? 0),
       leyesYPrecios,
@@ -431,7 +405,7 @@ export class ValorizacionComponent implements OnInit {
       totalValorLiquidoVentaBolivianos: Number(v.totalValorLiquidoVentaBolivianos ?? 0),
       descuentos,
       descuentoTotal: Number(v.totalAportesBolivianos ?? 0),
-      telefonoCliente: v.recepcionMineral?.persona?.celular,
+      telefonoCliente: recepcion?.persona?.celular,
     };
 
     this.dialog.open(VerValorizacionDialogComponent, {
@@ -442,16 +416,15 @@ export class ValorizacionComponent implements OnInit {
     });
   }
 
-  /** Pide al backend el PDF ya generado (con el liquidador resuelto del
-   *  usuario autenticado) y lo abre en una pestaña nueva. */
-  /** VALORIZADO con saldo a pagar y sin recibo vigente. */
-  puedeGenerarRecibo(v: ValorizacionMineral): boolean {
-    return faltaReciboValorizacion(v);
+  /** VALORIZADO y todavía sin pago registrado. */
+  puedeRegistrarPago(v: ValorizacionMineral): boolean {
+    return faltaPagoValorizacion(v);
   }
 
-  generarRecibo(v: ValorizacionMineral): void {
-    abrirReciboValorizacion(this.dialog, v).subscribe((recibo) => {
-      if (recibo) this.cargarRegistros();
+  /** Registra el pago (sin recibo) o, si ya existe, lo muestra y permite anularlo. */
+  abrirPago(v: ValorizacionMineral): void {
+    abrirPagoValorizacion(this.dialog, v).subscribe((cambio) => {
+      if (cambio) this.cargarRegistros();
     });
   }
 
@@ -459,47 +432,34 @@ export class ValorizacionComponent implements OnInit {
     const recibo = v.recibos?.[0];
     if (!recibo) return;
     this.reciboService.obtenerPdf(recibo.id).subscribe({
-      next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        window.open(url, '_blank');
-        setTimeout(() => window.URL.revokeObjectURL(url), 60000);
-      },
+      next: (blob) => abrirBlobEnPestana(blob),
       error: (err) =>
-        this.snackBar.open(
+        this.avisar(
           err?.error?.message ?? 'No se pudo generar el PDF del recibo',
-          'Cerrar',
-          { duration: 4000 },
         ),
     });
   }
 
+  /** Pide al backend el PDF ya generado (con el liquidador resuelto del
+   *  usuario autenticado) y lo abre en una pestaña nueva. */
   imprimir(v: ValorizacionMineral): void {
-    this.valorizacionMineralService.descargarPdf(v.id);
-  }
-
-  private productosTexto(v: ValorizacionMineral): string {
-    const minerales = codificacionEfectiva(v)?.minerales ?? [];
-    return minerales.map((m) => m.descripcion).join(', ') || '—';
-  }
-
-  /** Igual que formatFechaTabla, pero sin hora: se usa para la fecha de
-   *  entrega en el visualizador. */
-  private formatFechaSolo(fecha: string | null | undefined): string {
-    if (!fecha) return '—';
-    const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(fecha);
-    if (!match) return fecha;
-    const [, anio, mes, dia] = match;
-    return `${dia}-${mes}-${anio}`;
+    this.valorizacionMineralService.obtenerPdf(v.id).subscribe({
+      next: (blob) => abrirBlobEnPestana(blob),
+      error: (err) =>
+        this.avisar(
+          err?.error?.message ?? 'No se pudo generar el PDF de la valorización',
+        ),
+    });
   }
 
   claseEstado(idEstadoValorizacion: number): string {
     switch (idEstadoValorizacion) {
       case ESTADO_VALORIZACION_BORRADOR_ID:
-        return 'estado-chip--pendiente'; // BORRADOR
-      case 2:
-        return 'estado-chip--proceso'; // PRE-VALORIZADO
-      case 3:
-        return 'estado-chip--aprobado'; // VALORIZADO
+        return 'estado-chip--pendiente';
+      case ESTADO_VALORIZACION_PREVALORIZADO_ID:
+        return 'estado-chip--proceso';
+      case ESTADO_VALORIZACION_VALORIZADO_ID:
+        return 'estado-chip--aprobado';
       default:
         return '';
     }

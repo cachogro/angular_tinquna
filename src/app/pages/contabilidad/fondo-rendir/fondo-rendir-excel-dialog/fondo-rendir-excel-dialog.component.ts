@@ -33,7 +33,11 @@ import {
 import { PersonaService } from '../../../configurations/services/persona.service';
 import { ExcelFondoRendirRequest } from '../../models/fondo-rendir.models';
 import { FondoRendirService } from '../../services/fondo-rendir.service';
-import { mensajeErrorBlob } from '../../../../shared/utils/descarga-archivo.util';
+import {
+  extensionReporte,
+  FormatoReporte,
+  mensajeErrorBlob,
+} from '../../../../shared/utils/descarga-archivo.util';
 
 type DestinatarioTipo = 'PERSONA' | 'ACTOR';
 type Periodo = 'MENSUAL' | 'ANUAL';
@@ -227,7 +231,7 @@ export class FondoRendirExcelDialogComponent implements OnInit {
     this.dialogRef.close();
   }
 
-  descargarExcel(): void {
+  descargarExcel(formato: FormatoReporte = 'EXCEL'): void {
     if (this.descargandoExcel()) return;
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -252,7 +256,7 @@ export class FondoRendirExcelDialogComponent implements OnInit {
     if (mes != null) filtro.mes = mes;
 
     this.descargandoExcel.set(true);
-    this.fondoRendirService.descargarExcel(filtro).subscribe({
+    this.fondoRendirService.descargarExcel(filtro, formato).subscribe({
       next: (blob) => {
         this.descargandoExcel.set(false);
         const url = window.URL.createObjectURL(blob);
@@ -261,7 +265,7 @@ export class FondoRendirExcelDialogComponent implements OnInit {
         const nombreArchivo = nombre.trim().replace(/\s+/g, '_').toUpperCase();
         const periodo =
           mes != null ? `${gestion}-${String(mes).padStart(2, '0')}` : `${gestion}`;
-        a.download = `rendicion-cuentas-${nombreArchivo}-${periodo}.xlsx`;
+        a.download = `rendicion-cuentas-${nombreArchivo}-${periodo}.${extensionReporte(formato)}`;
         a.click();
         window.URL.revokeObjectURL(url);
       },
@@ -269,7 +273,7 @@ export class FondoRendirExcelDialogComponent implements OnInit {
         this.descargandoExcel.set(false);
         this.snackBar.open(
           (await mensajeErrorBlob(err)) ??
-            'No se pudo generar el Excel de rendición de cuentas',
+            'No se pudo generar el reporte de rendición de cuentas',
           'Cerrar',
           { duration: 5000 },
         );

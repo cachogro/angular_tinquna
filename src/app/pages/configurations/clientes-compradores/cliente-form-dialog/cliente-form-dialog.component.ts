@@ -32,6 +32,9 @@ import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog
 import { ParametricaDialogShellComponent } from '../../parametricas/shared/parametrica-dialog-shell.component';
 import {
   Cliente,
+  ID_TIPO_ACTOR_TRADING,
+  MODALIDADES_VENTA_CLIENTE,
+  ModalidadVentaCliente,
   Municipio,
   TipoActorProductivoMinero,
 } from '../../parametricas/models/parametricas.models';
@@ -96,6 +99,7 @@ const CARACTERES_INVALIDOS_MUNICIPIO = /[^A-Z0-9 ]/g;
 export class ClienteFormDialogComponent implements OnInit {
   /** Expuesto para el template: valor de la opción "Sin tipo" del select. */
   readonly SIN_TIPO = SIN_TIPO;
+  readonly modalidadesVenta = MODALIDADES_VENTA_CLIENTE;
 
   private readonly fb = inject(FormBuilder);
   private readonly parametricasService = inject(ParametricasService);
@@ -152,6 +156,12 @@ export class ClienteFormDialogComponent implements OnInit {
       null as number | string | null,
       [Validators.required],
     ],
+    // Cómo se le cobra: cuenta corriente (comercio interno) o lote por lote
+    // (exportación). Al elegir el tipo TRADING se sugiere exportación.
+    modalidadVenta: [
+      'COMERCIO_INTERNO' as ModalidadVentaCliente,
+      [Validators.required],
+    ],
     nit: ['', [Validators.maxLength(20), Validators.pattern(CHARSET_NIT)]],
     observaciones: ['', [Validators.maxLength(255)]],
     // Obligatoria en el front aunque el back la trate como opcional (default
@@ -163,6 +173,19 @@ export class ClienteFormDialogComponent implements OnInit {
   ngOnInit(): void {
     this.cargarMunicipios();
     this.cargarTiposActor();
+
+    // Solo al elegirlo a mano (patchValue de edición no emite acá porque el
+    // control de modalidad se precarga después con su valor guardado).
+    this.form.get('idTipoActorProductivoMinero')!.valueChanges.subscribe((tipo) => {
+      if (this.form.get('idTipoActorProductivoMinero')!.pristine) return;
+      this.form
+        .get('modalidadVenta')!
+        .setValue(
+          String(tipo ?? '') === ID_TIPO_ACTOR_TRADING
+            ? 'EXPORTACION'
+            : 'COMERCIO_INTERNO',
+        );
+    });
 
     this.registrarSaneador(this.form.get('nombre')!, (v) =>
       this.saneaNombreDireccion(v),
@@ -343,6 +366,7 @@ export class ClienteFormDialogComponent implements OnInit {
       telefono,
       idMunicipio,
       idTipoActorProductivoMinero,
+      modalidadVenta,
       nit,
       observaciones,
       fechaInicioOperaciones,
@@ -361,6 +385,7 @@ export class ClienteFormDialogComponent implements OnInit {
           idTipoActorProductivoMinero === SIN_TIPO
             ? undefined
             : (idTipoActorProductivoMinero ?? undefined),
+        modalidadVenta,
         nit: nit?.trim() || undefined,
         observaciones: observaciones?.trim() || undefined,
         fechaInicioOperaciones: this.formatFecha(fechaInicioOperaciones!),
@@ -399,6 +424,7 @@ export class ClienteFormDialogComponent implements OnInit {
       // (no en blanco): editar no debería forzar a re-elegir algo que ya
       // quedó decidido al crearlo.
       idTipoActorProductivoMinero: cliente.idTipoActorProductivoMinero ?? SIN_TIPO,
+      modalidadVenta: cliente.modalidadVenta ?? 'COMERCIO_INTERNO',
       nit: cliente.nit ?? '',
       observaciones: cliente.observaciones ?? '',
       fechaInicioOperaciones: this.parseFecha(cliente.fechaInicioOperaciones),

@@ -9,7 +9,8 @@
       activeMenu: item.route ? router.isActive(item.route, true) : false,
       expanded: expanded,
       disabled: item.disabled
-    }" class="menu-list-item">
+    }" class="menu-list-item" [matTooltip]="item.displayName" matTooltipPosition="right"
+    [matTooltipDisabled]="!sidebarMini()">
     <span class="iconify routeIcon" matListItemIcon [attr.data-icon]="item.iconName"></span>
     <span class="hide-menu">{{ item.displayName }}</span>
     
@@ -32,7 +33,8 @@
   <!-- external Link -->
 
 @if(!item.navCap && item.external) {
-  <mat-list-item (click)="openExternalLink(item.route)" class="menu-list-item" target="_blank">
+  <mat-list-item (click)="openExternalLink(item.route)" class="menu-list-item" target="_blank"
+    [matTooltip]="item.displayName" matTooltipPosition="right" [matTooltipDisabled]="!sidebarMini()">
     <span class="iconify routeIcon" matListItemIcon [attr.data-icon]="item.iconName"></span>
     <span class="hide-menu">{{ item.displayName }} </span>
     @if(item.chip) {

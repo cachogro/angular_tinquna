@@ -30,7 +30,7 @@
   <form [formGroup]="form" class="kx-form">
     <mat-form-field appearance="outline" class="kx-form__full">
       <mat-label>Descripción (opcional)</mat-label>
-      <input matInput formControlName="descripcion" maxlength="150"
+      <input matInput appMayusculas formControlName="descripcion" maxlength="150"
         placeholder="Ej: ANTICIPOS A CTA SACOS DE MINERAL" />
     </mat-form-field>
 
@@ -76,6 +76,7 @@
   @if (kardexAbierto(); as ka) {
   <div class="kx-resumen">
     <div class="kx-resumen__titulo">
+      <span class="kx-codigo">{{ ka.codigo }}</span>
       <span>N° {{ ka.numero }} · {{ ka.fechaApertura ? 'Apertura ' + fechaFmt(ka.fechaApertura) : 'Gestión ' + ka.gestion }}</span>
       <span class="kx-badge">ABIERTO</span>
     </div>
@@ -111,6 +112,10 @@
         }
         Descargar Excel
       </button>
+      <button mat-stroked-button [disabled]="descargandoExcel()" (click)="descargarExcel(ka, 'PDF')">
+        <mat-icon>picture_as_pdf</mat-icon>
+        Descargar PDF
+      </button>
       <button mat-stroked-button [disabled]="guardando()" (click)="cerrar(ka)">
         <mat-icon>lock</mat-icon> Cerrar N°{{ ka.numero }} (abre N°{{ ka.numero + 1 }})
       </button>
@@ -120,7 +125,7 @@
   <!-- ===== Movimientos del kardex abierto ===== -->
   <div class="kx-movimientos">
     <div class="kx-movimientos__head">
-      <h3>Movimientos — N°{{ ka.numero }}</h3>
+      <h3>Movimientos — {{ ka.codigo }} (N°{{ ka.numero }})</h3>
       <button mat-flat-button color="primary" (click)="nuevoMovimiento()">
         <mat-icon>add</mat-icon> Nuevo movimiento
       </button>
@@ -245,6 +250,11 @@
     <h3>Historial</h3>
     <div class="kx-tabla-scroll">
       <table mat-table [dataSource]="ordenados()" class="kx-tabla mat-elevation-z1">
+
+        <ng-container matColumnDef="codigo">
+          <th mat-header-cell *matHeaderCellDef>Código</th>
+          <td mat-cell *matCellDef="let k" class="kx-codigo">{{ k.codigo || '—' }}</td>
+        </ng-container>
 
         <ng-container matColumnDef="numero">
           <th mat-header-cell *matHeaderCellDef>N°</th>

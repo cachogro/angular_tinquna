@@ -11,6 +11,7 @@ import {
   Kardex,
   KardexPaginado,
 } from '../models/kardex.models';
+import { FormatoReporte } from '../../../shared/utils/descarga-archivo.util';
 
 @Injectable({ providedIn: 'root' })
 export class KardexService {
@@ -33,6 +34,7 @@ export class KardexService {
       );
     if (filtros.idPersona) params = params.set('idPersona', filtros.idPersona);
     if (filtros.idCliente) params = params.set('idCliente', filtros.idCliente);
+    if (filtros.codigo) params = params.set('codigo', filtros.codigo);
     if (filtros.busqueda) params = params.set('busqueda', filtros.busqueda);
     if (filtros.orderBy) params = params.set('orderBy', filtros.orderBy);
     if (filtros.orderDirection)
@@ -75,16 +77,23 @@ export class KardexService {
     return this.http.patch<Kardex>(`${this.baseUrl}/${id}/reactivar`, {});
   }
 
-  /** Excel del kardex (cabecera + movimientos). */
-  descargarExcel(id: string): Observable<Blob> {
+  /** Excel (o PDF) del kardex (cabecera + movimientos). */
+  descargarExcel(
+    id: string,
+    formato: FormatoReporte = 'EXCEL',
+  ): Observable<Blob> {
     return this.http.get(`${this.baseUrl}/${id}/excel`, {
+      params: new HttpParams().set('formato', formato),
       responseType: 'blob',
     });
   }
 
-  /** Excel del resumen de deudas de todos los kardex. Sin `tipo` salen todos. */
-  descargarResumenDeudas(filtro: FiltroResumenDeudas): Observable<Blob> {
-    let params = new HttpParams();
+  /** Excel (o PDF) del resumen de deudas de todos los kardex. Sin `tipo` salen todos. */
+  descargarResumenDeudas(
+    filtro: FiltroResumenDeudas,
+    formato: FormatoReporte = 'EXCEL',
+  ): Observable<Blob> {
+    let params = new HttpParams().set('formato', formato);
     if (filtro.tipo) params = params.set('tipo', filtro.tipo);
     return this.http.get(`${this.baseUrl}/reporte/deudas-totales/excel`, {
       params,

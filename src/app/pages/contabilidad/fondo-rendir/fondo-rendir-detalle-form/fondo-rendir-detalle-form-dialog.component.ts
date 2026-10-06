@@ -30,6 +30,9 @@ import {
 } from '../../models/fondo-rendir.models';
 import { FondoRendirService } from '../../services/fondo-rendir.service';
 import { FechaInputDirective } from '../../../../shared/directives/fecha-input.directive';
+import { MontoInputDirective } from '../../../../shared/directives/monto-input.directive';
+import { MayusculasDirective } from '../../../../shared/directives/mayusculas.directive';
+import { DestinoGastoFieldComponent } from '../../components/destino-gasto-field/destino-gasto-field.component';
 
 export interface FondoRendirDetalleFormDialogData {
   fondo: FondoRendirCuentas;
@@ -41,6 +44,9 @@ export interface FondoRendirDetalleFormDialogData {
   standalone: true,
   imports: [
     FechaInputDirective,
+    MontoInputDirective,
+    MayusculasDirective,
+    DestinoGastoFieldComponent,
     CommonModule,
     ReactiveFormsModule,
     MatDialogModule,
@@ -94,7 +100,7 @@ export class FondoRendirDetalleFormDialogComponent implements OnInit {
       Validators.required,
       Validators.maxLength(255),
     ]),
-    monto: new FormControl<number | null>(null, [
+    monto: new FormControl<number | string | null>(null, [
       Validators.required,
       montoDosDecimales,
       Validators.min(0.01),

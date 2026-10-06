@@ -38,7 +38,7 @@
 
   <mat-form-field appearance="outline">
     <mat-label>N° de comprobante</mat-label>
-    <input matInput class="nro-cpte" formControlName="nroComprobante" maxlength="30" />
+    <input matInput appMayusculas class="nro-cpte" formControlName="nroComprobante" maxlength="30" />
     @if (form.controls.nroComprobante.hasError('required') && form.controls.nroComprobante.touched) {
     <mat-error>Obligatorio para pagos bancarios</mat-error>
     }

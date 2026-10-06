@@ -55,6 +55,8 @@ import {
 } from '../../models/movimiento-kardex.models';
 import { MovimientoKardexService } from '../../services/movimiento-kardex.service';
 import { FechaInputDirective } from '../../../../shared/directives/fecha-input.directive';
+import { MontoInputDirective } from '../../../../shared/directives/monto-input.directive';
+import { MayusculasDirective } from '../../../../shared/directives/mayusculas.directive';
 
 export interface MovimientoKardexFormDialogData {
   idKardex: string;
@@ -83,6 +85,8 @@ type DestinoGastoControlValue = DestinoGasto | string | null;
   standalone: true,
   imports: [
     FechaInputDirective,
+    MontoInputDirective,
+    MayusculasDirective,
     CommonModule,
     ReactiveFormsModule,
     MatDialogModule,
@@ -132,7 +136,7 @@ export class MovimientoKardexFormDialogComponent implements OnInit {
     tipo: new FormControl<TipoMovimientoKardexLinea | null>(null, [
       Validators.required,
     ]),
-    monto: new FormControl<number | null>(null, [
+    monto: new FormControl<number | string | null>(null, [
       Validators.required,
       montoDosDecimales,
       Validators.min(0.01),

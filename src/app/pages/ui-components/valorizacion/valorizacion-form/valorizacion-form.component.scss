@@ -29,7 +29,7 @@
   justify-content: center;
   gap: 12px;
   padding: 56px 24px;
-  color: rgba(0, 0, 0, 0.45);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.45);
 }
 
 .valorizacion-preview {
@@ -51,7 +51,7 @@
 
 .valorizacion-preview__aviso--info {
   background: rgba(0, 207, 232, 0.12);
-  color: #00879c;
+  color: var(--tk-teal, #00879c);
 }
 
 .valorizacion-preview__aviso--alerta {
@@ -78,6 +78,25 @@
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.valorizacion-preview__acciones-cotizacion {
+  display: inline-flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Se valoriza con una cotización elegida del historial (no la vigente). */
+.valorizacion-preview__aviso--elegida {
+  background: color-mix(in srgb, var(--tk-naranja, #ef6c00) 12%, transparent);
+  color: var(--tk-naranja, #e65100);
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.valorizacion-form__hint-cotizacion {
+  color: var(--tk-naranja, #e65100);
+  font-weight: 600;
 }
 
 .valorizacion-preview__aviso--ok {
@@ -125,7 +144,7 @@
 .valorizacion-form__precio-valor {
   font-size: 18px;
   font-weight: 700;
-  color: #7367f0;
+  color: var(--tk-violeta, #7367f0);
 }
 
 .valorizacion-form__aportes-tabla-wrap {
@@ -144,9 +163,9 @@
   text-align: left;
   font-size: 11px;
   font-weight: 600;
-  color: rgba(0, 0, 0, 0.6);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.6);
   padding: 4px 4px;
-  border-bottom: 2px solid rgba(0, 0, 0, 0.08);
+  border-bottom: 2px solid rgb(var(--tk-ink, 0 0 0) / 0.08);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -155,7 +174,7 @@
 .valorizacion-form__aportes-tabla td {
   padding: 2px 4px;
   vertical-align: middle;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  border-bottom: 1px solid rgb(var(--tk-ink, 0 0 0) / 0.04);
 }
 
 /* Anchos en % (no px): con table-layout:fixed, el % es la única unidad que
@@ -226,7 +245,7 @@
 
 .valorizacion-form__aportes-vacio {
   text-align: center;
-  color: rgba(0, 0, 0, 0.35);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.35);
 }
 
 .valorizacion-form__aportes-importe {
@@ -235,7 +254,7 @@
 
 .valorizacion-form__aportes-fila-totales td {
   padding: 8px;
-  color: #7367f0;
+  color: var(--tk-violeta, #7367f0);
 }
 
 .valorizacion-form__aportes-fila-totales .col-importe-total,
@@ -257,7 +276,7 @@
   align-items: start;
   padding: 10px 12px;
   border-radius: 8px;
-  background: rgba(0, 0, 0, 0.02);
+  background: rgb(var(--tk-ink, 0 0 0) / 0.02);
 }
 
 .valorizacion-form__ley-campo {
@@ -288,7 +307,7 @@
   align-items: start;
   padding: 10px 12px;
   border-radius: 8px;
-  background: rgba(0, 0, 0, 0.02);
+  background: rgb(var(--tk-ink, 0 0 0) / 0.02);
 }
 
 .valorizacion-form__ley-fila-bcl .valorizacion-form__ley-campo--mineral {
@@ -458,13 +477,13 @@
 .valorizacion-form__ley-totales-label {
   font-size: 13px;
   font-weight: 600;
-  color: rgba(0, 0, 0, 0.6);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.6);
 }
 
 .valorizacion-form__ley-totales-valor {
   font-size: 16px;
   font-weight: 700;
-  color: #7367f0;
+  color: var(--tk-violeta, #7367f0);
 }
 
 /* Totales de "Gastos de Tratamiento y Penalidades": tabla sin bordes
@@ -544,7 +563,7 @@
 .valorizacion-form__resumen-saldo span:last-child {
   font-size: 18px;
   font-weight: 700;
-  color: #7367f0;
+  color: var(--tk-violeta, #7367f0);
 }
 
 .valorizacion-preview__grid {
@@ -554,9 +573,9 @@
 }
 
 .card {
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid rgb(var(--tk-ink, 0 0 0) / 0.08);
   border-radius: 8px;
-  background: rgba(0, 0, 0, 0.015);
+  background: rgb(var(--tk-ink, 0 0 0) / 0.015);
 }
 
 .mt-2 {
@@ -587,7 +606,7 @@
   font-size: 12px;
   font-weight: 600;
   background: rgba(255, 152, 0, 0.15);
-  color: #b26a00;
+  color: var(--tk-ambar, #b26a00);
 }
 
 .valorizacion-form__datos-recepcion p.small {
@@ -598,13 +617,13 @@
 .valorizacion-preview__label {
   display: block;
   font-size: 12px;
-  color: rgba(0, 0, 0, 0.5);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.5);
   margin-bottom: 4px;
 }
 
 .valorizacion-preview__nota {
   font-size: 12px;
-  color: rgba(0, 0, 0, 0.5);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.5);
   font-style: italic;
 }
 
@@ -662,7 +681,7 @@
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: rgba(0, 0, 0, 0.55);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.55);
   transition: color 0.3s ease;
 
   mat-icon {

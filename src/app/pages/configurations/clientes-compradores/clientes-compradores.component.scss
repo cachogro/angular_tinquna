@@ -22,7 +22,7 @@
 }
 
 .clientes-comp-toolbar__clear {
-  color: rgba(0, 0, 0, 0.5);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.5);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -47,7 +47,7 @@
   justify-content: center;
   gap: 12px;
   padding: 56px 24px;
-  color: rgba(0, 0, 0, 0.45);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.45);
 }
 
 .clientes-comp-table {
@@ -61,7 +61,7 @@
 
 .cliente-cell__telefono {
   font-size: 12px;
-  color: rgba(0, 0, 0, 0.55);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.55);
 
   mat-icon {
     font-size: 14px;
@@ -88,7 +88,7 @@
 }
 
 .estado-badge--inactivo {
-  color: #a8aaae;
+  color: var(--tk-texto-tenue, #a8aaae);
 }
 
 .estado-badge--inactivo .estado-badge__dot {
@@ -109,12 +109,12 @@
 }
 
 .text-danger {
-  color: #000000;
+  color: var(--tk-texto-fuerte, #000000);
 }
 
 .mat-mdc-header-row {
-  background: #0d6efd !important;
-  color: #ffffff !important;
+  background: var(--mat-sys-primary) !important;
+  color: var(--mat-sys-on-primary) !important;
   font-weight: 600;
   letter-spacing: .3px;
   position: sticky;

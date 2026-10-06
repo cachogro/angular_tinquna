@@ -121,6 +121,11 @@
           }
           Descargar Excel
         </button>
+        <button mat-stroked-button [disabled]="descargandoExcel()" (click)="descargarExcel('PDF')"
+          matTooltip="La misma caja de flujo del mes, en PDF">
+          <mat-icon>picture_as_pdf</mat-icon>
+          Descargar PDF
+        </button>
         <button mat-stroked-button [disabled]="descargandoExcelCompleto()" (click)="descargarExcelCompleto()"
           matTooltip="Caja en Bs, caja en $us y todas las cuentas bancarias del mes">
           @if (descargandoExcelCompleto()) {
@@ -129,6 +134,11 @@
           <mat-icon>download</mat-icon>
           }
           Descargar Excel completo
+        </button>
+        <button mat-stroked-button [disabled]="descargandoExcelCompleto()" (click)="descargarExcelCompleto('PDF')"
+          matTooltip="Caja en Bs, caja en $us y todas las cuentas bancarias del mes, en PDF">
+          <mat-icon>picture_as_pdf</mat-icon>
+          Descargar PDF completo
         </button>
         @if (p.estado === 'ABIERTO') {
         <button mat-stroked-button (click)="cerrarMes()">

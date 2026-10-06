@@ -68,6 +68,10 @@ export interface MovimientoBanco {
   haber: string;
   /** Saldo corriente tras el movimiento. */
   saldo: string;
+  /** Bs por 1 USD, solo en cuentas en USD. Referencial (debe/haber/saldo van
+   *  en la moneda de la cuenta); null en Bs y en movimientos anteriores a la
+   *  086 o generados por un recibo / línea de kardex. */
+  tipoCambio?: string | number | null;
   activo: boolean;
   usuarioUltimaModificacion?: string | null;
   fechaUltimaModificacion?: string | null;
@@ -148,8 +152,11 @@ export interface GuardarMovimientoBancoRequest {
   nombresApellidos?: string;
   concepto: string;
   tipo: TipoMovimientoBanco;
-  /** > 0, hasta 2 decimales. */
+  /** > 0, hasta 2 decimales. En la moneda de la cuenta. */
   monto: number;
+  /** Bs por 1 USD (> 0, hasta 4 decimales). Obligatorio si la cuenta es en
+   *  USD, también al editar; en Bs no se envía. */
+  tipoCambio?: number;
 }
 
 /** Body de cerrar/reabrir mes. Para gestión se omite `mes`. */

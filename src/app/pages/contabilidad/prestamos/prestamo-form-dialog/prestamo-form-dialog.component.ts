@@ -28,6 +28,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { montoDosDecimales } from '../../../../shared/utils/numero.util';
 import { sinSoloEspacios } from '../../../../shared/utils/texto.util';
 import { FechaInputDirective } from '../../../../shared/directives/fecha-input.directive';
+import { MayusculasDirective } from '../../../../shared/directives/mayusculas.directive';
 import { MontoInputDirective } from '../../../../shared/directives/monto-input.directive';
 import { PersonaCI } from '../../../configurations/models/persona.models';
 import { PersonaService } from '../../../configurations/services/persona.service';
@@ -77,6 +78,7 @@ export interface PrestamoFormDialogData {
     MatDatepickerModule,
     MatProgressSpinnerModule,
     FechaInputDirective,
+    MayusculasDirective,
     MontoInputDirective,
     DatosPagoFieldsComponent,
   ],

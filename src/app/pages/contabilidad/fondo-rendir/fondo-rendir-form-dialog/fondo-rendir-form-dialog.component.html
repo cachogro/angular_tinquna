@@ -42,6 +42,19 @@
         </mat-autocomplete>
       </mat-form-field>
       }
+
+      @if (saldoFavor() > 0) {
+      <div class="fr-saldo-favor">
+        <mat-icon>savings</mat-icon>
+        <span>Tiene <strong>Bs {{ saldoFavor() | number:'1.2-2' }}</strong> a favor de fondos anteriores (justificó
+          de más y no se le repuso). Entrará a este fondo como ya justificado.
+          @if (f.monto.value && pendienteTrasSaldoFavor >= 0) {
+          Le quedarán <strong>Bs {{ pendienteTrasSaldoFavor | number:'1.2-2' }}</strong> por justificar.
+          } @else if (f.monto.value) {
+          Seguirá con <strong>Bs {{ -pendienteTrasSaldoFavor | number:'1.2-2' }}</strong> a su favor.
+          }</span>
+      </div>
+      }
     </div>
 
     <div class="fr-form__row2">
@@ -57,8 +70,7 @@
 
       <mat-form-field appearance="outline">
         <mat-label>Monto</mat-label>
-        <input matInput type="text" inputmode="decimal" class="fr-input-derecha" formControlName="monto"
-          placeholder="0.00" (keydown)="restringirEntradaNumerica($event)" />
+        <input matInput appMonto formControlName="monto" />
         @if (f.monto.hasError('required') && f.monto.touched) {
         <mat-error>Obligatorio</mat-error>
         }
@@ -72,7 +84,7 @@
 
     <mat-form-field appearance="outline" class="fr-form__full">
       <mat-label>Concepto</mat-label>
-      <input matInput formControlName="concepto" maxlength="255" />
+      <input matInput appMayusculas formControlName="concepto" maxlength="255" />
       @if (f.concepto.hasError('required') && f.concepto.touched) {
       <mat-error>Obligatorio</mat-error>
       }
@@ -93,15 +105,7 @@
         }
       </mat-form-field>
 
-      <mat-form-field appearance="outline">
-        <mat-label>Destino del gasto (opcional)</mat-label>
-        <mat-select formControlName="idDestinoGasto">
-          <mat-option [value]="null">— Sin especificar —</mat-option>
-          @for (d of destinosGasto(); track d.id) {
-          <mat-option [value]="d.id">{{ d.nombre }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
+      <app-destino-gasto-field [control]="f.idDestinoGasto" [opciones]="destinosGasto()" />
     </div>
 
     @if (requiereCuentaBancaria) {
@@ -122,7 +126,7 @@
 
       <mat-form-field appearance="outline">
         <mat-label>N° de comprobante</mat-label>
-        <input matInput formControlName="nroComprobante" maxlength="30" class="nro-cpte"
+        <input matInput appMayusculas formControlName="nroComprobante" maxlength="30" class="nro-cpte"
           placeholder="Ej: CH-000123/A" />
         @if (f.nroComprobante.hasError('required') && f.nroComprobante.touched) {
         <mat-error>Obligatorio con forma de pago bancaria</mat-error>

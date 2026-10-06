@@ -1,6 +1,6 @@
 .bd-titulo__destinatario {
   font-weight: 400;
-  color: rgba(0, 0, 0, 0.6);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.6);
   font-size: 0.85em;
 }
 
@@ -21,7 +21,7 @@
 }
 
 .bd-bien small {
-  color: rgba(0, 0, 0, 0.6);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.6);
   font-size: 12px;
 }
 
@@ -55,7 +55,7 @@
   border-radius: 8px;
   font-size: 12.5px;
   background: rgba(46, 125, 50, 0.1);
-  color: #1b5e20;
+  color: var(--tk-verde, #1b5e20);
 }
 
 .bd-aviso mat-icon {
@@ -65,10 +65,96 @@
   flex-shrink: 0;
 }
 
+.bd-aviso--neutro {
+  background: rgb(var(--tk-ink, 0 0 0) / 0.05);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.7);
+}
+
+/* Nota al lado del campo "Amortiza su deuda" en la venta directa */
+.bd-form__nota {
+  display: flex;
+  align-items: center;
+  padding-bottom: 20px;
+  font-size: 12px;
+  color: rgb(var(--tk-ink, 0 0 0) / 0.55);
+}
+
+/* Resumen de la venta: precio, amortizado, gastos y resultado */
+.bd-resumen {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  margin: 4px 0 10px;
+  border-radius: 10px;
+  background: rgb(var(--tk-ink, 0 0 0) / 0.03);
+  font-size: 13px;
+}
+
+.bd-resumen__linea {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.bd-resumen__linea--total {
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid rgb(var(--tk-ink, 0 0 0) / 0.12);
+  font-weight: 600;
+}
+
+.bd-resumen__linea--subtotal {
+  font-weight: 600;
+  color: rgb(var(--tk-ink, 0 0 0) / 0.75);
+}
+
+/* Costo del bien cuando la empresa le invirtió gastos */
+.bd-costo {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.bd-costo__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgb(var(--tk-ink, 0 0 0) / 0.03);
+}
+
+.bd-costo__item small {
+  color: rgb(var(--tk-ink, 0 0 0) / 0.5);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.bd-costo__item--total strong {
+  color: var(--mat-sys-primary);
+}
+
+.bd-resumen--ganancia {
+  color: var(--tk-verde, #2e7d32);
+}
+
+.bd-resumen--perdida {
+  color: var(--tk-rojo, #c62828);
+}
+
+.bd-nota {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: rgb(var(--tk-ink, 0 0 0) / 0.55);
+}
+
 .bd-sub {
   font-size: 13px;
   font-weight: 600;
-  color: rgba(0, 0, 0, 0.6);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.6);
   margin: 8px 0;
 }
 

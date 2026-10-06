@@ -6,7 +6,7 @@
   justify-content: center;
   gap: 10px;
   padding: 40px 16px;
-  color: rgba(0, 0, 0, 0.45);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.45);
   text-align: center;
 }
 
@@ -73,8 +73,8 @@
 }
 
 .rl-tabla .mat-mdc-header-row {
-  background: #0d6efd !important;
-  color: #ffffff !important;
+  background: var(--mat-sys-primary) !important;
+  color: var(--mat-sys-on-primary) !important;
   font-weight: 600;
   letter-spacing: .2px;
   position: sticky;
@@ -139,17 +139,17 @@
 
 .rl-estado--borrador {
   background: color-mix(in srgb, #f9a825 18%, transparent);
-  color: #a06a00;
+  color: var(--tk-ambar, #a06a00);
 }
 
 .rl-estado--procesado {
-  background: color-mix(in srgb, #2e7d32 15%, transparent);
-  color: #2e7d32;
+  background: color-mix(in srgb, var(--tk-verde, #2e7d32) 15%, transparent);
+  color: var(--tk-verde, #2e7d32);
 }
 
 .rl-estado--anulado {
-  background: color-mix(in srgb, #757575 20%, transparent);
-  color: #616161;
+  background: color-mix(in srgb, var(--tk-texto-tenue, #757575) 20%, transparent);
+  color: var(--tk-texto-fuerte, #616161);
   text-decoration: line-through;
 }
 
@@ -164,6 +164,6 @@
 }
 
 .rl-moneda {
-  color: rgba(0, 0, 0, 0.55);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.55);
   margin-right: 2px;
 }

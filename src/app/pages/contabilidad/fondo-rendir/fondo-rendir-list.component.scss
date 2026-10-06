@@ -6,7 +6,7 @@
   justify-content: center;
   gap: 10px;
   padding: 40px 16px;
-  color: rgba(0, 0, 0, 0.45);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.45);
   text-align: center;
 }
 
@@ -58,8 +58,8 @@
 }
 
 .fl-tabla .mat-mdc-header-row {
-  background: #0d6efd !important;
-  color: #ffffff !important;
+  background: var(--mat-sys-primary) !important;
+  color: var(--mat-sys-on-primary) !important;
   font-weight: 600;
   letter-spacing: .2px;
   position: sticky;
@@ -115,7 +115,7 @@
 }
 
 .fl-neg {
-  color: #c62828;
+  color: var(--tk-rojo, #c62828);
   font-weight: 600;
 }
 
@@ -129,32 +129,32 @@
 
 .fl-estado--pendiente {
   background: color-mix(in srgb, #f9a825 18%, transparent);
-  color: #a06a00;
+  color: var(--tk-ambar, #a06a00);
 }
 
 .fl-estado--rendido_parcial {
-  background: color-mix(in srgb, #1565c0 15%, transparent);
-  color: #1565c0;
+  background: color-mix(in srgb, var(--tk-azul, #1565c0) 15%, transparent);
+  color: var(--tk-azul, #1565c0);
 }
 
 .fl-estado--rendido_total {
-  background: color-mix(in srgb, #2e7d32 15%, transparent);
-  color: #2e7d32;
+  background: color-mix(in srgb, var(--tk-verde, #2e7d32) 15%, transparent);
+  color: var(--tk-verde, #2e7d32);
 }
 
 .fl-estado--rendido_en_exceso {
-  background: color-mix(in srgb, #ef6c00 18%, transparent);
-  color: #e65100;
+  background: color-mix(in srgb, var(--tk-naranja, #ef6c00) 18%, transparent);
+  color: var(--tk-naranja, #e65100);
 }
 
 .fl-reponer {
-  color: #e65100;
+  color: var(--tk-naranja, #e65100);
   font-weight: 600;
 }
 
 .fl-estado--cerrado_con_deuda {
-  background: color-mix(in srgb, #c62828 15%, transparent);
-  color: #c62828;
+  background: color-mix(in srgb, var(--tk-rojo, #c62828) 15%, transparent);
+  color: var(--tk-rojo, #c62828);
 }
 
 /* ===== Responsive ===== */

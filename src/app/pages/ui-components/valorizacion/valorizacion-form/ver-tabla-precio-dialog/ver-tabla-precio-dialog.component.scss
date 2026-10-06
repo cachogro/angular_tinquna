@@ -9,7 +9,7 @@
 }
 
 .ver-tabla-precio__vacio {
-  color: rgba(0, 0, 0, 0.5);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.5);
   font-style: italic;
 }
 
@@ -28,15 +28,15 @@
 .ver-tabla-precio__tabla th {
   position: sticky;
   top: 0;
-  background: white;
+  background: var(--tk-superficie, white);
   text-align: left;
   padding: 8px;
-  border-bottom: 2px solid rgba(0, 0, 0, 0.08);
+  border-bottom: 2px solid rgb(var(--tk-ink, 0 0 0) / 0.08);
 }
 
 .ver-tabla-precio__tabla td {
   padding: 6px 8px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  border-bottom: 1px solid rgb(var(--tk-ink, 0 0 0) / 0.04);
 }
 
 .ver-tabla-precio__fila--activa {

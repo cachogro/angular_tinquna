@@ -9,6 +9,8 @@ import {
   DevolverBienDacionRequest,
   FiltrosBienDacion,
   RegistrarBienDacionRequest,
+  RegistrarGastoBienDacionRequest,
+  TomarEnPagoBienDacionRequest,
   VenderBienDacionRequest,
 } from '../models/bien-dacion-pago.models';
 
@@ -36,7 +38,19 @@ export class BienDacionPagoService {
     return this.http.post<BienDacionPago>(this.baseUrl, data);
   }
 
-  /** Solo si está EN_POSESION. */
+  /** Solo EN_POSESION: abona el valor acordado al kardex del dueño (sin
+   *  mover caja) y el bien pasa a ser de la empresa. */
+  tomarEnPago(
+    id: string | number,
+    data: TomarEnPagoBienDacionRequest,
+  ): Observable<BienDacionPago> {
+    return this.http.post<BienDacionPago>(
+      `${this.baseUrl}/${id}/tomar-en-pago`,
+      data,
+    );
+  }
+
+  /** EN_POSESION (venta directa) o TOMADO_EN_PAGO. */
   vender(
     id: string | number,
     data: VenderBienDacionRequest,
@@ -52,6 +66,22 @@ export class BienDacionPagoService {
     return this.http.post<BienDacionPago>(
       `${this.baseUrl}/${id}/devolver`,
       data,
+    );
+  }
+
+  /** Solo TOMADO_EN_PAGO: egreso directo de caja o libreta. */
+  registrarGasto(
+    id: string | number,
+    data: RegistrarGastoBienDacionRequest,
+  ): Observable<BienDacionPago> {
+    return this.http.post<BienDacionPago>(`${this.baseUrl}/${id}/gasto`, data);
+  }
+
+  /** Da de baja el gasto y su egreso; devuelve el bien actualizado. */
+  anularGasto(idGasto: string | number): Observable<BienDacionPago> {
+    return this.http.patch<BienDacionPago>(
+      `${this.baseUrl}/gasto/${idGasto}/anular`,
+      {},
     );
   }
 }

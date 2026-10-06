@@ -20,11 +20,27 @@
 .mov-form mat-form-field {
   width: 100%;
 }
+.mov-equivalente {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2px;
+  padding-bottom: 20px;
+  text-align: right;
+}
+.mov-equivalente small {
+  color: rgb(var(--tk-ink, 0 0 0) / 0.5);
+  font-size: 11px;
+}
+.mov-equivalente strong {
+  color: var(--mat-sys-primary);
+}
 .mov-input-derecha {
   text-align: right;
 }
 .benef-doc {
-  color: rgba(0, 0, 0, 0.5);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.5);
 }
 .mov-contraparte {
   display: flex;
@@ -35,7 +51,7 @@
 .mov-contraparte__label {
   font-size: 12px;
   font-weight: 600;
-  color: rgba(0, 0, 0, 0.6);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.6);
 }
 .mov-contraparte__tipo {
   align-self: flex-start;

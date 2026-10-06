@@ -27,13 +27,18 @@ import {
   BienDacionFormDialogData,
   ModoBienDacion,
 } from '../bien-dacion-form-dialog/bien-dacion-form-dialog.component';
+import {
+  BienDacionGastosDialogComponent,
+  BienDacionGastosDialogData,
+} from '../bien-dacion-gastos-dialog/bien-dacion-gastos-dialog.component';
 
 export interface BienesDacionDialogData {
   nombreDestinatario: string;
   /** Uno de los dos (excluyentes). */
   idActorProductivoMinero?: string;
   idPersona?: string;
-  /** Registrar un bien exige kardex ABIERTO; vender/devolver no. */
+  /** Registrar, tomar en pago y la venta directa exigen kardex ABIERTO;
+   *  devolver, cargar gastos y vender un bien ya tomado en pago, no. */
   tieneKardexAbierto: boolean;
 }
 
@@ -81,6 +86,7 @@ export class BienesDacionDialogComponent implements OnInit {
     'descripcion',
     'valorReferencial',
     'estado',
+    'costo',
     'resolucion',
     'observaciones',
     'acciones',
@@ -135,8 +141,52 @@ export class BienesDacionDialogComponent implements OnInit {
     this.abrirForm('REGISTRAR');
   }
 
+  /** La empresa se queda con el bien: abona el valor acordado a su kardex. */
+  tomarEnPago(b: BienDacionPago): void {
+    this.abrirForm('TOMAR_EN_PAGO', b);
+  }
+
   vender(b: BienDacionPago): void {
     this.abrirForm('VENDER', b);
+  }
+
+  /** Gastos del bien: se cargan con el bien tomado en pago; vendido, solo
+   *  se consultan. */
+  gastos(b: BienDacionPago): void {
+    const data: BienDacionGastosDialogData = {
+      bien: b,
+      nombreDestinatario: this.data.nombreDestinatario,
+    };
+    this.dialog
+      .open(BienDacionGastosDialogComponent, {
+        data,
+        width: '820px',
+        maxWidth: '95vw',
+        autoFocus: false,
+      })
+      .afterClosed()
+      .subscribe((huboCambios: boolean) => {
+        if (!huboCambios) return;
+        this.huboCambios = true;
+        this.cargar();
+      });
+  }
+
+  /** Vender o tomar en pago abonan al kardex: necesitan uno abierto, salvo
+   *  vender un bien ya tomado en pago (ahí solo entra el dinero). */
+  puedeVender(b: BienDacionPago): boolean {
+    return (
+      b.estado === 'TOMADO_EN_PAGO' ||
+      (b.estado === 'EN_POSESION' && this.data.tieneKardexAbierto)
+    );
+  }
+
+  puedeTomarEnPago(b: BienDacionPago): boolean {
+    return b.estado === 'EN_POSESION' && this.data.tieneKardexAbierto;
+  }
+
+  tieneGastos(b: BienDacionPago): boolean {
+    return (b.gastos?.length ?? 0) > 0;
   }
 
   devolver(b: BienDacionPago): void {
@@ -171,7 +221,14 @@ export class BienesDacionDialogComponent implements OnInit {
   }
 
   estadoLabel(e: EstadoBienDacion): string {
-    return e === 'EN_POSESION' ? 'EN POSESIÓN' : e;
+    if (e === 'EN_POSESION') return 'EN POSESIÓN';
+    if (e === 'TOMADO_EN_PAGO') return 'TOMADO EN PAGO';
+    return e;
+  }
+
+  /** Valor absoluto, para mostrar la pérdida sin el signo. */
+  abs(n: number): number {
+    return Math.abs(n);
   }
 
   num(v: number | string | null | undefined): number {

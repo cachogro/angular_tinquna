@@ -1,11 +1,11 @@
 .rf-icono--ingreso {
-  color: #2e7d32;
+  color: var(--tk-verde, #2e7d32);
   vertical-align: middle;
   margin-right: 4px;
 }
 
 .rf-icono--egreso {
-  color: #c62828;
+  color: var(--tk-rojo, #c62828);
   vertical-align: middle;
   margin-right: 4px;
 }
@@ -16,7 +16,7 @@
   gap: 12px;
   padding: 32px;
   justify-content: center;
-  color: rgba(0, 0, 0, 0.5);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.5);
 }
 
 .rf-form {
@@ -47,7 +47,7 @@
 }
 
 .rf-doc {
-  color: rgba(0, 0, 0, 0.5);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.5);
 }
 
 /* Cabecera fija del borrador (solo lectura al procesar) */
@@ -57,7 +57,7 @@
   gap: 8px 16px;
   padding: 10px 12px;
   margin-bottom: 8px;
-  background: rgba(0, 0, 0, 0.03);
+  background: rgb(var(--tk-ink, 0 0 0) / 0.03);
   border-radius: 8px;
 }
 
@@ -68,7 +68,7 @@
 }
 
 .rf-fijo small {
-  color: rgba(0, 0, 0, 0.5);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.5);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.03em;
@@ -79,7 +79,7 @@
 }
 
 .rf-fijo--monto strong {
-  color: #1565c0;
+  color: var(--tk-azul, #1565c0);
 }
 
 .rf-fijo .rf-fijo__tc {
@@ -99,12 +99,12 @@
 }
 
 .rf-equivalente small {
-  color: rgba(0, 0, 0, 0.5);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.5);
   font-size: 11px;
 }
 
 .rf-equivalente strong {
-  color: #1565c0;
+  color: var(--tk-azul, #1565c0);
 }
 
 /* Contraparte: toggle de tipo + campo dependiente */
@@ -118,17 +118,23 @@
 .rf-contraparte__label {
   font-size: 12px;
   font-weight: 600;
-  color: rgba(0, 0, 0, 0.6);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.6);
 }
 
 .rf-contraparte__tipo {
   align-self: flex-start;
 }
 
+.rf-contraparte__aviso {
+  margin: 0;
+  font-size: 12.5px;
+  color: rgb(var(--tk-ink, 0 0 0) / 0.7);
+}
+
 .rf-detalles {
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  border-top: 1px solid rgb(var(--tk-ink, 0 0 0) / 0.08);
 }
 
 .rf-detalles__head {
@@ -163,7 +169,7 @@
   margin: 0 0 8px;
   font-size: 13px;
   font-style: italic;
-  color: rgba(0, 0, 0, 0.55);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.55);
 }
 
 .rf-total {
@@ -185,7 +191,7 @@
 .rf-total__linea--fuerte {
   margin-top: 4px;
   padding-top: 4px;
-  border-top: 1px solid rgba(0, 0, 0, 0.12);
+  border-top: 1px solid rgb(var(--tk-ink, 0 0 0) / 0.12);
 }
 
 .rf-total__linea--fuerte strong {
@@ -193,13 +199,13 @@
 }
 
 .rf-total__linea--error {
-  color: #c62828;
+  color: var(--tk-rojo, #c62828);
   font-weight: 600;
 }
 
 .rf-total__alerta {
   margin: 4px 0 0;
-  color: #c62828;
+  color: var(--tk-rojo, #c62828);
   font-size: 12px;
 }
 

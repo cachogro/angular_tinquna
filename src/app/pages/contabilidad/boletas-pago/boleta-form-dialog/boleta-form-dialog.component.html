@@ -146,13 +146,13 @@
     <div class="bf-grid">
       <mat-form-field appearance="outline" class="bf-span3">
         <mat-label>Concepto</mat-label>
-        <input matInput formControlName="concepto" maxlength="255" />
+        <input matInput appMayusculas formControlName="concepto" maxlength="255" />
         <mat-hint>Se arma solo con el periodo</mat-hint>
         <mat-hint align="end">{{ f.concepto.value?.length ?? 0 }}/255</mat-hint>
       </mat-form-field>
       <mat-form-field appearance="outline" class="bf-span3">
         <mat-label>Observaciones (opcional)</mat-label>
-        <input matInput formControlName="observaciones" maxlength="255" />
+        <input matInput appMayusculas formControlName="observaciones" maxlength="255" />
       </mat-form-field>
     </div>
     }

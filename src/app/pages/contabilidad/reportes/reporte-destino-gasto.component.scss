@@ -6,7 +6,7 @@
   justify-content: center;
   gap: 10px;
   padding: 32px 16px;
-  color: rgba(0, 0, 0, 0.45);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.45);
   text-align: center;
 }
 
@@ -55,8 +55,8 @@
 }
 
 .rd-aviso--error {
-  background: color-mix(in srgb, #c62828 12%, transparent);
-  color: #c62828;
+  background: color-mix(in srgb, var(--tk-rojo, #c62828) 12%, transparent);
+  color: var(--tk-rojo, #c62828);
 }
 
 /* ===== Totales ===== */
@@ -77,7 +77,7 @@
 }
 
 .rd-tile small {
-  color: rgba(0, 0, 0, 0.55);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.55);
   font-size: 11px;
 }
 
@@ -97,8 +97,8 @@
 }
 
 .rd-tabla .mat-mdc-header-row {
-  background: #0d6efd !important;
-  color: #ffffff !important;
+  background: var(--mat-sys-primary) !important;
+  color: var(--mat-sys-on-primary) !important;
   font-weight: 600;
   letter-spacing: .2px;
   position: sticky;
@@ -146,16 +146,16 @@
 }
 
 .rd-pos {
-  color: #2e7d32;
+  color: var(--tk-verde, #2e7d32);
 }
 
 .rd-neg {
-  color: #c62828;
+  color: var(--tk-rojo, #c62828);
 }
 
 .rd-cpte-nro {
   display: block;
-  color: rgba(0, 0, 0, 0.5);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.5);
 }
 
 /* ===== Detalle ===== */
@@ -172,7 +172,7 @@
 
 .rd-detalle__titulo small {
   font-weight: 400;
-  color: rgba(0, 0, 0, 0.55);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.55);
 }
 
 .rd-detalle__totales {

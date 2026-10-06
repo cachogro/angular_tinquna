@@ -49,7 +49,7 @@
 
 
 .recepcion-toolbar__clear {
-  color: rgba(0, 0, 0, 0.5);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.5);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -67,7 +67,7 @@
   justify-content: center;
   gap: 12px;
   padding: 56px 24px;
-  color: rgba(0, 0, 0, 0.45);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.45);
 }
 
 .recepcion-table {
@@ -81,7 +81,7 @@
 
 .operacion-cell__fecha {
   font-size: 12px;
-  color: rgba(0, 0, 0, 0.55);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.55);
 
   mat-icon {
     font-size: 14px;
@@ -98,7 +98,7 @@
 
 .proveedor-cell__doc {
   font-size: 12px;
-  color: rgba(0, 0, 0, 0.5);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.5);
 }
 
 .detalle-cell {
@@ -106,7 +106,7 @@
   flex-direction: column;
   gap: 2px;
   font-size: 12px;
-  color: rgba(0, 0, 0, 0.65);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.65);
 }
 
 .estado-chip {
@@ -122,7 +122,7 @@
 
 .estado-chip--proceso {
   background: rgba(0, 207, 232, 0.15) !important;
-  color: #00879c !important;
+  color: var(--tk-teal, #00879c) !important;
 }
 
 .estado-chip--aprobado {
@@ -132,7 +132,7 @@
 
 .estado-chip--liquidado {
   background: rgba(115, 103, 240, 0.15) !important;
-  color: #7367f0 !important;
+  color: var(--tk-violeta, #7367f0) !important;
 }
 
 .estado-chip--rechazado {
@@ -141,18 +141,18 @@
 }
 
 .estado-chip--cancelado {
-  background: rgba(0, 0, 0, 0.08) !important;
-  color: rgba(0, 0, 0, 0.55) !important;
+  background: rgb(var(--tk-ink, 0 0 0) / 0.08) !important;
+  color: rgb(var(--tk-ink, 0 0 0) / 0.55) !important;
 }
 
 .estado-chip--tranzado {
   background: rgba(115, 103, 240, 0.15) !important;
-  color: #7367f0 !important;
+  color: var(--tk-violeta, #7367f0) !important;
 }
 
 .estado-chip--remuestreo {
   background: rgba(0, 207, 232, 0.15) !important;
-  color: #00879c !important;
+  color: var(--tk-teal, #00879c) !important;
 }
 
 .acciones-header {
@@ -168,19 +168,19 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: rgba(0, 0, 0, 0.3);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.3);
   padding: 8px;
 }
 
 /* Opción 1: Pintar la fila completa del encabezado */
 .recepcion-table .mat-mdc-header-row {
-  background-color: #0d6efd !important;
+  background-color: var(--mat-sys-primary) !important;
   /* Cambia este HEX por tu azul preferido */
 }
 
 /* Opción 2: Pintar celda por celda y forzar el texto a blanco */
 .recepcion-table th.mat-mdc-header-cell {
-  background-color: #0d6efd !important;
-  color: #ffffff !important;
+  background-color: var(--mat-sys-primary) !important;
+  color: var(--mat-sys-on-primary) !important;
   font-weight: bold !important;
 }

@@ -210,6 +210,12 @@ export class FondoRendirListComponent implements OnInit {
     this.abrirPdf(f, this.reciboService.obtenerPdfDetallado(f.idRecibo));
   }
 
+  /** PDF del recibo de egreso con que se repuso el excedente del fondo. */
+  verPdfReciboReposicion(f: FondoRendirCuentas): void {
+    if (!f.idReciboReposicion) return;
+    this.abrirPdf(f, this.reciboService.obtenerPdf(f.idReciboReposicion));
+  }
+
   private abrirPdf(f: FondoRendirCuentas, obs: Observable<Blob>): void {
     if (this.descargandoPdf()) return;
     this.descargandoPdf.set(f.id);

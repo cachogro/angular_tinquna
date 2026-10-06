@@ -1,0 +1,48 @@
+// Color por módulo: el layout (FullComponent) pone la clase según la ruta,
+// tanto en el contenedor de la página como en el de los diálogos (overlay).
+// Todo lo que usa var(--mat-sys-primary) —botones, tabs, spinners,
+// encabezados de tabla— toma el color del módulo.
+//   Comercio Interno (/ui-components) → azul
+//   Contabilidad     (/contabilidad)  → naranja
+//   Configuraciones  (/configuraciones) → verde azulado (teal)
+// Un diálogo de contabilidad abierto desde comercio interno fuerza el suyo
+// con panelClass: 'tema-contabilidad'.
+
+html .tema-comercio {
+  --mat-sys-primary: #0d6efd;
+  --mat-sys-on-primary: #ffffff;
+  --mat-sys-primary-fixed-dim: rgba(13, 110, 253, 0.15);
+}
+
+html .tema-contabilidad {
+  --mat-sys-primary: #ff914c;
+  --mat-sys-on-primary: #ffffff;
+  --mat-sys-primary-fixed-dim: rgba(255, 145, 76, 0.15);
+}
+
+html .tema-configuracion {
+  --mat-sys-primary: #00796b;
+  --mat-sys-on-primary: #ffffff;
+  --mat-sys-primary-fixed-dim: rgba(0, 121, 107, 0.15);
+}
+
+// Modo oscuro: variantes más luminosas para que resalten sobre el fondo
+// pizarra. La clase del módulo puede estar en el mismo elemento que
+// .dark-theme (layout, overlay) o debajo (panelClass de un diálogo).
+html .tema-comercio.dark-theme,
+html .dark-theme .tema-comercio {
+  --mat-sys-primary: #3b82f6;
+  --mat-sys-primary-fixed-dim: rgba(59, 130, 246, 0.18);
+}
+
+html .tema-contabilidad.dark-theme,
+html .dark-theme .tema-contabilidad {
+  --mat-sys-primary: #f97f3a;
+  --mat-sys-primary-fixed-dim: rgba(249, 127, 58, 0.18);
+}
+
+html .tema-configuracion.dark-theme,
+html .dark-theme .tema-configuracion {
+  --mat-sys-primary: #0f9488;
+  --mat-sys-primary-fixed-dim: rgba(15, 148, 136, 0.2);
+}

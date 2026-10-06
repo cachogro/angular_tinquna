@@ -59,6 +59,10 @@ export interface Kardex {
   cliente?: ClienteEnKardex | null;
   /** N° del libro (1, 2, 3…), correlativo por destinatario. No es el id. */
   numero: number;
+  /** Código legible y único, ej. "KA-001" (A = actor, S = asociado,
+   *  P = personal, C = cliente). Lo asigna el back: nunca se envía. Al
+   *  cerrar, el kardex nuevo recibe el siguiente código libre de su sigla. */
+  codigo: string;
   gestion: number;
   descripcion: string;
   estado: EstadoKardex;
@@ -96,7 +100,13 @@ export interface AbrirKardexRequest {
   saldoInicial: number;
 }
 
-export type OrdenKardex = 'id' | 'numero' | 'gestion' | 'estado' | 'fechaApertura';
+export type OrdenKardex =
+  | 'id'
+  | 'codigo'
+  | 'numero'
+  | 'gestion'
+  | 'estado'
+  | 'fechaApertura';
 
 /** GET /contabilidad/kardex/reporte/deudas-totales/excel. El back marca
  *  INACTIVO según KARDEX_DIAS_INACTIVIDAD (.env), igual que el listado. */
@@ -119,7 +129,10 @@ export interface FiltrosKardex {
   idPersona?: string;
   /** Historial completo de un cliente puntual. */
   idCliente?: string;
-  /** Busca en nombre de actor, nombres/apellidos de persona y descripción. */
+  /** Coincidencia parcial sin distinguir mayúsculas: "KA-001" trae ese
+   *  kardex; "KA" trae todos los de actor. */
+  codigo?: string;
+  /** Busca en código, nombre de actor, nombres/apellidos de persona y descripción. */
   busqueda?: string;
   orderBy?: OrdenKardex;
   orderDirection?: 'ASC' | 'DESC';

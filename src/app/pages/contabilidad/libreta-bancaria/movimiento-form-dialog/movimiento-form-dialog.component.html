@@ -28,15 +28,8 @@
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>Monto (Bs)</mat-label>
-        <input
-          matInput
-          type="text"
-          inputmode="decimal"
-          class="mov-input-derecha"
-          formControlName="monto"
-          (keydown)="restringirEntradaNumerica($event)"
-        />
+        <mat-label>Monto ({{ simbolo }})</mat-label>
+        <input matInput appMonto formControlName="monto" />
         @if (f.monto.hasError('required') && f.monto.touched) {
         <mat-error>Obligatorio</mat-error>
         }
@@ -49,9 +42,34 @@
       </mat-form-field>
     </div>
 
+    @if (esUsd) {
+    <div class="mov-form__row2">
+      <mat-form-field appearance="outline">
+        <mat-label>Tipo de cambio (Bs por 1 $us)</mat-label>
+        <input matInput appMonto formControlName="tipoCambio" placeholder="6.96" />
+        @if (f.tipoCambio.hasError('required') && f.tipoCambio.touched) {
+        <mat-error>Obligatorio en dólares</mat-error>
+        } @else if (f.tipoCambio.hasError('pattern') && f.tipoCambio.touched) {
+        <mat-error>Número con hasta 4 decimales</mat-error>
+        } @else if (f.tipoCambio.hasError('min') && f.tipoCambio.touched) {
+        <mat-error>Debe ser mayor a 0</mat-error>
+        }
+        @if (faltaTipoCambio) {
+        <mat-hint>Movimiento registrado sin tipo de cambio: indícalo</mat-hint>
+        }
+      </mat-form-field>
+
+      <div class="mov-equivalente">
+        <small>Equivalente</small>
+        <strong>Bs {{ equivalenteBs() | number:'1.2-2' }}</strong>
+        <small>{{ (f.monto.value || 0) | number:'1.2-2' }} $us × {{ tipoCambio() | number:'1.2-4' }}</small>
+      </div>
+    </div>
+    }
+
     <mat-form-field appearance="outline" class="mov-form__full">
       <mat-label>Concepto</mat-label>
-      <input matInput formControlName="concepto" maxlength="255"
+      <input matInput appMayusculas formControlName="concepto" maxlength="255"
         [matAutocomplete]="autoConcepto" #conceptoTrigger="matAutocompleteTrigger"
         (focus)="conceptoTrigger.openPanel()" />
       <mat-autocomplete #autoConcepto="matAutocomplete">
@@ -79,13 +97,13 @@
 
       <mat-form-field appearance="outline">
         <mat-label>N° de transacción (opcional)</mat-label>
-        <input matInput formControlName="nroTransaccion" maxlength="30" class="nro-cpte" />
+        <input matInput appMayusculas formControlName="nroTransaccion" maxlength="30" class="nro-cpte" />
       </mat-form-field>
     </div>
 
     <mat-form-field appearance="outline" class="mov-form__full">
       <mat-label>Factura y/o recibo (opcional)</mat-label>
-      <input matInput formControlName="facturaRecibo" maxlength="30"
+      <input matInput appMayusculas formControlName="facturaRecibo" maxlength="30"
         placeholder="Ej: FACT-001234 o R-0009" />
       <mat-hint align="end">{{ f.facturaRecibo.value?.length ?? 0 }}/30</mat-hint>
     </mat-form-field>
@@ -125,7 +143,7 @@
       @case ('TEXTO') {
       <mat-form-field appearance="outline" class="mov-form__full">
         <mat-label>Nombre / referencia</mat-label>
-        <input matInput formControlName="textoContraparte" maxlength="255" placeholder="Ej: JUANITA PÉREZ" />
+        <input matInput appMayusculas formControlName="textoContraparte" maxlength="255" placeholder="Ej: JUANITA PÉREZ" />
       </mat-form-field>
       }
       @default {

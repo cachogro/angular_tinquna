@@ -21,7 +21,7 @@
 }
 
 .usuarios-toolbar__clear {
-  color: rgba(0, 0, 0, 0.5);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.5);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -39,7 +39,7 @@
   justify-content: center;
   gap: 12px;
   padding: 56px 24px;
-  color: rgba(0, 0, 0, 0.45);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.45);
 }
 
 .usuarios-table {
@@ -82,7 +82,7 @@
 
 .usuario-cell__login {
   font-size: 12px;
-  color: rgba(0, 0, 0, 0.55);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.55);
 }
 
 // Celda de contacto
@@ -98,21 +98,21 @@
     height: 16px;
     vertical-align: middle;
     margin-right: 4px;
-    color: rgba(0, 0, 0, 0.5);
+    color: rgb(var(--tk-ink, 0 0 0) / 0.5);
   }
 }
 
 // Chip de rol
 .rol-chip {
   background: rgba(0, 207, 232, 0.12) !important;
-  color: #00879c !important;
+  color: var(--tk-teal, #00879c) !important;
   font-size: 12px !important;
   min-height: 24px !important;
 }
 
 .rol-chip--admin {
   background: rgba(255, 193, 7, 0.2) !important;
-  color: #b8860b !important;
+  color: var(--tk-ambar, #b8860b) !important;
 }
 
 // ======================================================
@@ -136,7 +136,7 @@
 }
 
 .estado-badge--inactivo {
-  color: #a8aaae;
+  color: var(--tk-texto-tenue, #a8aaae);
 }
 
 .estado-badge--inactivo .estado-badge__dot {
@@ -162,8 +162,8 @@
 // ======================================================
 
 .mat-mdc-header-row {
-  background: #0d6efd !important;
-  color: #ffffff !important;
+  background: var(--mat-sys-primary) !important;
+  color: var(--mat-sys-on-primary) !important;
   font-weight: 600;
   letter-spacing: 0.3px;
   position: sticky;

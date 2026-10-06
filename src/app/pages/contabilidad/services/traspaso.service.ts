@@ -10,6 +10,7 @@ import {
   Traspaso,
   TraspasosPaginados,
 } from '../models/traspaso.models';
+import { FormatoReporte } from '../../../shared/utils/descarga-archivo.util';
 
 @Injectable({ providedIn: 'root' })
 export class TraspasoService {
@@ -43,8 +44,11 @@ export class TraspasoService {
   }
 
   /** Excel "Libro de traspasos caja - banco" con los filtros dados. */
-  descargarLibroExcel(filtro: FiltroLibroTraspasos): Observable<Blob> {
-    let params = new HttpParams();
+  descargarLibroExcel(
+    filtro: FiltroLibroTraspasos,
+    formato: FormatoReporte = 'EXCEL',
+  ): Observable<Blob> {
+    let params = new HttpParams().set('formato', formato);
     if (filtro.idCuentaBancaria != null)
       params = params.set('idCuentaBancaria', filtro.idCuentaBancaria);
     if (filtro.tipo) params = params.set('tipo', filtro.tipo);

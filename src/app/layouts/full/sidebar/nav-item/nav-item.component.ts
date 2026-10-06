@@ -5,7 +5,9 @@ import {
   OnChanges,
   Output,
   EventEmitter,
+  inject,
 } from '@angular/core';
+import { CoreService } from 'src/app/services/core.service';
 import { NavItem } from './nav-item';
 import { Router } from '@angular/router';
 import { NavService } from '../../../../services/nav.service';
@@ -37,6 +39,9 @@ export class AppNavItemComponent implements OnChanges {
 
   @HostBinding('attr.aria-expanded') ariaExpanded = this.expanded;
   @Input() depth: any;
+
+  // Con el sidebar en modo mini el nombre del ítem se ve como tooltip.
+  sidebarMini = inject(CoreService).sidebarMini;
 
   constructor(public navService: NavService, public router: Router) {}
 

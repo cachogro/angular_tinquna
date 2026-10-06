@@ -98,10 +98,14 @@ export interface ValorizacionMineral {
   calculoAportes: CalculoAporteValorizacion[];
   /** Solo BCL: Gastos de Tratamiento y Penalidades ya guardados. */
   calculos?: CalculoValorizacion[];
-  /** Recibo del pago del saldo (Líquido Pagable): el back devuelve solo el
-   *  vigente (BORRADOR o PROCESADO). Vacío + VALORIZADO + saldo > 0 = falta
-   *  generarlo (ver recibo-valorizacion.util). */
+  /** Recibo de pago del saldo de las valorizaciones anteriores (ya no se
+   *  emite: ver `pagos`). El back devuelve solo el vigente; si existe, la
+   *  valorización cuenta como pagada. */
   recibos?: ReciboAnticipoResumen[];
+  /** Pago del líquido pagable (transacción interna, sin recibo): el back
+   *  devuelve solo el vigente. Vacío + VALORIZADO = falta registrar el pago
+   *  (ver pago-valorizacion.util). */
+  pagos?: { id: string; estado: 'REGISTRADO' | 'ANULADO'; fecha: string; montoPagado: string }[];
 }
 
 /** Codificación con la que realmente se valoriza: la elegida en la

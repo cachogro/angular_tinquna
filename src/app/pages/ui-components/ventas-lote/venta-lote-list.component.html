@@ -2,11 +2,20 @@
   <mat-card-header>
     <div>
       <mat-card-title class="m-b-0">Ventas de Lote</mat-card-title>
-      <mat-card-subtitle class="m-b-0">Comercio interno · seguimiento de anticipos y cobro de cada lote vendido</mat-card-subtitle>
+      <mat-card-subtitle class="m-b-0">Comercio interno y exportación · anticipos de cada cliente y cobro de los lotes vendidos</mat-card-subtitle>
     </div>
   </mat-card-header>
 
   <mat-card-content class="b-t-1">
+    <mat-tab-group animationDuration="200ms" mat-stretch-tabs="false">
+      <mat-tab label="Por cliente">
+        <div class="vll-tab">
+          <app-venta-lote-clientes (cambio)="cargar()"></app-venta-lote-clientes>
+        </div>
+      </mat-tab>
+
+      <mat-tab label="Por lote">
+        <div class="vll-tab">
     <div class="vll-acciones">
       <button mat-flat-button color="primary" (click)="nueva()">
         <mat-icon>add</mat-icon> Vender lote
@@ -17,6 +26,15 @@
       <mat-form-field appearance="outline" class="vll-toolbar__search" subscriptSizing="dynamic">
         <mat-icon matPrefix>search</mat-icon>
         <input matInput placeholder="Buscar por lote, promedio o cliente" [formControl]="searchControl" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="vll-toolbar__estado" subscriptSizing="dynamic">
+        <mat-label>Modalidad</mat-label>
+        <mat-select [formControl]="modalidadControl">
+          <mat-option [value]="null">Todas</mat-option>
+          <mat-option value="COMERCIO_INTERNO">Comercio interno</mat-option>
+          <mat-option value="EXPORTACION">Exportación</mat-option>
+        </mat-select>
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="vll-toolbar__estado" subscriptSizing="dynamic">
@@ -52,7 +70,10 @@
         </ng-container>
         <ng-container matColumnDef="cliente">
           <th mat-header-cell *matHeaderCellDef>Cliente</th>
-          <td mat-cell *matCellDef="let v">{{ v.cliente?.nombre ?? '—' }}</td>
+          <td mat-cell *matCellDef="let v">
+            {{ v.cliente?.nombre ?? '—' }}
+            <small class="vll-apagado"> · {{ v.modalidadVenta === 'EXPORTACION' ? 'exportación' : 'interno' }}</small>
+          </td>
         </ng-container>
         <ng-container matColumnDef="fecha">
           <th mat-header-cell *matHeaderCellDef>Fecha venta</th>
@@ -69,8 +90,12 @@
         <ng-container matColumnDef="cobrado">
           <th mat-header-cell *matHeaderCellDef class="vll-num">Cobrado (Bs)</th>
           <td mat-cell *matCellDef="let v" class="vll-num">
+            @if (v.modalidadVenta === 'COMERCIO_INTERNO' && v.estado !== 'LIQUIDADA') {
+            <span class="vll-apagado" matTooltip="Comercio interno: los anticipos del cliente lo pagan al liquidarlo">—</span>
+            } @else {
             {{ v.cobradoBolivianos | number:'1.2-2' }}
-            @if (v.cantidadCobros) { <small class="vll-apagado">({{ v.cantidadCobros }})</small> }
+            @if (v.modalidadVenta === 'EXPORTACION' && v.cantidadCobros) { <small class="vll-apagado">({{ v.cantidadCobros }})</small> }
+            }
           </td>
         </ng-container>
         <ng-container matColumnDef="venta">
@@ -133,5 +158,8 @@
     <mat-paginator [length]="total()" [pageSize]="pageSize" [pageIndex]="pageIndex" [pageSizeOptions]="[10, 25, 50]"
       (page)="onPageChange($event)"></mat-paginator>
     }
+        </div>
+      </mat-tab>
+    </mat-tab-group>
   </mat-card-content>
 </mat-card>

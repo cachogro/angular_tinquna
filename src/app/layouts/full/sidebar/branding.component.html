@@ -1,13 +1,26 @@
-<a [routerLink]="['/']" class="branding-logo">
-  <img
-    src="./assets/images/logos/logo.svg"
-    class="align-middle m-2"
-    style="width: 187px; height: 55px;"
-    alt="logo"
-  />
+<a [routerLink]="['/']" class="branding-logo" [class.branding-logo--mini]="sidebarMini()">
+  @if (sidebarMini()) {
+    <img src="./assets/images/logos/logo-icono.svg" class="branding-logo__icono" alt="logo" />
+  } @else {
+    <img
+      src="./assets/images/logos/logo.svg"
+      class="align-middle m-2"
+      style="width: 187px; height: 55px;"
+      alt="logo"
+    />
+  }
 </a>
 
 @if (authService.user(); as user) {
+  @if (sidebarMini()) {
+    <div
+      class="user-avatar"
+      [matTooltip]="user.persona.nombres + ' ' + user.persona.apellidoPaterno + (user.roles[0]?.nombre ? ' · ' + user.roles[0]?.nombre : '')"
+      matTooltipPosition="right"
+    >
+      {{ iniciales(user.persona.nombres, user.persona.apellidoPaterno) }}
+    </div>
+  } @else {
   <div class="user-card">
     <div class="user-card__fila">
       <span
@@ -31,4 +44,5 @@
       <span>{{ user.persona.correoElectronico }}</span>
     </span>
   </div>
+  }
 }

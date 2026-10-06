@@ -1,0 +1,45 @@
+.frr-resumen {
+  font-size: 13px;
+  margin: 0 0 12px;
+  line-height: 1.6;
+}
+
+.frr-monto {
+  color: var(--tk-naranja, #e65100);
+}
+
+.frr-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 14px;
+  min-width: 520px;
+}
+
+.frr-form mat-form-field {
+  width: 100%;
+}
+
+.frr-sub {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgb(var(--tk-ink, 0 0 0) / 0.6);
+  margin: 8px 0;
+}
+
+.frr-nota {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: rgb(var(--tk-ink, 0 0 0) / 0.55);
+}
+
+.btn-spinner {
+  display: inline-block;
+  margin-right: 6px;
+}
+
+@media (max-width: 620px) {
+  .frr-form {
+    grid-template-columns: 1fr;
+    min-width: 0;
+  }
+}

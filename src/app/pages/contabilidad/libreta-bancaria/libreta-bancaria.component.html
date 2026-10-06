@@ -132,6 +132,11 @@
           }
           {{ descargandoExcel() ? 'Generando...' : 'Excel libreta bancaria' }}
         </button>
+        <button mat-stroked-button color="primary" class="lb-periodo__excel" [disabled]="descargandoExcel()"
+          (click)="descargarExcel('PDF')" matTooltip="PDF de la libreta bancaria del mes">
+          <mat-icon>picture_as_pdf</mat-icon>
+          PDF libreta bancaria
+        </button>
       </div>
     </div>
     } @else if (gestionSel() !== null) {

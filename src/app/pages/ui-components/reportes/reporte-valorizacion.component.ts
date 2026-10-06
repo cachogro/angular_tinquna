@@ -21,24 +21,12 @@ import {
 import { RegistroMineralService } from '../services/registro-mineral.service';
 import { ValorizacionMineralService } from '../services/valorizacion-mineral.service';
 import { RangoFechasComponent } from '../../../shared/components/rango-fechas/rango-fechas.component';
+import { descargarBlob } from 'src/app/shared/utils/descarga-archivo.util';
+import { formatFechaIso } from '../../contabilidad/components/personal-interno.util';
+import { MESES } from './meses';
 
 /** Formas de acotar por fecha; el backend las trata como excluyentes. */
 type ModoPeriodo = 'todos' | 'fechas' | 'mes' | 'semana';
-
-const MESES = [
-  { value: 1, label: 'Enero' },
-  { value: 2, label: 'Febrero' },
-  { value: 3, label: 'Marzo' },
-  { value: 4, label: 'Abril' },
-  { value: 5, label: 'Mayo' },
-  { value: 6, label: 'Junio' },
-  { value: 7, label: 'Julio' },
-  { value: 8, label: 'Agosto' },
-  { value: 9, label: 'Septiembre' },
-  { value: 10, label: 'Octubre' },
-  { value: 11, label: 'Noviembre' },
-  { value: 12, label: 'Diciembre' },
-];
 
 /**
  * Pantalla "Reportes Valorización": solo filtros. No lista resultados en la
@@ -163,9 +151,9 @@ export class ReporteValorizacionComponent implements OnInit {
       .subscribe({
         next: (blob) => {
           this.generando.set(false);
-          this.descargar(
+          descargarBlob(
             blob,
-            `reporte-valorizaciones-${this.formatFecha(new Date()) ?? 'reporte'}.xlsx`,
+            `reporte-valorizaciones-${formatFechaIso(new Date())}.xlsx`,
           );
           this.snackBar.open('Reporte generado', 'Cerrar', { duration: 2500 });
         },
@@ -187,8 +175,8 @@ export class ReporteValorizacionComponent implements OnInit {
 
     switch (this.periodoModoControl.value) {
       case 'fechas':
-        filtros.fechaDesde = this.formatFecha(this.fechaDesdeControl.value);
-        filtros.fechaHasta = this.formatFecha(this.fechaHastaControl.value);
+        filtros.fechaDesde = this.fechaFiltro(this.fechaDesdeControl.value);
+        filtros.fechaHasta = this.fechaFiltro(this.fechaHastaControl.value);
         break;
       case 'mes':
         filtros.anio = this.anioControl.value ?? undefined;
@@ -204,21 +192,8 @@ export class ReporteValorizacionComponent implements OnInit {
     return filtros;
   }
 
-  private descargar(blob: Blob, nombre: string): void {
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = nombre;
-    a.click();
-    window.URL.revokeObjectURL(url);
-  }
-
-  private formatFecha(fecha: Date | null): string | undefined {
-    if (!fecha) return undefined;
-    const anio = fecha.getFullYear();
-    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
-    const dia = String(fecha.getDate()).padStart(2, '0');
-    return `${anio}-${mes}-${dia}`;
+  private fechaFiltro(fecha: Date | null): string | undefined {
+    return fecha ? formatFechaIso(fecha) : undefined;
   }
 
   private avisar(mensaje: string): void {

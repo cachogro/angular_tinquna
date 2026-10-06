@@ -1,8 +1,9 @@
 // src/app/pages/ui-components/ventas-lote/venta-lote-list.component.ts
-// Bandeja de ventas de lote: cada lote (promedio) vendido a un cliente, con
-// su seguimiento invertido / cobrado / venta / por cobrar / utilidad (Bs).
+// Ventas de lote en dos pestañas: "Por cliente" (cuenta corriente de cada
+// comprador, agrupada por modalidad) y "Por lote" (cada lote vendido con su
+// seguimiento invertido / cobrado / venta / por cobrar / utilidad, en Bs).
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, viewChild } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -15,18 +16,22 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
+import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog/confirm-dialog.component';
+import { ModalidadVentaCliente } from 'src/app/pages/configurations/parametricas/models/parametricas.models';
 import { EstadoVentaLote, VentaLote } from '../models/venta-lote.models';
 import { VentaLoteService } from '../services/venta-lote.service';
+import { fechaFmt } from 'src/app/pages/contabilidad/components/personal-interno.util';
 import {
   abrirCobroVentaLote,
+  abrirLiquidarVentaLote,
+  abrirVenderLote,
   puedeCobrarVentaLote,
 } from './cobro-venta-lote.util';
+import { VentaLoteClientesComponent } from './venta-lote-clientes/venta-lote-clientes.component';
 import { VentaLoteDetalleDialogComponent } from './venta-lote-detalle-dialog/venta-lote-detalle-dialog.component';
-import { VentaLoteFormDialogComponent } from './venta-lote-form-dialog/venta-lote-form-dialog.component';
-import { VentaLoteLiquidarDialogComponent } from './venta-lote-liquidar-dialog/venta-lote-liquidar-dialog.component';
 
 @Component({
   selector: 'app-venta-lote-list',
@@ -42,6 +47,8 @@ import { VentaLoteLiquidarDialogComponent } from './venta-lote-liquidar-dialog/v
     MatIconModule,
     MatTooltipModule,
     MatTableModule,
+    MatTabsModule,
+    VentaLoteClientesComponent,
     MatPaginatorModule,
     MatProgressSpinnerModule,
     MatDialogModule,
@@ -76,12 +83,17 @@ export class VentaLoteListComponent implements OnInit {
 
   readonly searchControl = new FormControl('');
   readonly estadoControl = new FormControl<EstadoVentaLote | null>(null);
+  readonly modalidadControl = new FormControl<ModalidadVentaCliente | null>(null);
+
+  /** Pestaña "Por cliente": se recarga cuando algo cambia en "Por lote". */
+  private readonly bandejaClientes = viewChild(VentaLoteClientesComponent);
 
   ngOnInit(): void {
     this.searchControl.valueChanges
       .pipe(debounceTime(400), distinctUntilChanged())
       .subscribe(() => this.reiniciarYcargar());
     this.estadoControl.valueChanges.subscribe(() => this.reiniciarYcargar());
+    this.modalidadControl.valueChanges.subscribe(() => this.reiniciarYcargar());
     this.cargar();
   }
 
@@ -98,6 +110,7 @@ export class VentaLoteListComponent implements OnInit {
         limit: this.pageSize,
         busqueda: this.searchControl.value?.trim() || undefined,
         estado: this.estadoControl.value ?? undefined,
+        modalidad: this.modalidadControl.value ?? undefined,
       })
       .subscribe({
         next: (res) => {
@@ -118,6 +131,12 @@ export class VentaLoteListComponent implements OnInit {
       });
   }
 
+  /** Tras una acción sobre un lote cambia también la cuenta del cliente. */
+  private recargarTodo(): void {
+    this.cargar();
+    this.bandejaClientes()?.cargar();
+  }
+
   onPageChange(e: PageEvent): void {
     this.pageIndex = e.pageIndex;
     this.pageSize = e.pageSize;
@@ -127,16 +146,9 @@ export class VentaLoteListComponent implements OnInit {
   // ---------- Acciones ----------
 
   nueva(): void {
-    this.dialog
-      .open(VentaLoteFormDialogComponent, {
-        width: '640px',
-        maxWidth: '95vw',
-        autoFocus: false,
-      })
-      .afterClosed()
-      .subscribe((venta?: VentaLote) => {
-        if (venta) this.cargar();
-      });
+    abrirVenderLote(this.dialog).subscribe((venta) => {
+      if (venta) this.recargarTodo();
+    });
   }
 
   verDetalle(v: VentaLote): void {
@@ -149,7 +161,7 @@ export class VentaLoteListComponent implements OnInit {
       })
       .afterClosed()
       .subscribe((cambios) => {
-        if (cambios) this.cargar();
+        if (cambios) this.recargarTodo();
       });
   }
 
@@ -159,22 +171,14 @@ export class VentaLoteListComponent implements OnInit {
 
   registrarCobro(v: VentaLote): void {
     abrirCobroVentaLote(this.dialog, v).subscribe((recibo) => {
-      if (recibo) this.cargar();
+      if (recibo) this.recargarTodo();
     });
   }
 
   liquidar(v: VentaLote): void {
-    this.dialog
-      .open(VentaLoteLiquidarDialogComponent, {
-        data: v,
-        width: '560px',
-        maxWidth: '95vw',
-        autoFocus: false,
-      })
-      .afterClosed()
-      .subscribe((res) => {
-        if (res) this.cargar();
-      });
+    abrirLiquidarVentaLote(this.dialog, v).subscribe((venta) => {
+      if (venta) this.recargarTodo();
+    });
   }
 
   anular(v: VentaLote): void {
@@ -196,7 +200,7 @@ export class VentaLoteListComponent implements OnInit {
         this.service.anular(v.id).subscribe({
           next: () => {
             this.snackBar.open('Venta anulada', 'Cerrar', { duration: 3000 });
-            this.cargar();
+            this.recargarTodo();
           },
           error: (err) =>
             this.snackBar.open(
@@ -214,9 +218,5 @@ export class VentaLoteListComponent implements OnInit {
     return v.pagada ? 'PAGADA' : v.estado;
   }
 
-  fechaFmt(iso: string | null | undefined): string {
-    if (!iso) return '—';
-    const [a, m, d] = iso.slice(0, 10).split('-');
-    return d && m && a ? `${d}/${m}/${a}` : iso;
-  }
+  readonly fechaFmt = fechaFmt;
 }

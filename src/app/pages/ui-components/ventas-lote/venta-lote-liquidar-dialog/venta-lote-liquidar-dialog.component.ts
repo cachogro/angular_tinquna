@@ -100,8 +100,36 @@ export class VentaLoteLiquidarDialogComponent {
     this.montoBs() > 0 ? this.montoBs() - Number(this.venta.totalEfectivoInvertido) : null,
   );
 
+  /** Monto tecleado − estimado propio, en la moneda de la venta. */
+  readonly diferenciaEstimado = computed(() => {
+    const monto = Number(this.valores().montoVenta);
+    if (this.venta.montoEstimado == null || !Number.isFinite(monto) || monto <= 0) {
+      return null;
+    }
+    return Math.round((monto - Number(this.venta.montoEstimado)) * 100) / 100;
+  });
+
+  /** Comercio interno: al liquidar, el lote se paga solo con los anticipos
+   *  del cliente que todavía no cubren otro lote. */
+  readonly cuentaCorriente = this.venta.modalidadVenta === 'COMERCIO_INTERNO';
+
+  /** Lo que la cuenta del cliente le pagará a este lote al liquidarlo: sus
+   *  anticipos disponibles, hasta cubrir lo que falte. */
+  readonly anticiposAplicables = computed(() => {
+    const falta = this.montoBs() - Number(this.venta.cobradoBolivianos);
+    const disponible = Number(this.venta.anticipoDisponibleClienteBolivianos ?? 0);
+    return Math.max(Math.min(falta, disponible), 0);
+  });
+
   readonly porCobrar = computed(() =>
-    this.montoBs() > 0 ? this.montoBs() - Number(this.venta.cobradoBolivianos) : null,
+    this.montoBs() > 0
+      ? Math.round(
+          (this.montoBs() -
+            Number(this.venta.cobradoBolivianos) -
+            this.anticiposAplicables()) *
+            100,
+        ) / 100
+      : null,
   );
 
   guardar(): void {

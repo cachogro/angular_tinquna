@@ -39,6 +39,11 @@ import { ParametricasService } from '../../services/parametricas.service';
 import { ParametricaDialogShellComponent } from '../shared/parametrica-dialog-shell.component';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { FechaInputDirective } from '../../../../shared/directives/fecha-input.directive';
+import {
+  estaVigente,
+  fechaBoliviaAInputDate,
+  formatearFechaBolivia,
+} from 'src/app/shared/utils/fecha-bolivia.util';
 
 interface OpcionOrden {
   value: string;
@@ -429,11 +434,11 @@ export class CotizacionFormDialogComponent implements OnInit {
     this.limpiar();
   }
 
-  /** El back devuelve fechas tipo "2026-08-14T04:00:00.000Z" o "2026-07-15";
-   *  el datepicker necesita un Date local con esa fecha (sin el offset). */
+  /** El back devuelve el fin de vigencia como "2026-09-26T03:59:59.999Z"
+   *  (= 25/09 23:59 en Bolivia); el datepicker necesita el día en Bolivia,
+   *  si no cada edición correría la vigencia un día. */
   private aInputDate(fecha: string): Date | null {
-    const [a, m, d] = (fecha ?? '').slice(0, 10).split('-').map(Number);
-    return a && m && d ? new Date(a, m - 1, d) : null;
+    return fechaBoliviaAInputDate(fecha);
   }
 
   /** Date del datepicker → "YYYY-MM-DD", lo que espera el back. */
@@ -443,14 +448,15 @@ export class CotizacionFormDialogComponent implements OnInit {
     return `${fecha.getFullYear()}-${mm}-${dd}`;
   }
 
-  /** Formatea a "dd/mm/aaaa" para la tabla. Se hace por string, sin pasar
-   *  por `Date`, para no arrastrar el offset del timestamp completo
-   *  ("...T15:42:10.123-04:00") ni el de fechas legadas sin hora
-   *  ("2026-07-15") — ambas ya traen el día calendario correcto. */
+  /** "dd/mm/aaaa" del día en Bolivia (el back manda `timestamptz` en UTC). */
   formatearFecha(fecha: string | null | undefined): string {
-    if (!fecha) return '';
-    const [year, month, day] = fecha.slice(0, 10).split('-');
-    return `${day}/${month}/${year}`;
+    return formatearFechaBolivia(fecha);
+  }
+
+  /** Vigencia real por fechas, igual que el filtro "vigente" del back.
+   *  `activo` es la baja lógica: una cotización vencida sigue con activo=true. */
+  esVigente(cotizacion: Cotizacion): boolean {
+    return estaVigente(cotizacion);
   }
 
   get cotizaciones(): Cotizacion[] {

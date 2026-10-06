@@ -13,7 +13,7 @@
 .pf-sub {
   font-size: 13px;
   font-weight: 600;
-  color: rgba(0, 0, 0, 0.6);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.6);
   margin: 8px 0 8px;
 }
 .btn-spinner {

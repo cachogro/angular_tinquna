@@ -1,0 +1,106 @@
+<div class="vc-toolbar">
+  <mat-form-field appearance="outline" class="vc-toolbar__search" subscriptSizing="dynamic">
+    <mat-icon matPrefix>search</mat-icon>
+    <input matInput placeholder="Buscar cliente" [formControl]="searchControl" />
+  </mat-form-field>
+</div>
+
+@if (cargando()) {
+<div class="vc-msg">
+  <mat-spinner diameter="32"></mat-spinner>
+  <span>Cargando cuentas de clientes...</span>
+</div>
+} @else if (grupos().length === 0) {
+<div class="vc-msg vc-msg--vacio">
+  <mat-icon>groups</mat-icon>
+  <p>No hay clientes compradores {{ searchControl.value ? 'con ese nombre' : 'registrados' }}</p>
+</div>
+} @else {
+@for (g of grupos(); track g.modalidad) {
+<section class="vc-grupo">
+  <header class="vc-grupo__head">
+    <h3>{{ g.titulo }} <span class="vc-apagado">({{ g.filas.length }})</span></h3>
+    <small class="vc-apagado">{{ g.ayuda }}</small>
+  </header>
+
+  <div class="vc-scroll">
+    <table class="vc-tabla">
+      <thead>
+        <tr>
+          <th>Cliente</th>
+          <th class="vc-num">Anticipos recibidos (Bs)</th>
+          <th class="vc-num">Lotes liquidados (Bs)</th>
+          <th class="vc-num">Anticipo disponible (Bs)</th>
+          <th class="vc-num">Saldo (Bs)</th>
+          <th class="vc-num">Lotes sin liquidar</th>
+          <th class="vc-num">Saldo proyectado (Bs)</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (c of g.filas; track c.idCliente) {
+        <tr>
+          <td>
+            <strong>{{ c.cliente.nombre }}</strong>
+            @if (!c.kardexAbierto) {
+            <small class="vc-aviso" matTooltip="Ábrelo en Actores y Clientes › Ventas para poder registrar anticipos y lotes">
+              · sin kardex abierto
+            </small>
+            }
+          </td>
+          <td class="vc-num">{{ c.anticiposBolivianos | number:'1.2-2' }}</td>
+          <td class="vc-num">
+            {{ c.liquidadoBolivianos | number:'1.2-2' }}
+            <small class="vc-apagado">({{ c.lotesPagados }}/{{ c.lotesLiquidados }} pagados)</small>
+          </td>
+          <td class="vc-num">{{ c.anticipoDisponibleBolivianos | number:'1.2-2' }}</td>
+          <td class="vc-num">
+            @if (c.saldoBolivianos > 0) {
+            <span class="vc-favor" matTooltip="Anticipos que todavía hay que cubrir con lotes">
+              {{ c.saldoBolivianos | number:'1.2-2' }} <small>a favor del cliente</small>
+            </span>
+            } @else if (c.saldoBolivianos < 0) {
+            <span class="vc-debe" matTooltip="Lotes liquidados que el cliente aún no pagó">
+              {{ abs(c.saldoBolivianos) | number:'1.2-2' }} <small>nos debe</small>
+            </span>
+            } @else {
+            <span class="vc-apagado">0.00 al día</span>
+            }
+          </td>
+          <td class="vc-num">
+            @if (c.lotesAbiertos) {
+            {{ c.lotesAbiertos }}
+            <small class="vc-apagado">
+              · estimado {{ c.estimadoAbiertosBolivianos | number:'1.2-2' }}
+              @if (c.lotesAbiertosSinEstimar) { ({{ c.lotesAbiertosSinEstimar }} sin estimar) }
+            </small>
+            } @else { — }
+          </td>
+          <td class="vc-num">
+            @if (c.lotesAbiertos) {
+            <span [class.vc-favor]="c.saldoProyectadoBolivianos > 0" [class.vc-debe]="c.saldoProyectadoBolivianos < 0">
+              {{ abs(c.saldoProyectadoBolivianos) | number:'1.2-2' }}
+              <small>{{ c.saldoProyectadoBolivianos > 0 ? 'por cubrir' : (c.saldoProyectadoBolivianos < 0 ? 'nos deberá' : '') }}</small>
+            </span>
+            } @else { — }
+          </td>
+          <td>
+            <button mat-icon-button matTooltip="Ver cuenta del cliente" (click)="verCuenta(c)">
+              <mat-icon>visibility</mat-icon>
+            </button>
+            <button mat-icon-button color="primary" matTooltip="Registrar anticipo" [disabled]="!c.kardexAbierto"
+              (click)="registrarAnticipo(c)">
+              <mat-icon>call_received</mat-icon>
+            </button>
+            <button mat-icon-button matTooltip="Venderle un lote" [disabled]="!c.kardexAbierto" (click)="venderLote(c)">
+              <mat-icon>local_shipping</mat-icon>
+            </button>
+          </td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</section>
+}
+}

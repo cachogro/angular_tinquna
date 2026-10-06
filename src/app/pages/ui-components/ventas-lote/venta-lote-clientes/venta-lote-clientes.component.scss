@@ -1,0 +1,122 @@
+.vc-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin: 8px 0 16px;
+}
+
+.vc-toolbar__search {
+  flex: 1 1 260px;
+  max-width: 420px;
+}
+
+.vc-msg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 40px 16px;
+  color: rgb(var(--tk-ink, 0 0 0) / 0.45);
+  text-align: center;
+}
+
+.vc-msg--vacio {
+  flex-direction: column;
+}
+
+.vc-msg--vacio mat-icon {
+  font-size: 40px;
+  width: 40px;
+  height: 40px;
+}
+
+.vc-grupo {
+  margin-bottom: 20px;
+}
+
+.vc-grupo__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin-bottom: 6px;
+}
+
+.vc-grupo__head h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.vc-scroll {
+  overflow: auto;
+}
+
+.vc-tabla {
+  width: 100%;
+  min-width: 1020px;
+  border-collapse: collapse;
+  font-size: 11.5px;
+}
+
+.vc-tabla th {
+  text-align: left;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  padding: 6px 8px;
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+}
+
+.vc-tabla td {
+  padding: 3px 8px;
+  border-bottom: 1px solid rgb(var(--tk-ink, 0 0 0) / 0.08);
+}
+
+.vc-tabla tbody tr:hover {
+  background: color-mix(in srgb, var(--mat-sys-primary) 8%, transparent);
+}
+
+.vc-tabla ::ng-deep .mat-mdc-icon-button {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  line-height: 28px;
+}
+
+.vc-tabla ::ng-deep .mat-mdc-icon-button .mat-icon {
+  font-size: 17px;
+  width: 17px;
+  height: 17px;
+  line-height: 17px;
+}
+
+.vc-num {
+  text-align: right !important;
+  white-space: nowrap;
+}
+
+.vc-apagado {
+  color: rgb(var(--tk-ink, 0 0 0) / 0.45);
+  font-weight: 400;
+}
+
+.vc-aviso {
+  color: var(--tk-rojo, #c62828);
+}
+
+.vc-favor {
+  color: var(--tk-azul, #0d47a1);
+  font-weight: 600;
+}
+
+.vc-debe {
+  color: var(--tk-rojo, #c62828);
+  font-weight: 600;
+}
+
+.vc-favor small,
+.vc-debe small {
+  font-weight: 400;
+}

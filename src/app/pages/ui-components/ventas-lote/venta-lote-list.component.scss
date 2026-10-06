@@ -4,7 +4,7 @@
   justify-content: center;
   gap: 10px;
   padding: 40px 16px;
-  color: rgba(0, 0, 0, 0.45);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.45);
   text-align: center;
 }
 
@@ -100,20 +100,20 @@
 }
 
 .vll-apagado {
-  color: rgba(0, 0, 0, 0.45);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.45);
 }
 
 .vll-negativo {
-  color: #c62828;
+  color: var(--tk-rojo, #c62828);
 }
 
 .vll-positivo {
-  color: #2e7d32;
+  color: var(--tk-verde, #2e7d32);
   font-weight: 600;
 }
 
 .vll-fila-anulada .mat-mdc-cell {
-  color: rgba(0, 0, 0, 0.4);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.4);
 }
 
 .vll-estado {
@@ -121,20 +121,24 @@
   border-radius: 10px;
   font-size: 10.5px;
   font-weight: 600;
-  background: rgba(0, 0, 0, 0.08);
+  background: rgb(var(--tk-ink, 0 0 0) / 0.08);
 }
 
 .vll-estado--liq {
   background: rgba(25, 118, 210, 0.15);
-  color: #0d47a1;
+  color: var(--tk-azul, #0d47a1);
 }
 
 .vll-estado--pagada {
   background: rgba(46, 125, 50, 0.15);
-  color: #1b5e20;
+  color: var(--tk-verde, #1b5e20);
 }
 
 .vll-estado--anulada {
   background: rgba(198, 40, 40, 0.12);
-  color: #b71c1c;
+  color: var(--tk-rojo, #b71c1c);
+}
+
+.vll-tab {
+  padding-top: 12px;
 }

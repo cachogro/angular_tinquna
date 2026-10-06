@@ -25,7 +25,7 @@
 
   <mat-card-content class="b-t-1">
     <div class="form-page">
-      @if (cargandoCatalogos()) {
+      @if (cargandoCatalogos() || cargandoRegistro()) {
       <div class="form-loading">
         <mat-spinner diameter="36"></mat-spinner>
         <span>Cargando información...</span>
@@ -140,48 +140,83 @@
           <mat-icon>groups</mat-icon>
           Proveedor y responsables
         </h3>
-        <div class="form-grid">
+        <!-- Proveedor: mismo selector que "Recibí de / Entregué a" del recibo (sin Cliente).
+             A qué kardex va el dinero se decide al procesar el recibo. -->
+        <div class="proveedor">
+          <span class="proveedor__label">Recibí de</span>
+          <mat-button-toggle-group [formControl]="proveedorTipo" class="proveedor__tipo">
+            <mat-button-toggle value="PERSONA">Persona CI</mat-button-toggle>
+            <mat-button-toggle value="ACTOR">Actor productivo</mat-button-toggle>
+            <mat-button-toggle value="TEXTO">Otro (Externo)</mat-button-toggle>
+          </mat-button-toggle-group>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Actor productivo minero</mat-label>
+          @switch (proveedorTipo.value) {
+          @case ('ACTOR') {
+          <mat-form-field appearance="outline" class="form-grid__full">
+            <mat-label>Actor productivo</mat-label>
             <input type="text" matInput [formControl]="$any(actorControl)" [matAutocomplete]="autoActor"
               #actorTrigger="matAutocompleteTrigger" (focus)="actorTrigger.openPanel()"
-              placeholder="Ingenio, cooperativa o empresa minera (opcional)" />
+              placeholder="Buscar ingenio, cooperativa o empresa minera" />
             <mat-autocomplete #autoActor="matAutocomplete" [displayWith]="displayActor">
               @for (opcion of (filtroActores | async); track opcion.id) {
-              <mat-option [value]="opcion" style="font-size: 13px">
-                {{ opcion.nombre }}
-                <small> · {{ opcion.tipoActorProductivoMinero?.descripcion }}</small>
+              <mat-option [value]="opcion">
+                <span>{{ opcion.nombre }}</span>
+                @if (opcion.tipoActorProductivoMinero?.descripcion; as tipo) {
+                <small class="proveedor__doc"> · {{ tipo }}</small>
+                }
               </mat-option>
               } @empty {
-              <mat-option disabled>Sin resultados</mat-option>
+              <mat-option disabled>Sin coincidencias</mat-option>
               }
             </mat-autocomplete>
-            <mat-hint>Elígelo primero para acotar el proveedor</mat-hint>
+            @if (actorControl.hasError('required') && actorControl.touched) {
+            <mat-error>Selecciona un actor productivo</mat-error>
+            } @else if (actorControl.hasError('proveedorInvalido') && actorControl.touched) {
+            <mat-error>Selecciona un actor productivo de la lista</mat-error>
+            }
           </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Proveedor</mat-label>
+          }
+          @case ('TEXTO') {
+          <mat-form-field appearance="outline" class="form-grid__full">
+            <mat-label>Nombre y apellido</mat-label>
+            <input type="text" matInput appMayusculas [formControl]="externoControl" maxlength="255"
+              placeholder="Ej: JUANITA PÉREZ" />
+            @if (externoControl.invalid && externoControl.touched) {
+            <mat-error>Escribe el nombre y apellido de quien deja el mineral</mat-error>
+            }
+            <mat-hint>Sin registro: solo queda el nombre. El kardex se elige al procesar el recibo.</mat-hint>
+          </mat-form-field>
+          }
+          @default {
+          <mat-form-field appearance="outline" class="form-grid__full">
+            <mat-label>Persona registrada</mat-label>
             <input type="text" matInput [formControl]="$any(proveedorControl)" [matAutocomplete]="autoProveedor"
               #proveedorTrigger="matAutocompleteTrigger" (focus)="proveedorTrigger.openPanel()"
-              placeholder="Escribe nombre, apellido o carnet..." />
+              placeholder="Buscar por nombre o documento" />
             <mat-autocomplete #autoProveedor="matAutocomplete" [displayWith]="displayProveedor">
               @for (opcion of (filtroProveedores | async); track opcion.id) {
-              <mat-option [value]="opcion" style="font-size: 13px">
-                {{ opcion.nombres }} {{ opcion.apellidoPaterno }} {{ opcion.apellidoMaterno }} — {{
-                opcion.numeroDocumento }}
+              <mat-option [value]="opcion">
+                <span>{{ nombreProveedor(opcion) }}</span>
+                <small class="proveedor__doc"> · {{ opcion.numeroDocumento }}</small>
+                @if (opcion.actorProductivoMinero?.nombre; as actor) {
+                <small class="proveedor__doc"> · {{ actor }}</small>
+                }
               </mat-option>
               } @empty {
-              <mat-option disabled>Sin resultados</mat-option>
+              <mat-option disabled>Sin coincidencias</mat-option>
               }
             </mat-autocomplete>
             @if (proveedorControl.hasError('required') && proveedorControl.touched) {
-            <mat-error>Selecciona un proveedor</mat-error>
-            }
-            @if (proveedorControl.hasError('proveedorInvalido') && proveedorControl.touched) {
-            <mat-error>Selecciona un proveedor de la lista</mat-error>
+            <mat-error>Selecciona una persona</mat-error>
+            } @else if (proveedorControl.hasError('proveedorInvalido') && proveedorControl.touched) {
+            <mat-error>Selecciona una persona de la lista</mat-error>
             }
           </mat-form-field>
+          }
+          }
+        </div>
+
+        <div class="form-grid">
 
           <mat-form-field appearance="outline">
             <mat-label>Muestrero</mat-label>
@@ -207,6 +242,17 @@
             @if (f.lugarAcopio.hasError('required') && f.lugarAcopio.touched) {
             <mat-error>Selecciona un lugar de acopio</mat-error>
             }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Laboratorio</mat-label>
+            <mat-select formControlName="idLaboratorio">
+              <mat-option [value]="null">Sin laboratorio</mat-option>
+              @for (lab of laboratorios(); track lab.id) {
+              <mat-option [value]="lab.id">{{ lab.nombre }}</mat-option>
+              }
+            </mat-select>
+            <mat-hint>Opcional, se precarga en la valorización</mat-hint>
           </mat-form-field>
 
         </div>

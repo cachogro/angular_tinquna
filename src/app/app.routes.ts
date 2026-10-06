@@ -3,6 +3,8 @@ import { Routes } from '@angular/router';
 import { BlankComponent } from './layouts/blank/blank.component';
 import { FullComponent } from './layouts/full/full.component';
 import { guestGuard, authGuard } from './core/auth/guards/auth.guard'; // <-- NUEVO
+import { roleMatchGuard } from './core/auth/guards/role.guard';
+import { PERMISOS_MODULO } from './core/auth/models/permisos-modulo';
 
 export const routes: Routes = [
   {
@@ -36,6 +38,8 @@ export const routes: Routes = [
       },
       {
         path: 'ui-components',
+        canMatch: [roleMatchGuard],
+        data: { roles: PERMISOS_MODULO.comercioInterno },
         loadChildren: () =>
           import('./pages/ui-components/ui-components.routes').then(
             (m) => m.UiComponentsRoutes,
@@ -43,6 +47,8 @@ export const routes: Routes = [
       },
       {
         path: 'configuraciones',
+        canMatch: [roleMatchGuard],
+        data: { roles: PERMISOS_MODULO.configuraciones },
         loadChildren: () =>
           import('./pages/configurations/configuration.routes').then(
             (m) => m.ConfiguracionesRoutes,
@@ -50,6 +56,8 @@ export const routes: Routes = [
       },
       {
         path: 'contabilidad',
+        canMatch: [roleMatchGuard],
+        data: { roles: PERMISOS_MODULO.contabilidad },
         loadChildren: () =>
           import('./pages/contabilidad/contabilidad.routes').then(
             (m) => m.ContabilidadRoutes,

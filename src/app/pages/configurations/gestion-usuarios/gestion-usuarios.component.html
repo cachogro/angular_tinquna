@@ -36,13 +36,13 @@
           </mat-select>
         </mat-form-field>
 
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <!-- <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-select [formControl]="orderByControl" placeholder="Ordenar por">
             @for (opcion of opcionesOrden; track opcion.value) {
             <mat-option [value]="opcion.value">{{ opcion.label }}</mat-option>
             }
           </mat-select>
-        </mat-form-field>
+        </mat-form-field> -->
 
         <button mat-icon-button (click)="toggleOrden()"
           [matTooltip]="orderDirectionControl.value === 'ASC' ? 'Ascendente' : 'Descendente'">

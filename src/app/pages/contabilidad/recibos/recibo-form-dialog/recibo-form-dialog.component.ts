@@ -68,6 +68,8 @@ import {
 import { KardexService } from '../../services/kardex.service';
 import { ReciboService } from '../../services/recibo.service';
 import { FechaInputDirective } from '../../../../shared/directives/fecha-input.directive';
+import { MontoInputDirective } from '../../../../shared/directives/monto-input.directive';
+import { MayusculasDirective } from '../../../../shared/directives/mayusculas.directive';
 
 export type ReciboFormModo = 'GENERAR' | 'PROCESAR';
 
@@ -76,7 +78,7 @@ export interface ReciboFormDialogData {
   modo: ReciboFormModo;
   /** Solo en modo 'PROCESAR': el BORRADOR que se está procesando. */
   recibo?: Recibo;
-  /** Solo en modo 'GENERAR': datos ya conocidos (ej. anticipo de una recepción). */
+  /** Sin `recibo`: datos ya conocidos (ej. anticipo de una recepción). */
   prefill?: ReciboPrefill;
 }
 
@@ -89,13 +91,21 @@ export interface ReciboPrefill {
   /** null = lo teclea el usuario (ej. anticipo de venta de lote). */
   montoTotal: number | null;
   concepto: string;
-  idPersona?: string;
+  /** Proveedor de la recepción: persona, actor productivo o externo. Solo
+   *  se precarga como contraparte si tiene kardex abierto; si no, el usuario
+   *  decide en el recibo a qué kardex afecta (ver `nombreContraparte`). */
+  idPersona?: string | null;
+  idActorProductivoMinero?: string | null;
+  /** Nombre del proveedor: se propone al elegir "Otro (Externo)". */
+  nombreContraparte?: string;
   idRecepcionMineral?: string;
   idValorizacionMineral?: string;
-  /** Cobro (anticipo/pago) de una venta de lote: contraparte fija = cliente
-   *  comprador y TODO el monto va a su kardex (una sola línea CLIENTE, sin
+  /** Cobro a un cliente comprador (`idCliente`): contraparte fija = el
+   *  cliente y TODO el monto va a su kardex (una sola línea CLIENTE, sin
    *  efectivo suelto); entra a caja o, con forma de pago bancaria, a la
-   *  libreta. Moneda y tipo de cambio editables. */
+   *  libreta. Moneda y tipo de cambio editables. Con `idVentaLote` es el
+   *  anticipo/pago de ese lote; sin él, un anticipo a la cuenta corriente
+   *  del cliente (paga sus lotes a medida que se liquidan). */
   idVentaLote?: string;
   idCliente?: string;
   /** Código de lote que se estampa en la línea del kardex. */
@@ -134,6 +144,8 @@ type DestinatarioControlValue = DestinatarioKardex | string | null;
   standalone: true,
   imports: [
     FechaInputDirective,
+    MontoInputDirective,
+    MayusculasDirective,
     CommonModule,
     ReactiveFormsModule,
     MatDialogModule,
@@ -170,6 +182,13 @@ export class ReciboFormDialogComponent implements OnInit {
   readonly clientes = signal<Cliente[]>([]);
   readonly entidadesFinancieras = signal<EntidadFinanciera[]>([]);
   readonly personasAutorizadas = signal<PersonaCI[]>([]);
+  /** Código del kardex abierto por destinatario ("ACTOR:5" → "KA-001"). */
+  readonly codigosKardex = signal<Map<string, string>>(new Map());
+
+  /** Nombre del proveedor de la recepción/valorización cuando no se pudo
+   *  precargar como contraparte (no tiene kardex abierto): el usuario debe
+   *  elegir a qué kardex afecta el recibo, o dejarlo como externo. */
+  readonly contrapartePendiente = signal<string | null>(null);
 
   /** Códigos de forma de pago que NO usan cuenta bancaria (efectivo). El resto
    *  (QR, transferencia, cheque, depósito…) exige cuenta + n° de comprobante. */
@@ -305,7 +324,13 @@ export class ReciboFormDialogComponent implements OnInit {
       this.f.personaContraparte.setValue(null, { emitEvent: false });
       this.f.idActorContraparte.setValue(null, { emitEvent: false });
       this.f.idClienteContraparte.setValue(null, { emitEvent: false });
-      this.f.textoContraparte.setValue(null, { emitEvent: false });
+      // Con "Otro (Externo)" se propone el nombre con el que se registró.
+      this.f.textoContraparte.setValue(
+        this.f.contraparteTipo.value === 'TEXTO'
+          ? this.contrapartePendiente()
+          : null,
+        { emitEvent: false },
+      );
     });
 
     forkJoin({
@@ -370,6 +395,24 @@ export class ReciboFormDialogComponent implements OnInit {
             .map((k) => String(k.idPersona ?? k.persona?.id ?? ''))
             .filter(Boolean),
         );
+        // Código del kardex abierto de cada destinatario ("PERSONAL:15" → "KP-002").
+        const codigos = new Map<string, string>();
+        for (const k of [
+          ...(kardexPersonal.data ?? []),
+          ...(kardexAsociado.data ?? []),
+        ]) {
+          codigos.set(`PERSONAL:${k.idPersona ?? k.persona?.id}`, k.codigo);
+        }
+        for (const k of kardexActor.data ?? []) {
+          codigos.set(
+            `ACTOR:${k.idActorProductivoMinero ?? k.actorProductivoMinero?.id}`,
+            k.codigo,
+          );
+        }
+        for (const k of kardexCliente.data ?? []) {
+          codigos.set(`CLIENTE:${k.idCliente ?? k.cliente?.id}`, k.codigo);
+        }
+        this.codigosKardex.set(codigos);
         const idsActorConKardex = new Set(
           (kardexActor.data ?? [])
             .map((k) =>
@@ -424,14 +467,25 @@ export class ReciboFormDialogComponent implements OnInit {
       montoTotal: p.montoTotal,
       concepto: p.concepto,
     });
-    if (p.idPersona) {
-      const persona = this.personas().find(
-        (x) => String(x.id) === String(p.idPersona),
-      );
-      if (persona) {
-        this.f.contraparteTipo.setValue('PERSONA', { emitEvent: false });
-        this.f.personaContraparte.setValue(persona, { emitEvent: false });
-      }
+    // La contraparte solo se precarga si el proveedor tiene kardex abierto
+    // (las listas ya vienen filtradas así). Si no — externo, o persona/actor
+    // sin kardex — queda vacía para que se decida acá a qué kardex afecta.
+    const persona = p.idPersona
+      ? this.personas().find((x) => String(x.id) === String(p.idPersona))
+      : undefined;
+    const actor = p.idActorProductivoMinero
+      ? this.actores().find(
+          (x) => String(x.id) === String(p.idActorProductivoMinero),
+        )
+      : undefined;
+    if (persona) {
+      this.f.contraparteTipo.setValue('PERSONA', { emitEvent: false });
+      this.f.personaContraparte.setValue(persona, { emitEvent: false });
+    } else if (actor) {
+      this.f.contraparteTipo.setValue('ACTOR', { emitEvent: false });
+      this.f.idActorContraparte.setValue(String(actor.id), { emitEvent: false });
+    } else if (p.nombreContraparte) {
+      this.contrapartePendiente.set(p.nombreContraparte);
     }
     // El monto debe coincidir con el anticipo de la recepción (o el líquido
     // pagable de la valorización) vinculada, y ambos se registran en Bs.
@@ -440,12 +494,13 @@ export class ReciboFormDialogComponent implements OnInit {
       this.f.moneda.setValue('BS', { emitEvent: false });
       this.f.moneda.disable({ emitEvent: false });
     }
-    if (p.idVentaLote) this.aplicarCobroVentaLote(p);
+    if (p.idCliente) this.aplicarCobroVentaLote(p);
   }
 
-  /** Cobro de venta de lote (ver ReciboPrefill.idVentaLote). */
+  /** Cobro a un cliente comprador (ver ReciboPrefill.idCliente): de un lote
+   *  (`idVentaLote`) o un anticipo a su cuenta corriente, sin lote. */
   get esCobroVentaLote(): boolean {
-    return !!this.data.prefill?.idVentaLote;
+    return !!this.data.prefill?.idCliente;
   }
 
   private aplicarCobroVentaLote(p: ReciboPrefill): void {
@@ -604,27 +659,29 @@ export class ReciboFormDialogComponent implements OnInit {
   /** Personas + actores con kardex ABIERTO, en una sola lista para el
    *  autocomplete de cada fila de reparto. */
   destinatariosKardex(): DestinatarioKardex[] {
-    const dePersonas: DestinatarioKardex[] = this.personas().map((p) => {
-      const nombre = this.nombreCompleto(p);
-      return {
-        tipo: 'PERSONAL',
-        id: String(p.id),
-        label: `${nombre} — ${p.numeroDocumento}`,
-        buscar: `${nombre} ${p.numeroDocumento}`.toLowerCase(),
-      };
-    });
-    const deActores: DestinatarioKardex[] = this.actores().map((a) => ({
-      tipo: 'ACTOR',
-      id: String(a.id),
-      label: `${a.nombre} · actor productivo`,
-      buscar: `${a.nombre} actor productivo`.toLowerCase(),
-    }));
-    const deClientes: DestinatarioKardex[] = this.clientes().map((c) => ({
-      tipo: 'CLIENTE',
-      id: String(c.id),
-      label: `${c.nombre} · cliente`,
-      buscar: `${c.nombre} cliente`.toLowerCase(),
-    }));
+    // El código del kardex va al inicio de la etiqueta y también se busca.
+    const conCodigo = (
+      tipo: DestinoFila,
+      id: string,
+      texto: string,
+    ): DestinatarioKardex => {
+      const codigo = this.codigosKardex().get(`${tipo}:${id}`);
+      const label = codigo ? `${codigo} · ${texto}` : texto;
+      return { tipo, id, label, buscar: label.toLowerCase() };
+    };
+    const dePersonas = this.personas().map((p) =>
+      conCodigo(
+        'PERSONAL',
+        String(p.id),
+        `${this.nombreCompleto(p)} — ${p.numeroDocumento}`,
+      ),
+    );
+    const deActores = this.actores().map((a) =>
+      conCodigo('ACTOR', String(a.id), `${a.nombre} · actor productivo`),
+    );
+    const deClientes = this.clientes().map((c) =>
+      conCodigo('CLIENTE', String(c.id), `${c.nombre} · cliente`),
+    );
     return [...dePersonas, ...deActores, ...deClientes];
   }
 
@@ -772,7 +829,7 @@ export class ReciboFormDialogComponent implements OnInit {
       destinoGasto: new FormControl<DestinoGastoControlValue>(null, [
         Validators.required,
       ]),
-      monto: new FormControl<number | null>(null, [
+      monto: new FormControl<number | string | null>(null, [
         Validators.required,
         montoDosDecimales,
         Validators.min(0.01),

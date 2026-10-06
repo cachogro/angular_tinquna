@@ -1,0 +1,90 @@
+<mat-card class="cardWithShadow theme-card">
+  <mat-card-header>
+    <div>
+      <mat-card-title class="m-b-0">Reportes Promedios</mat-card-title>
+      <mat-card-subtitle class="m-b-0">
+        Lotes del período con su estado de venta — elige los filtros y genera el Excel
+      </mat-card-subtitle>
+    </div>
+    <div class="reporte-header__acciones">
+      <button mat-button (click)="limpiarFiltros()" class="reporte-toolbar__clear" [disabled]="generando()">
+        <mat-icon>filter_alt_off</mat-icon>
+        Limpiar
+      </button>
+      <button mat-flat-button color="primary" (click)="generarExcel()" [disabled]="generando()">
+        @if (generando()) {
+        <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
+        <span>Generando...</span>
+        } @else {
+        <ng-container>
+          <mat-icon>grid_on</mat-icon>
+          <span>Generar Excel</span>
+        </ng-container>
+        }
+      </button>
+    </div>
+  </mat-card-header>
+
+  <mat-card-content class="b-t-1">
+    <div class="reporte-page">
+
+      <div class="reporte-toolbar">
+        <mat-button-toggle-group [formControl]="periodoControl" aria-label="Período">
+          <mat-button-toggle value="diario">Diario</mat-button-toggle>
+          <mat-button-toggle value="semanal">Semanal</mat-button-toggle>
+          <mat-button-toggle value="mensual">Mensual</mat-button-toggle>
+        </mat-button-toggle-group>
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="reporte-toolbar__fecha">
+          <mat-label>{{ periodoControl.value === 'diario' ? 'Día' : 'Fecha de referencia' }}</mat-label>
+          <input matInput class="input-fecha" [matDatepicker]="picker" [max]="hoy" [formControl]="fechaControl" />
+          <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+          <mat-datepicker #picker></mat-datepicker>
+        </mat-form-field>
+
+        <span class="reporte-rango">
+          <mat-icon inline="true">date_range</mat-icon>
+          {{ rangoTexto() }}
+        </span>
+      </div>
+
+      <div class="reporte-toolbar">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="reporte-toolbar__select">
+          <mat-label>Estado de venta</mat-label>
+          <mat-select [formControl]="estadoControl">
+            @for (e of estados; track e.value) {
+            <mat-option [value]="e.value">{{ e.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="reporte-toolbar__select">
+          <mat-label>Codificación de lote</mat-label>
+          <mat-select [formControl]="codificacionLoteControl">
+            <mat-option [value]="null">Todas</mat-option>
+            @for (c of codificacionesLote(); track c.id) {
+            <mat-option [value]="c.id">{{ c.codigo }} — {{ c.nombre }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="reporte-toolbar__select">
+          <mat-label>Codificación de valorización</mat-label>
+          <mat-select [formControl]="codificacionControl">
+            <mat-option [value]="null">Todas</mat-option>
+            @for (c of codificaciones(); track c.id) {
+            <mat-option [value]="c.id">{{ c.codigo }} — {{ c.nombre }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <p class="reporte-nota">
+        <mat-icon inline="true">info</mat-icon>
+        Semanal toma la semana de lunes a domingo de la fecha elegida; mensual, su mes completo.
+        "Codificación de valorización" incluye los lotes que tienen al menos una valorización de ese tipo.
+      </p>
+
+    </div>
+  </mat-card-content>
+</mat-card>

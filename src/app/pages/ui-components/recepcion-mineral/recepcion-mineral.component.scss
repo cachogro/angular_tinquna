@@ -49,7 +49,7 @@
 
 
 .recepcion-toolbar__clear {
-  color: rgba(0, 0, 0, 0.5);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.5);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -67,52 +67,72 @@
   justify-content: center;
   gap: 12px;
   padding: 56px 24px;
-  color: rgba(0, 0, 0, 0.45);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.45);
 }
 
 .recepcion-table {
   width: 100%;
 }
 
+.operacion-cell__id {
+  font-size: 11.5px;
+}
+
 .operacion-cell__codigo {
   font-weight: 700;
-  font-size: 13px;
+  font-size: 12px;
+  line-height: 1.25;
 }
 
 .operacion-cell__fecha {
-  font-size: 12px;
-  color: rgba(0, 0, 0, 0.55);
+  font-size: 10.5px;
+  line-height: 1.25;
+  color: rgb(var(--tk-ink, 0 0 0) / 0.55);
 
   mat-icon {
-    font-size: 14px;
-    width: 14px;
-    height: 14px;
+    font-size: 12px;
+    width: 12px;
+    height: 12px;
     vertical-align: middle;
   }
 }
 
 .proveedor-cell__nombre {
   font-weight: 600;
-  font-size: 14px;
+  font-size: 12px;
+  line-height: 1.25;
 }
 
 .proveedor-cell__doc {
-  font-size: 12px;
-  color: rgba(0, 0, 0, 0.5);
+  font-size: 10.5px;
+  line-height: 1.25;
+  color: rgb(var(--tk-ink, 0 0 0) / 0.5);
 }
 
 .detalle-cell {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  font-size: 12px;
-  color: rgba(0, 0, 0, 0.65);
+  gap: 0;
+  font-size: 11px;
+  line-height: 1.3;
+  color: rgb(var(--tk-ink, 0 0 0) / 0.65);
 }
 
 .estado-chip {
-  font-size: 11px !important;
+  --mdc-chip-container-height: 20px;
+  font-size: 10px !important;
   font-weight: 700 !important;
-  min-height: 24px !important;
+  min-height: 20px !important;
+  height: 20px !important;
+}
+
+.estado-chip ::ng-deep .mdc-evolution-chip__action {
+  padding: 0 8px !important;
+}
+
+.estado-chip ::ng-deep .mdc-evolution-chip__text-label {
+  font-size: 10px;
+  font-weight: 700;
 }
 
 .estado-chip--pendiente {
@@ -122,7 +142,7 @@
 
 .estado-chip--proceso {
   background: rgba(0, 207, 232, 0.15) !important;
-  color: #00879c !important;
+  color: var(--tk-teal, #00879c) !important;
 }
 
 .estado-chip--aprobado {
@@ -132,7 +152,7 @@
 
 .estado-chip--liquidado {
   background: rgba(115, 103, 240, 0.15) !important;
-  color: #7367f0 !important;
+  color: var(--tk-violeta, #7367f0) !important;
 }
 
 .estado-chip--rechazado {
@@ -141,18 +161,50 @@
 }
 
 .estado-chip--cancelado {
-  background: rgba(0, 0, 0, 0.08) !important;
-  color: rgba(0, 0, 0, 0.55) !important;
+  background: rgb(var(--tk-ink, 0 0 0) / 0.08) !important;
+  color: rgb(var(--tk-ink, 0 0 0) / 0.55) !important;
 }
 
 .estado-chip--tranzado {
   background: rgba(115, 103, 240, 0.15) !important;
-  color: #7367f0 !important;
+  color: var(--tk-violeta, #7367f0) !important;
 }
 
 .estado-chip--remuestreo {
   background: rgba(0, 207, 232, 0.15) !important;
-  color: #00879c !important;
+  color: var(--tk-teal, #00879c) !important;
+}
+
+/* Recepción con anticipo que todavía no se procesó (sin recibo o con el
+   recibo en borrador): fila, etiqueta y botón en naranja. */
+.fila-anticipo-pendiente {
+  background: color-mix(in srgb, var(--tk-naranja, #ef6c00) 7%, transparent);
+}
+
+.fila-anticipo-pendiente td:first-child {
+  box-shadow: inset 3px 0 0 var(--tk-naranja, #ef6c00);
+}
+
+/* Estado y, si corresponde, la etiqueta de anticipo en el mismo renglón. */
+.estado-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.anticipo-pendiente {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--tk-naranja, #e65100);
+}
+
+.btn-anticipo-pendiente {
+  color: var(--tk-naranja, #e65100) !important;
+  background: color-mix(in srgb, var(--tk-naranja, #ef6c00) 16%, transparent) !important;
 }
 
 .acciones-header {
@@ -168,19 +220,60 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: rgba(0, 0, 0, 0.3);
-  padding: 8px;
+  color: rgb(var(--tk-ink, 0 0 0) / 0.3);
+  padding: 4px;
 }
 
-/* Opción 1: Pintar la fila completa del encabezado */
+/* ===== Tabla compacta (mismo criterio que las bandejas de contabilidad) ===== */
 .recepcion-table .mat-mdc-header-row {
-  background-color: #0d6efd !important;
-  /* Cambia este HEX por tu azul preferido */
+  background-color: var(--mat-sys-primary) !important;
+  height: 28px;
 }
 
-/* Opción 2: Pintar celda por celda y forzar el texto a blanco */
 .recepcion-table th.mat-mdc-header-cell {
-  background-color: #0d6efd !important;
-  color: #ffffff !important;
-  font-weight: bold !important;
+  background-color: var(--mat-sys-primary) !important;
+  color: var(--mat-sys-on-primary) !important;
+  font-weight: 600 !important;
+  font-size: 10.5px;
+  letter-spacing: .2px;
+  padding: 2px 8px !important;
+}
+
+/* Cada celda lleva dos renglones (código + fecha, nombre + documento...):
+   la fila queda en 38px en vez de los 30px de una tabla de un solo renglón. */
+.recepcion-table .mat-mdc-row {
+  height: 38px;
+}
+
+.recepcion-table .mat-mdc-cell {
+  padding: 2px 8px !important;
+  font-size: 11.5px;
+}
+
+.recepcion-table .mat-mdc-row:hover {
+  background: color-mix(in srgb, var(--mat-sys-primary) 8%, transparent);
+  transition: background-color .2s ease;
+}
+
+.recepcion-table ::ng-deep .mat-mdc-icon-button {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  line-height: 28px;
+}
+
+.recepcion-table ::ng-deep .mat-mdc-icon-button .mat-mdc-button-touch-target {
+  width: 28px;
+  height: 28px;
+}
+
+.recepcion-table ::ng-deep .mat-mdc-icon-button .mat-icon {
+  font-size: 17px;
+  width: 17px;
+  height: 17px;
+  line-height: 17px;
+}
+
+.recepcion-table ::ng-deep .mat-mdc-icon-button .mat-mdc-progress-spinner {
+  margin: 0 auto;
 }

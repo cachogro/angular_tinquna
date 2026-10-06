@@ -6,7 +6,7 @@
   justify-content: center;
   gap: 10px;
   padding: 40px 16px;
-  color: rgba(0, 0, 0, 0.45);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.45);
   text-align: center;
 }
 
@@ -69,9 +69,34 @@
   min-width: 80px;
 }
 
+.kl-toolbar__orden {
+  flex: 0 1 170px;
+  min-width: 130px;
+}
+
+/* Código del kardex (KA-001): ancho fijo para que se lea como etiqueta. */
+.kl-codigo {
+  font-weight: 600;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Cabecera clicable para ordenar por código. */
+.kl-th-orden {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
 .kl-toolbar__clear {
   margin-left: auto;
-  color: rgba(0, 0, 0, 0.5);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.5);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -117,8 +142,8 @@
 }
 
 .kl-tabla .mat-mdc-header-row {
-  background: #0d6efd !important;
-  color: #ffffff !important;
+  background: var(--mat-sys-primary) !important;
+  color: var(--mat-sys-on-primary) !important;
   font-weight: 600;
   letter-spacing: .2px;
   position: sticky;
@@ -195,12 +220,12 @@
 
 .kl-chip--asociado {
   background: color-mix(in srgb, #f9a825 18%, transparent);
-  color: #8a6d00;
+  color: var(--tk-ambar, #8a6d00);
 }
 
 .kl-chip--cliente {
-  background: color-mix(in srgb, #00879c 18%, transparent);
-  color: #00879c;
+  background: color-mix(in srgb, var(--tk-teal, #00879c) 18%, transparent);
+  color: var(--tk-teal, #00879c);
 }
 
 .kl-badge {
@@ -209,40 +234,40 @@
   font-size: 11px;
   font-weight: 700;
   letter-spacing: .3px;
-  background: color-mix(in srgb, #2e7d32 15%, transparent);
-  color: #2e7d32;
+  background: color-mix(in srgb, var(--tk-verde, #2e7d32) 15%, transparent);
+  color: var(--tk-verde, #2e7d32);
 }
 
 .kl-badge--cerrado {
-  background: color-mix(in srgb, #9e9e9e 22%, transparent);
-  color: #616161;
+  background: color-mix(in srgb, var(--tk-texto-tenue, #9e9e9e) 22%, transparent);
+  color: var(--tk-texto-fuerte, #616161);
 }
 
 .kl-badge--baja {
-  background: color-mix(in srgb, #c62828 15%, transparent);
-  color: #c62828;
+  background: color-mix(in srgb, var(--tk-rojo, #c62828) 15%, transparent);
+  color: var(--tk-rojo, #c62828);
   margin-left: 4px;
 }
 
 /* Actividad: baja lógica por días sin movimientos */
 .kl-badge--inactivo {
-  background: color-mix(in srgb, #ef6c00 18%, transparent);
-  color: #e65100;
+  background: color-mix(in srgb, var(--tk-naranja, #ef6c00) 18%, transparent);
+  color: var(--tk-naranja, #e65100);
 }
 
 .kl-badge--por-vencer {
   background: color-mix(in srgb, #f9a825 22%, transparent);
-  color: #8d6e00;
+  color: var(--tk-ambar, #8d6e00);
 }
 
 .kl-actividad-sub {
   font-size: 11px;
-  color: #757575;
+  color: var(--tk-texto-tenue, #757575);
   margin-top: 0;
 }
 
 .kl-row-sin-actividad td {
-  background: color-mix(in srgb, #ef6c00 5%, transparent);
+  background: color-mix(in srgb, var(--tk-naranja, #ef6c00) 5%, transparent);
 }
 
 /* ===== Responsive ===== */

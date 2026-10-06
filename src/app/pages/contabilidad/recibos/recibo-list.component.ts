@@ -37,6 +37,8 @@ import {
 import { RangoFechasComponent } from '../../../shared/components/rango-fechas/rango-fechas.component';
 import {
   descargarBlob,
+  extensionReporte,
+  FormatoReporte,
   mensajeErrorBlob,
 } from '../../../shared/utils/descarga-archivo.util';
 
@@ -176,7 +178,7 @@ export class ReciboListComponent implements OnInit {
 
   /** Excel "Libro de recibos" con los mismos filtros de la bandeja (sin
    *  paginar: trae todos los que cumplan, procesados, borradores y anulados). */
-  descargarLibro(): void {
+  descargarLibro(formato: FormatoReporte = 'EXCEL'): void {
     if (this.descargandoLibro()) return;
     const fechaDesde = this.formatFecha(this.fechaDesdeControl.value);
     const fechaHasta = this.formatFecha(this.fechaHastaControl.value);
@@ -188,7 +190,7 @@ export class ReciboListComponent implements OnInit {
         fechaDesde,
         fechaHasta,
         busqueda: this.searchControl.value?.trim() || undefined,
-      })
+      }, formato)
       .subscribe({
         next: (blob) => {
           this.descargandoLibro.set(false);
@@ -196,7 +198,10 @@ export class ReciboListComponent implements OnInit {
             fechaDesde || fechaHasta
               ? `-${fechaDesde ?? 'inicio'}_al_${fechaHasta ?? 'hoy'}`
               : '';
-          descargarBlob(blob, `libro-recibos${periodo}.xlsx`);
+          descargarBlob(
+            blob,
+            `libro-recibos${periodo}.${extensionReporte(formato)}`,
+          );
         },
         error: async (err) => {
           this.descargandoLibro.set(false);

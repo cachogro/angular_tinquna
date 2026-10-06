@@ -58,8 +58,8 @@ ENCABEZADO
 ===========================*/
 
 .mat-mdc-header-row {
-    background: #0d6efd !important;
-    color: #ffffff !important;
+    background: var(--mat-sys-primary) !important;
+    color: var(--mat-sys-on-primary) !important;
     font-weight: 600;
     letter-spacing: .3px;
     position: sticky;
@@ -106,18 +106,18 @@ BADGE DE ESTADO (activo / inactivo)
 }
 
 .badge--vigente {
-    background: color-mix(in srgb, #2e7d32 15%, transparent);
-    color: #2e7d32;
+    background: color-mix(in srgb, var(--tk-verde, #2e7d32) 15%, transparent);
+    color: var(--tk-verde, #2e7d32);
 }
 
 .badge--vencida {
-    background: color-mix(in srgb, #9e9e9e 20%, transparent);
-    color: #616161;
+    background: color-mix(in srgb, var(--tk-texto-tenue, #9e9e9e) 20%, transparent);
+    color: var(--tk-texto-fuerte, #616161);
 }
 
 .sin-datos {
     text-align: center;
-    color: #757575;
+    color: var(--tk-texto-tenue, #757575);
     padding: 16px 0;
 }
 

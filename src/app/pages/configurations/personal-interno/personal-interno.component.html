@@ -54,8 +54,8 @@
 
       <ng-container matColumnDef="id">
         <th mat-header-cell *matHeaderCellDef>N°</th>
-        <td mat-cell *matCellDef="let persona; let i = index">
-          <div class="persona-cell__nombre">{{ numeroFila(i) }}</div>
+        <td mat-cell *matCellDef="let persona">
+          <div class="persona-cell__nombre">{{ numeroPorId().get(persona.id) }}</div>
         </td>
       </ng-container>
 

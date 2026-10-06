@@ -18,6 +18,11 @@
         }
         {{ descargandoLibro() ? 'Generando...' : 'Libro de traspasos (Excel)' }}
       </button>
+      <button mat-stroked-button color="primary" (click)="descargarLibro('PDF')" [disabled]="descargandoLibro()"
+        matTooltip="PDF con los traspasos de la cuenta, tipo y gestión filtrados">
+        <mat-icon>picture_as_pdf</mat-icon>
+        Libro de traspasos (PDF)
+      </button>
 
       <button mat-flat-button color="primary" [matMenuTriggerFor]="menuNuevo"
         [disabled]="cargandoCatalogos()">

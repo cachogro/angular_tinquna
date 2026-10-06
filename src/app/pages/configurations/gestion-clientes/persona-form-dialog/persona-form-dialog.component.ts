@@ -170,16 +170,12 @@ export class PersonaFormDialogComponent implements OnInit {
     this.form.controls.actorProductivoMinero.markAsDirty();
   }
 
-  /** true si el actor es la propia empresa: id 1 y nombre "TINKURIKUNA". */
+  /** true si el actor es la propia empresa: id 1 (mismo criterio que el back,
+   *  que no mira el nombre; la razón social puede cambiar). */
   private esActorMismaEmpresa(
     actor: ActorProductivoMinero | string | null,
   ): boolean {
-    return (
-      !!actor &&
-      typeof actor === 'object' &&
-      String(actor.id) === '1' &&
-      (actor.nombre ?? '').trim().toUpperCase() === 'TINKURIKUNA'
-    );
+    return !!actor && typeof actor === 'object' && String(actor.id) === '1';
   }
 
   /** Activa/desactiva los campos extra (fecha nacimiento, inicio laboral y

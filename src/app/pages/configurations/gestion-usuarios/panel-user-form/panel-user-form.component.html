@@ -27,54 +27,6 @@
       <form [formGroup]="form" (ngSubmit)="guardar()">
         <section class="form-section">
           <h3 class="form-section__title">
-            <mat-icon>vpn_key</mat-icon>
-            Datos de acceso
-          </h3>
-          <div class="form-grid">
-            <mat-form-field appearance="outline">
-              <mat-label>Usuario</mat-label>
-              <input matInput formControlName="usuario" autocomplete="off" />
-              @if (f.usuario.hasError('required') && f.usuario.touched) {
-              <mat-error>El usuario es obligatorio</mat-error>
-              }
-              @if (f.usuario.hasError('minlength') && f.usuario.touched) {
-              <mat-error>Mínimo 4 caracteres</mat-error>
-              }
-              @if (f.usuario.hasError('pattern') && f.usuario.touched) {
-              <mat-error>Solo letras, ñ y puntos, sin espacios</mat-error>
-              }
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label>{{ esEdicion ? 'Nueva contraseña (opcional)' : 'Contraseña' }}</mat-label>
-              <input matInput type="password" formControlName="contrasena" autocomplete="new-password" />
-              @if (f.contrasena.hasError('required') && f.contrasena.touched) {
-              <mat-error>La contraseña es obligatoria</mat-error>
-              }
-              @if (f.contrasena.hasError('minlength') && f.contrasena.touched) {
-              <mat-error>Mínimo 8 caracteres</mat-error>
-              }
-              @if (f.contrasena.hasError('pattern') && f.contrasena.touched) {
-              <mat-error>No se permiten espacios</mat-error>
-              }
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label>Rol</mat-label>
-              <mat-select formControlName="idRol" [compareWith]="compararPorValor">
-                @for (rol of roles(); track rol.id) {
-                <mat-option [value]="rol.id">{{ rol.nombre }}</mat-option>
-                }
-              </mat-select>
-              @if (f.idRol.hasError('required') && f.idRol.touched) {
-              <mat-error>Selecciona un rol</mat-error>
-              }
-            </mat-form-field>
-          </div>
-        </section>
-
-        <section class="form-section">
-          <h3 class="form-section__title">
             <mat-icon>badge</mat-icon>
             Datos personales
           </h3>
@@ -184,9 +136,58 @@
             </mat-form-field>
           </div>
         </section>
-        <br />
-        <br />
 
+        <section class="form-section">
+          <h3 class="form-section__title">
+            <mat-icon>vpn_key</mat-icon>
+            Datos de acceso
+          </h3>
+          <div class="form-grid">
+            <mat-form-field appearance="outline">
+              <mat-label>Usuario</mat-label>
+              <input matInput formControlName="usuario" autocomplete="off" />
+              <button mat-icon-button matSuffix type="button" (click)="generarUsuario()"
+                [disabled]="!puedeGenerarUsuario()" matTooltip="Autogenerar: primer nombre.primer apellido">
+                <mat-icon>auto_fix_high</mat-icon>
+              </button>
+              @if (f.usuario.hasError('required') && f.usuario.touched) {
+              <mat-error>El usuario es obligatorio</mat-error>
+              }
+              @if (f.usuario.hasError('minlength') && f.usuario.touched) {
+              <mat-error>Mínimo 4 caracteres</mat-error>
+              }
+              @if (f.usuario.hasError('pattern') && f.usuario.touched) {
+              <mat-error>Solo letras, ñ y puntos, sin espacios</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>{{ esEdicion ? 'Nueva contraseña (opcional)' : 'Contraseña' }}</mat-label>
+              <input matInput type="password" formControlName="contrasena" autocomplete="new-password" />
+              @if (f.contrasena.hasError('required') && f.contrasena.touched) {
+              <mat-error>La contraseña es obligatoria</mat-error>
+              }
+              @if (f.contrasena.hasError('minlength') && f.contrasena.touched) {
+              <mat-error>Mínimo 8 caracteres</mat-error>
+              }
+              @if (f.contrasena.hasError('pattern') && f.contrasena.touched) {
+              <mat-error>No se permiten espacios</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Rol</mat-label>
+              <mat-select formControlName="idRol" [compareWith]="compararPorValor">
+                @for (rol of roles(); track rol.id) {
+                <mat-option [value]="rol.id">{{ rol.nombre }}</mat-option>
+                }
+              </mat-select>
+              @if (f.idRol.hasError('required') && f.idRol.touched) {
+              <mat-error>Selecciona un rol</mat-error>
+              }
+            </mat-form-field>
+          </div>
+        </section>
 
         <div class="m-t-12 actions-center">
           <button mat-stroked-button color="warn" (click)="cancelar()" [disabled]="guardando()">

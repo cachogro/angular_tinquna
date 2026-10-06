@@ -29,6 +29,7 @@ import {
 import { ParametricasService } from '../../../configurations/services/parametricas.service';
 import { PersonaService } from '../../../configurations/services/persona.service';
 import { DatosPagoRequest } from '../../models/prestamo-personal.models';
+import { MayusculasDirective } from '../../../../shared/directives/mayusculas.directive';
 
 /** Objeto elegido del autocomplete, o el texto que se está escribiendo. */
 export type DestinoGastoControlValue = DestinoGasto | string | null;
@@ -94,6 +95,7 @@ interface CuentaOpcion {
     MatInputModule,
     MatSelectModule,
     MatAutocompleteModule,
+    MayusculasDirective,
   ],
   templateUrl: './datos-pago-fields.component.html',
   styleUrl: './datos-pago-fields.component.scss',

@@ -59,15 +59,24 @@
             : esCodificacionAc() ?
             'Los siguientes minerales no tienen precio vigente (cotización o tabla de escala de precio). No se puede
             valorizar hasta registrarlo:'
-            : 'Los siguientes minerales no tienen cotización vigente. No se puede valorizar hasta registrarla:' }}
+            : 'Los siguientes minerales no tienen cotización vigente. Registra la de hoy o elige una anterior para valorizar:' }}
           </span>
           @for (m of mineralesSinPrecioVigente; track m.id) {
           <div class="valorizacion-preview__mineral-sin-cotizacion">
             <span>{{ m.descripcion }}{{ m.simbolo ? ' (' + m.simbolo + ')' : '' }}</span>
-            <button mat-stroked-button color="primary" type="button" (click)="abrirRegistrarPrecioVigente(m.id)">
-              <mat-icon>request_quote</mat-icon>
-              {{ etiquetaRegistrarPrecioVigente(m.id) }}
-            </button>
+            <span class="valorizacion-preview__acciones-cotizacion">
+              @if (!mineralUsaEscalaPrecio(m.id)) {
+              <button mat-stroked-button color="primary" type="button" (click)="elegirCotizacion(m.id)"
+                matTooltip="Valorizar con una cotización ya registrada de este mineral">
+                <mat-icon>history</mat-icon>
+                Elegir una anterior
+              </button>
+              }
+              <button mat-stroked-button color="primary" type="button" (click)="abrirRegistrarPrecioVigente(m.id)">
+                <mat-icon>request_quote</mat-icon>
+                {{ etiquetaRegistrarPrecioVigente(m.id) }}
+              </button>
+            </span>
           </div>
           }
         </div>
@@ -79,8 +88,37 @@
           {{ esCodificacionRam() ? 'Tabla de escala de precio vigente verificada para todos los minerales de la ley.'
           : esCodificacionAc() ? 'Precio vigente verificado para todos los minerales de la ley (cotización o tabla de
           escala de precio).'
+          : mineralesConCotizacionElegida.length > 0 ? 'Cotización verificada para todos los minerales de la ley.'
           : 'Cotización vigente verificada para todos los minerales de la ley.' }}
         </span>
+      </div>
+      }
+
+      <!-- Minerales valorizados con una cotización elegida del historial
+           (no la vigente de hoy): que no pase desapercibido. -->
+      @if (!verificandoPrecioVigente && mineralesConCotizacionElegida.length > 0) {
+      <div class="valorizacion-preview__aviso valorizacion-preview__aviso--elegida">
+        <mat-icon>history</mat-icon>
+        <div class="valorizacion-preview__aviso-contenido">
+          <span>Se está valorizando con una cotización que no es la vigente de hoy:</span>
+          @for (m of mineralesConCotizacionElegida; track m.id) {
+          <div class="valorizacion-preview__mineral-sin-cotizacion">
+            <span><strong>{{ m.descripcion }}</strong>: {{ m.cotizacion }} USD (vigencia {{ m.vigencia }})</span>
+            @if (esEditable) {
+            <span class="valorizacion-preview__acciones-cotizacion">
+              <button mat-stroked-button type="button" (click)="elegirCotizacion(m.id)">
+                <mat-icon>history</mat-icon> Cambiar
+              </button>
+              @if (m.hayVigente) {
+              <button mat-stroked-button type="button" (click)="usarCotizacionVigente(m.id)">
+                <mat-icon>today</mat-icon> Usar la vigente
+              </button>
+              }
+            </span>
+            }
+          </div>
+          }
+        </div>
       </div>
       }
 
@@ -118,8 +156,7 @@
               </p>
               <p class="small mb-0">
                 Tipo APM:
-                <span class="text-primary">{{ v.recepcionMineral?.persona?.actorProductivoMinero?.nombre ?? '—'
-                  }}</span>
+                <span class="text-primary">{{ actorProveedorTexto(v) }}</span>
               </p>
             </div>
           </div>
@@ -384,8 +421,17 @@
 
                 <mat-form-field appearance="outline"
                   class="valorizacion-form__ley-campo valorizacion-form__ley-campo--cotizacion">
-                  <mat-label>Cotización vigente</mat-label>
+                  <mat-label>{{ etiquetaCotizacion(fila.get('idMineral')?.value) }}</mat-label>
                   <input matInput type="number" formControlName="cotizacionAplicada" />
+                  @if (esEditable) {
+                  <button matSuffix mat-icon-button type="button" matTooltip="Elegir otra cotización del mineral"
+                    [disabled]="!fila.get('idMineral')?.value" (click)="elegirCotizacion(fila.get('idMineral')?.value)">
+                    <mat-icon>history</mat-icon>
+                  </button>
+                  }
+                  @if (usaCotizacionElegida(fila.get('idMineral')?.value)) {
+                  <mat-hint class="valorizacion-form__hint-cotizacion">No es la vigente de hoy</mat-hint>
+                  }
                 </mat-form-field>
 
                 <mat-form-field appearance="outline"
@@ -466,8 +512,17 @@
 
                 <mat-form-field appearance="outline"
                   class="valorizacion-form__ley-campo valorizacion-form__ley-campo--cotizacion">
-                  <mat-label>Cotización vigente</mat-label>
+                  <mat-label>{{ etiquetaCotizacion(fila.get('idMineral')?.value) }}</mat-label>
                   <input matInput type="number" [value]="cotizacionUSDMineral(fila.get('idMineral')?.value)" disabled />
+                  @if (esEditable && !filaUsaEscalaPrecio(i)) {
+                  <button matSuffix mat-icon-button type="button" matTooltip="Elegir otra cotización del mineral"
+                    [disabled]="!fila.get('idMineral')?.value" (click)="elegirCotizacion(fila.get('idMineral')?.value)">
+                    <mat-icon>history</mat-icon>
+                  </button>
+                  }
+                  @if (usaCotizacionElegida(fila.get('idMineral')?.value)) {
+                  <mat-hint class="valorizacion-form__hint-cotizacion">No es la vigente de hoy</mat-hint>
+                  }
                 </mat-form-field>
 
                 <mat-form-field appearance="outline"
@@ -827,7 +882,7 @@
                     <td>
                       <mat-form-field appearance="outline" subscriptSizing="dynamic"
                         class="valorizacion-form__aportes-campo">
-                        <mat-select formControlName="idEntidadAporte" (selectionChange)="recalcularAporte(i)">
+                        <mat-select formControlName="idEntidadAporte" (selectionChange)="onEntidadAporteChange(i)">
                           @for (entidad of entidadesAporteActivas(); track entidad.id) {
                           <mat-option [value]="entidad.id">{{ entidad.descripcion }}</mat-option>
                           }

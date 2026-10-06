@@ -18,6 +18,7 @@ import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog
 import { PromedioMineral } from '../models/promedio-mineral.models';
 import { PromedioMineralService } from '../services/promedio-mineral.service';
 import { Router } from '@angular/router';
+import { fechaFmt } from 'src/app/pages/contabilidad/components/personal-interno.util';
 
 @Component({
   selector: 'app-promedio-list',
@@ -169,9 +170,5 @@ export class PromedioListComponent implements OnInit {
 
   // ---------- Presentación ----------
 
-  fechaFmt(iso: string | null | undefined): string {
-    if (!iso) return '—';
-    const [a, m, d] = iso.slice(0, 10).split('-');
-    return d && m && a ? `${d}/${m}/${a}` : iso;
-  }
+  readonly fechaFmt = fechaFmt;
 }

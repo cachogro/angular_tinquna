@@ -35,7 +35,7 @@
 
       <mat-form-field appearance="outline">
         <mat-label>Monto ({{ data.moneda }})</mat-label>
-        <input matInput type="number" step="0.01" min="0.01" class="input-monto" formControlName="monto" />
+        <input matInput appMonto formControlName="monto" />
         @if (f.monto.hasError('required') && f.monto.touched) {
         <mat-error>Obligatorio</mat-error>
         }
@@ -50,21 +50,19 @@
 
     <mat-form-field appearance="outline" class="mc-form__full">
       <mat-label>Concepto</mat-label>
-      <input matInput formControlName="concepto" maxlength="255" />
+      <input matInput appMayusculas formControlName="concepto" maxlength="255" />
       @if (f.concepto.hasError('required') && f.concepto.touched) {
       <mat-error>Obligatorio</mat-error>
       }
     </mat-form-field>
 
-    <mat-form-field appearance="outline" class="mc-form__full">
-      <mat-label>Destino del gasto (opcional)</mat-label>
-      <input matInput formControlName="destinoGasto" maxlength="255" placeholder="Ej: COMPRA DE COMBUSTIBLE" />
-    </mat-form-field>
+    <app-destino-gasto-field class="mc-form__full" [control]="f.idDestinoGasto" [opciones]="destinosGastoFiltrados"
+      [label]="f.tipo.value === 'INGRESO' ? 'Origen del ingreso (opcional)' : 'Destino del gasto (opcional)'" />
 
     <div class="mc-form__row2">
       <mat-form-field appearance="outline">
         <mat-label>N° de comprobante (opcional)</mat-label>
-        <input matInput formControlName="nroComprobante" maxlength="30" class="nro-cpte" placeholder="Ej: REC:R-0084" />
+        <input matInput appMayusculas formControlName="nroComprobante" maxlength="30" class="nro-cpte" placeholder="Ej: REC:R-0084" />
       </mat-form-field>
 
       <mat-form-field appearance="outline">

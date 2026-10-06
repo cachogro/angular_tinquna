@@ -32,7 +32,7 @@
 
     <mat-form-field appearance="outline" class="pf-full">
       <mat-label>A cuenta de qué se presta</mat-label>
-      <input matInput formControlName="descripcion" maxlength="255" placeholder="Ej: COMPRA DE MOTO HONDA XR150" />
+      <input matInput appMayusculas formControlName="descripcion" maxlength="255" placeholder="Ej: COMPRA DE MOTO HONDA XR150" />
       <mat-hint>Concepto del recibo y del kardex: "PRÉSTAMO N° x: …"</mat-hint>
       <mat-hint align="end">{{ f.descripcion.value?.length ?? 0 }}/255</mat-hint>
       @if ((f.descripcion.hasError('required') || f.descripcion.hasError('soloEspacios')) && f.descripcion.touched) {
@@ -73,7 +73,7 @@
 
     <mat-form-field appearance="outline" class="pf-full">
       <mat-label>Observaciones (opcional)</mat-label>
-      <input matInput formControlName="observaciones" maxlength="255" />
+      <input matInput appMayusculas formControlName="observaciones" maxlength="255" />
       <mat-hint align="end">{{ f.observaciones.value?.length ?? 0 }}/255</mat-hint>
     </mat-form-field>
   </form>

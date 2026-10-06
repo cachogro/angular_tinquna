@@ -1,9 +1,9 @@
 .pl-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0 16px; }
 .pl-toolbar__persona { flex: 1 1 240px; min-width: 180px; max-width: 360px; }
 .pl-toolbar__sel { flex: 0 1 140px; min-width: 110px; }
-.pl-toolbar__clear { color: rgba(0,0,0,.5); white-space: nowrap; }
+.pl-toolbar__clear { color: rgb(var(--tk-ink, 0 0 0) / .5); white-space: nowrap; }
 .pl-toolbar__nuevo { margin-left: auto; white-space: nowrap; }
-.pl-loading, .pl-empty { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 40px 16px; color: rgba(0,0,0,.45); }
+.pl-loading, .pl-empty { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 40px 16px; color: rgb(var(--tk-ink, 0 0 0) / .45); }
 .pl-empty { flex-direction: column; }
 .pl-tabla-scroll { overflow: auto; max-height: 560px; }
 .pl-tabla { width: 100%; }
@@ -18,6 +18,6 @@
 .pl-num { text-align: right; }
 .pl-saldo { font-weight: 600; }
 .pl-truncar { display: block; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pl-badge { padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; background: color-mix(in srgb, #2e7d32 15%, transparent); color: #2e7d32; }
-.pl-badge--cancelado { background: color-mix(in srgb, #9e9e9e 22%, transparent); color: #616161; }
+.pl-badge { padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; background: color-mix(in srgb, var(--tk-verde, #2e7d32) 15%, transparent); color: var(--tk-verde, #2e7d32); }
+.pl-badge--cancelado { background: color-mix(in srgb, var(--tk-texto-tenue, #9e9e9e) 22%, transparent); color: var(--tk-texto-fuerte, #616161); }
 .pl-row-cancelado { opacity: .6; }

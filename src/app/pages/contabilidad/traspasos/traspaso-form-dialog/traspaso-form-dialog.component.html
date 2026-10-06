@@ -20,8 +20,8 @@
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>Monto</mat-label>
-        <input matInput type="number" step="0.01" min="0.01" class="input-monto" formControlName="monto" />
+        <mat-label>Monto{{ simbolo ? ' (' + simbolo + ')' : '' }}</mat-label>
+        <input matInput appMonto formControlName="monto" />
         @if (f.monto.hasError('required') && f.monto.touched) {
         <mat-error>Obligatorio</mat-error>
         }
@@ -52,27 +52,45 @@
 
       <mat-form-field appearance="outline">
         <mat-label>N° de comprobante (opcional)</mat-label>
-        <input matInput formControlName="nroComprobante" maxlength="30" class="nro-cpte" />
+        <input matInput appMayusculas formControlName="nroComprobante" maxlength="30" class="nro-cpte" />
       </mat-form-field>
     </div>
 
+    @if (esUsd) {
+    <div class="tf-form__row2">
+      <mat-form-field appearance="outline">
+        <mat-label>Tipo de cambio (Bs por 1 $us)</mat-label>
+        <input matInput appMonto formControlName="tipoCambio" placeholder="6.96" />
+        @if (f.tipoCambio.hasError('required') && f.tipoCambio.touched) {
+        <mat-error>Obligatorio en dólares</mat-error>
+        } @else if (f.tipoCambio.hasError('pattern') && f.tipoCambio.touched) {
+        <mat-error>Número con hasta 4 decimales</mat-error>
+        } @else if (f.tipoCambio.hasError('min') && f.tipoCambio.touched) {
+        <mat-error>Debe ser mayor a 0</mat-error>
+        }
+        @if (esEdicion && data.traspaso?.tipoCambio == null) {
+        <mat-hint>Traspaso registrado sin tipo de cambio: indícalo</mat-hint>
+        }
+      </mat-form-field>
+
+      <div class="tf-equivalente">
+        <small>Equivalente</small>
+        <strong>Bs {{ equivalenteBs() | number:'1.2-2' }}</strong>
+        <small>{{ (f.monto.value || 0) | number:'1.2-2' }} $us × {{ tipoCambio() | number:'1.2-4' }}</small>
+      </div>
+    </div>
+    }
+
     <mat-form-field appearance="outline" class="tf-form__full">
       <mat-label>Concepto</mat-label>
-      <input matInput formControlName="concepto" maxlength="255" />
+      <input matInput appMayusculas formControlName="concepto" maxlength="255" />
       @if (f.concepto.hasError('required') && f.concepto.touched) {
       <mat-error>Obligatorio</mat-error>
       }
     </mat-form-field>
 
-    <mat-form-field appearance="outline" class="tf-form__full">
-      <mat-label>Destino del gasto (opcional)</mat-label>
-      <mat-select formControlName="idDestinoGasto">
-        <mat-option [value]="null">— Sin especificar —</mat-option>
-        @for (d of destinosGastoFiltrados; track d.id) {
-        <mat-option [value]="d.id">{{ d.nombre }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
+    <app-destino-gasto-field class="tf-form__full" [control]="f.idDestinoGasto"
+      [opciones]="destinosGastoFiltrados" />
 
     <mat-form-field appearance="outline" class="tf-form__full">
       <mat-label>Autorizó</mat-label>

@@ -49,6 +49,16 @@ export interface CuentaBancariaEnFondoRendir {
   alias?: string | null;
 }
 
+/** COMPROBANTE: gasto con respaldo cargado a mano. SIN_COMPROBANTE: el fondo
+ *  se dio por rendido sin comprobantes (cubre el saldo que faltaba).
+ *  SALDO_FAVOR: excedente de un fondo anterior del mismo destinatario que
+ *  entra como ya justificado. Las dos últimas las genera el back: no se
+ *  editan, y la de SALDO_FAVOR tampoco se anula. */
+export type TipoDetalleFondoRendir =
+  | 'COMPROBANTE'
+  | 'SIN_COMPROBANTE'
+  | 'SALDO_FAVOR';
+
 export interface DetalleFondoRendir {
   id: string;
   idFondoRendir: string | number;
@@ -59,6 +69,9 @@ export interface DetalleFondoRendir {
   facturaRecibo?: string | null;
   idDestinoGasto?: number | null;
   destinoGasto?: DestinoGasto | null;
+  tipo?: TipoDetalleFondoRendir;
+  /** Solo en SALDO_FAVOR: fondo del que viene el excedente. */
+  idFondoOrigen?: string | null;
   activo: boolean;
 }
 
@@ -89,6 +102,20 @@ export interface FondoRendirCuentas {
   /** Presente cuando se cerró con deuda: movimiento generado en el kardex
    *  del destinatario por el saldo pendiente. */
   idMovimientoKardexCierre?: string | null;
+  /** Excedente ya devuelto al destinatario con un recibo de egreso. */
+  montoRepuesto?: number | string;
+  idReciboReposicion?: string | null;
+  reciboReposicion?: ReciboEnFondoRendir | null;
+  /** "YYYY-MM-DD" */
+  fechaReposicion?: string | null;
+  /** Excedente que no se devolvió y se aplicó como ya justificado en un
+   *  fondo posterior (`idFondoCompensacion`). */
+  montoCompensado?: number | string;
+  idFondoCompensacion?: string | null;
+  /** Solo en el detalle (GET /:id), con el fondo PENDIENTE o RENDIDO_PARCIAL:
+   *  lo que el destinatario tiene a favor en otros fondos y se puede aplicar
+   *  a este. */
+  saldoFavorDisponible?: number;
   activo: boolean;
   /** Usuario (login) que entregó el fondo. */
   usuarioRegistro?: string | null;
@@ -139,6 +166,33 @@ export interface GuardarDetalleFondoRendirRequest {
   nroComprobante?: string;
   facturaRecibo?: string;
   idDestinoGasto?: number;
+}
+
+/** POST /contabilidad/fondo-rendir/:id/reponer — devuelve al destinatario el
+ *  excedente con un recibo de EGRESO (caja en efectivo o libreta bancaria).
+ *  El monto no se envía: siempre es todo `montoPorReponer`. */
+export interface ReponerFondoRendirRequest {
+  /** "YYYY-MM-DD" */
+  fecha: string;
+  idFormaPago?: number;
+  idCuentaBancaria?: number;
+  nroComprobante?: string;
+  /** Si se omite, el back usa el de la cabecera del fondo. */
+  idDestinoGasto?: number;
+  idPersonaAutorizo: string;
+}
+
+/** GET /contabilidad/fondo-rendir/saldo-favor — lo que la empresa aún le
+ *  debe reponer al destinatario; al entregarle un fondo nuevo entra solo
+ *  como ya justificado. */
+export interface SaldoFavorFondoRendir {
+  saldoFavor: number;
+  fondos: {
+    id: string;
+    fecha: string;
+    concepto: string;
+    montoPorReponer: number;
+  }[];
 }
 
 export interface FiltroFondoRendirRequest {

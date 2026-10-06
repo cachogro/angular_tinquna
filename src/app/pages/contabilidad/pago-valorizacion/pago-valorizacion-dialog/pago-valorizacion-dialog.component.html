@@ -1,0 +1,221 @@
+<h2 mat-dialog-title>
+  <mat-icon class="pv-icono">payments</mat-icon>
+  Pago de valorización {{ prep()?.codigoOperacion }}
+</h2>
+
+<mat-dialog-content>
+  @if (cargando()) {
+  <div class="pv-loading">
+    <mat-spinner diameter="32"></mat-spinner>
+    <span>Cargando...</span>
+  </div>
+  } @else if (prep(); as p) {
+
+  <p class="pv-resumen">
+    <strong>{{ p.proveedor.nombre || '—' }}</strong><br />
+    Sin recibo: el respaldo es el PDF de la valorización firmado por ambas partes.
+  </p>
+
+  <div class="pv-tiles">
+    <div class="pv-tile pv-tile--destacado">
+      <small>Líquido pagable</small>
+      <strong>Bs {{ p.liquidoPagable | number:'1.2-2' }}</strong>
+    </div>
+    <div class="pv-tile">
+      <small>Anticipo descontado</small>
+      <strong>Bs {{ p.anticipo | number:'1.2-2' }}</strong>
+    </div>
+    <div class="pv-tile">
+      <small>Otros anticipos descontados</small>
+      <strong>Bs {{ p.otrosAnticipos | number:'1.2-2' }}</strong>
+    </div>
+  </div>
+
+  @if (p.pagoVigente; as pago) {
+  <!-- ===== Pago ya registrado ===== -->
+  <div class="pv-registrado">
+    <div class="pv-registrado__titulo">
+      <span>Pago registrado el {{ fechaFmt(pago.fecha) }}</span>
+      <span class="pv-badge">REGISTRADO</span>
+    </div>
+    <div class="pv-linea pv-linea--fuerte">
+      <span>Pagado · {{ origenPago(pago) }}</span>
+      <strong>Bs {{ num(pago.montoPagado) | number:'1.2-2' }}</strong>
+    </div>
+    @if (num(pago.montoPagado) > 0) {
+    <div class="pv-linea">
+      <span>
+        {{ pago.formaPago?.nombre || 'Efectivo' }}
+        @if (pago.nroComprobante) { · N° {{ pago.nroComprobante }} }
+        @if (pago.destinoGasto) { · {{ pago.destinoGasto.nombre }} }
+      </span>
+    </div>
+    }
+    @for (d of pago.detalles ?? []; track d.id) {
+    <div class="pv-linea">
+      <span>{{ etiquetaConcepto(d.concepto) }} · {{ nombreKardex(d) }} (HABER)</span>
+      <span>Bs {{ num(d.monto) | number:'1.2-2' }}</span>
+    </div>
+    }
+    <div class="pv-linea">
+      <span>Autorizó: {{ nombreAutorizo(pago) }}</span>
+    </div>
+  </div>
+  } @else if (!p.valorizada) {
+  <p class="pv-aviso">
+    <mat-icon inline>info</mat-icon>
+    La valorización todavía no está VALORIZADA: el pago se registra recién al finalizarla.
+  </p>
+  } @else {
+  <!-- ===== Registrar pago ===== -->
+
+  @if (p.liquidoPagable < 0) {
+  <p class="pv-aviso">
+    <mat-icon inline>info</mat-icon>
+    El líquido es negativo: no hay nada que pagar. Los anticipos se cancelan solo hasta donde alcanzó el mineral.
+  </p>
+  }
+
+  @if (p.anticipoEnKardex.length || p.anticipoSinKardex > 0) {
+  <div class="pv-bloque">
+    <h3>Anticipo de la recepción</h3>
+    @for (a of p.anticipoEnKardex; track a.idKardex) {
+    <div class="pv-linea">
+      <span>Se cancela en el kardex <strong>{{ a.codigo }}</strong> · {{ a.nombre }} (HABER)</span>
+      <span>Bs {{ a.monto | number:'1.2-2' }}</span>
+    </div>
+    }
+    @if (p.anticipoSinKardex > 0) {
+    <p class="pv-nota">
+      Bs {{ p.anticipoSinKardex | number:'1.2-2' }} del anticipo no están en ningún kardex (se entregó a un externo
+      o su recibo no está procesado): no hay deuda que cancelar.
+    </p>
+    }
+  </div>
+  }
+
+  @if (p.otrosAnticipos > 0) {
+  <div class="pv-bloque">
+    <h3>Otros anticipos</h3>
+    <mat-form-field appearance="outline" class="pv-full">
+      <mat-label>Kardex donde se cancelan (HABER de Bs {{ p.otrosAnticipos | number:'1.2-2' }})</mat-label>
+      <input matInput [formControl]="kardexOtros" [matAutocomplete]="autoOtros" #otrosTrigger="matAutocompleteTrigger"
+        (focus)="otrosTrigger.openPanel()" placeholder="Buscar por código o nombre" />
+      <mat-autocomplete #autoOtros="matAutocomplete" [displayWith]="displayKardex">
+        @for (o of opcionesKardex(kardexOtros); track o.idKardex) {
+        <mat-option [value]="o">{{ o.label }}</mat-option>
+        } @empty {
+        <mat-option disabled>Sin coincidencias</mat-option>
+        }
+      </mat-autocomplete>
+      @if (kardexOtros.invalid && kardexOtros.touched) {
+      <mat-error>Elige el kardex de la lista</mat-error>
+      }
+    </mat-form-field>
+  </div>
+  }
+
+  <div class="pv-bloque">
+    <div class="pv-bloque__head">
+      <h3>Dejar a kardex (opcional)</h3>
+      <button mat-stroked-button type="button" (click)="agregarAbono()" [disabled]="p.montoAPagar <= 0">
+        <mat-icon>add</mat-icon> Agregar
+      </button>
+    </div>
+    @if (filas.length === 0) {
+    <p class="pv-nota">Sin reparto: todo el líquido se paga y no se anota en ningún kardex.</p>
+    }
+    @for (fila of filas; track fila; let i = $index) {
+    <div class="pv-fila" [formGroup]="fila">
+      <mat-form-field appearance="outline" class="pv-fila__kardex">
+        <mat-label>Kardex abierto</mat-label>
+        <input matInput formControlName="kardex" [matAutocomplete]="autoAbono" #abonoTrigger="matAutocompleteTrigger"
+          (focus)="abonoTrigger.openPanel()" placeholder="Buscar por código o nombre" />
+        <mat-autocomplete #autoAbono="matAutocomplete" [displayWith]="displayKardex">
+          @for (o of opcionesKardex(fila.get('kardex')); track o.idKardex) {
+          <mat-option [value]="o">{{ o.label }}</mat-option>
+          } @empty {
+          <mat-option disabled>Sin coincidencias</mat-option>
+          }
+        </mat-autocomplete>
+        @if (fila.get('kardex')?.invalid && fila.get('kardex')?.touched) {
+        <mat-error>Elige el kardex de la lista</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="pv-fila__monto">
+        <mat-label>Monto (Bs)</mat-label>
+        <input matInput appMonto formControlName="monto" />
+        @if (fila.get('monto')?.hasError('required') && fila.get('monto')?.touched) {
+        <mat-error>Obligatorio</mat-error>
+        } @else if (fila.get('monto')?.hasError('pattern') && fila.get('monto')?.touched) {
+        <mat-error>Máx. 2 decimales</mat-error>
+        } @else if (fila.get('monto')?.hasError('min') && fila.get('monto')?.touched) {
+        <mat-error>Mayor a 0</mat-error>
+        }
+      </mat-form-field>
+
+      <button mat-icon-button type="button" color="warn" matTooltip="Quitar" (click)="quitarAbono(i)">
+        <mat-icon>delete_outline</mat-icon>
+      </button>
+    </div>
+    }
+
+    <div class="pv-total">
+      @if (filas.length > 0) {
+      <div class="pv-linea">
+        <span>Queda en kardex (HABER)</span>
+        <span>Bs {{ sumaAbonos() | number:'1.2-2' }}</span>
+      </div>
+      }
+      <div class="pv-linea pv-linea--fuerte" [class.pv-linea--error]="excede()">
+        <span>A pagar (sale de caja o banco)</span>
+        <strong>Bs {{ aPagar() | number:'1.2-2' }}</strong>
+      </div>
+      @if (excede()) {
+      <p class="pv-alerta">Lo que se deja a kardex supera el líquido pagable</p>
+      }
+    </div>
+  </div>
+
+  <div class="pv-bloque">
+    <h3>Datos del pago</h3>
+    <mat-form-field appearance="outline" class="pv-fecha">
+      <mat-label>Fecha</mat-label>
+      <input matInput [matDatepicker]="picker" [max]="hoy" [formControl]="fecha" />
+      <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+      <mat-datepicker #picker></mat-datepicker>
+      @if (fecha.hasError('matDatepickerMax') && fecha.touched) {
+      <mat-error>No puede ser una fecha futura</mat-error>
+      } @else if (fecha.invalid && fecha.touched) {
+      <mat-error>Obligatorio (dd/mm/aaaa)</mat-error>
+      }
+    </mat-form-field>
+    @if (aPagar() <= 0) {
+    <p class="pv-nota">No sale dinero: no hace falta forma de pago, solo quién autorizó.</p>
+    }
+    <app-datos-pago-fields [form]="pago" [esEgreso]="true" />
+  </div>
+  }
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-stroked-button (click)="cerrar()" [disabled]="guardando()">Cerrar</button>
+  @if (prep(); as p) {
+  @if (p.pagoVigente; as pago) {
+  <button mat-flat-button color="warn" (click)="anular(pago)" [disabled]="guardando()">
+    <mat-icon>block</mat-icon> Anular pago
+  </button>
+  } @else if (p.valorizada && !cargando()) {
+  <button mat-flat-button color="primary" (click)="registrar()" [disabled]="guardando()">
+    @if (guardando()) {
+    <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
+    <span>Guardando...</span>
+    } @else {
+    <span>Registrar pago</span>
+    }
+  </button>
+  }
+  }
+</mat-dialog-actions>

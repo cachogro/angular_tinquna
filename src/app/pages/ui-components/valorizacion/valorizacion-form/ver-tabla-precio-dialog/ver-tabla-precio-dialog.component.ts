@@ -8,6 +8,7 @@ import {
 } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { EscalaPrecio } from 'src/app/pages/configurations/parametricas/models/parametricas.models';
+import { formatearFechaBolivia } from 'src/app/shared/utils/fecha-bolivia.util';
 
 /** Datos ya resueltos que arma valorizacion-form antes de abrir este
  *  diálogo: es una vista de solo lectura, no vuelve a consultar servicios. */
@@ -41,8 +42,6 @@ export class VerTablaPrecioDialogComponent {
   }
 
   formatearFecha(fecha: string | null | undefined): string {
-    if (!fecha) return '';
-    const [year, month, day] = fecha.slice(0, 10).split('-');
-    return `${day}/${month}/${year}`;
+    return formatearFechaBolivia(fecha);
   }
 }

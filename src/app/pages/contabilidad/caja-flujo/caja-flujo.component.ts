@@ -29,7 +29,11 @@ import {
   MovimientoCajaFormDialogComponent,
   MovimientoCajaFormDialogData,
 } from './movimiento-caja-form-dialog/movimiento-caja-form-dialog.component';
-import { mensajeErrorBlob } from '../../../shared/utils/descarga-archivo.util';
+import {
+  extensionReporte,
+  FormatoReporte,
+  mensajeErrorBlob,
+} from '../../../shared/utils/descarga-archivo.util';
 
 const MESES = [
   'Enero',
@@ -397,7 +401,8 @@ export class CajaFlujoComponent implements OnInit {
 
   // ---------- Períodos ----------
 
-  descargarExcel(): void {
+  /** Caja de flujo del mes en Excel o, con `formato` PDF, en hoja carta apaisada. */
+  descargarExcel(formato: FormatoReporte = 'EXCEL'): void {
     const id = this.cajaSelId();
     const gestion = this.gestionSel();
     const mes = this.mesSel();
@@ -406,7 +411,10 @@ export class CajaFlujoComponent implements OnInit {
     }
     this.descargandoExcel.set(true);
     this.movimientoCajaService
-      .descargarExcel({ idCaja: id, moneda: this.monedaSel(), gestion, mes })
+      .descargarExcel(
+        { idCaja: id, moneda: this.monedaSel(), gestion, mes },
+        formato,
+      )
       .subscribe({
         next: (blob) => {
           this.descargandoExcel.set(false);
@@ -414,14 +422,14 @@ export class CajaFlujoComponent implements OnInit {
           const a = document.createElement('a');
           a.href = url;
           const mesStr = String(mes).padStart(2, '0');
-          a.download = `caja-flujo-${id}-${this.monedaSel()}-${gestion}-${mesStr}.xlsx`;
+          a.download = `caja-flujo-${id}-${this.monedaSel()}-${gestion}-${mesStr}.${extensionReporte(formato)}`;
           a.click();
           window.URL.revokeObjectURL(url);
         },
         error: async (err) => {
           this.descargandoExcel.set(false);
           this.snackBar.open(
-            (await mensajeErrorBlob(err)) ?? 'No se pudo generar el Excel de la caja',
+            (await mensajeErrorBlob(err)) ?? 'No se pudo generar el reporte de la caja',
             'Cerrar',
             { duration: 5000 },
           );
@@ -429,7 +437,7 @@ export class CajaFlujoComponent implements OnInit {
       });
   }
 
-  descargarExcelCompleto(): void {
+  descargarExcelCompleto(formato: FormatoReporte = 'EXCEL'): void {
     const id = this.cajaSelId();
     const gestion = this.gestionSel();
     const mes = this.mesSel();
@@ -438,7 +446,7 @@ export class CajaFlujoComponent implements OnInit {
     }
     this.descargandoExcelCompleto.set(true);
     this.movimientoCajaService
-      .descargarExcelCompleto({ idCaja: id, gestion, mes })
+      .descargarExcelCompleto({ idCaja: id, gestion, mes }, formato)
       .subscribe({
         next: (blob) => {
           this.descargandoExcelCompleto.set(false);
@@ -446,14 +454,14 @@ export class CajaFlujoComponent implements OnInit {
           const a = document.createElement('a');
           a.href = url;
           const mesStr = String(mes).padStart(2, '0');
-          a.download = `caja-flujo-completa-${gestion}-${mesStr}.xlsx`;
+          a.download = `caja-flujo-completa-${gestion}-${mesStr}.${extensionReporte(formato)}`;
           a.click();
           window.URL.revokeObjectURL(url);
         },
         error: async (err) => {
           this.descargandoExcelCompleto.set(false);
           this.snackBar.open(
-            (await mensajeErrorBlob(err)) ?? 'No se pudo generar el Excel completo de la caja',
+            (await mensajeErrorBlob(err)) ?? 'No se pudo generar el reporte completo de la caja',
             'Cerrar',
             { duration: 5000 },
           );

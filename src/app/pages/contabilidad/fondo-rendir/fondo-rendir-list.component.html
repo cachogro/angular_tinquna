@@ -122,6 +122,11 @@
                 <button mat-menu-item (click)="verPdfReciboDetallado(f)" [disabled]="f.recibo?.estado !== 'PROCESADO'">
                   <mat-icon>fact_check</mat-icon> Recibo detallado (procesado)
                 </button>
+                @if (f.idReciboReposicion) {
+                <button mat-menu-item (click)="verPdfReciboReposicion(f)">
+                  <mat-icon>currency_exchange</mat-icon> Recibo de devolución del excedente
+                </button>
+                }
               </mat-menu>
               }
             </td>

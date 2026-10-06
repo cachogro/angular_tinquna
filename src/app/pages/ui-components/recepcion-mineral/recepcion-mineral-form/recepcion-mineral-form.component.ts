@@ -6,31 +6,34 @@ import {
   FormControl,
   FormGroup,
   ReactiveFormsModule,
-  ValidatorFn,
   Validators,
 } from '@angular/forms';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { Observable, forkJoin, map, merge, startWith } from 'rxjs';
+import { Observable, catchError, forkJoin, map, of, startWith } from 'rxjs';
 import {
   ActorProductivoMinero,
   PersonaCI,
 } from 'src/app/pages/configurations/models/persona.models';
 import { PersonaService } from 'src/app/pages/configurations/services/persona.service';
 import { ParametricasService } from 'src/app/pages/configurations/services/parametricas.service';
-import { LugarAcopio } from 'src/app/pages/configurations/parametricas/models/parametricas.models';
+import {
+  Laboratorio,
+  LugarAcopio,
+} from 'src/app/pages/configurations/parametricas/models/parametricas.models';
 import {
   CodificacionCatalogo,
-  DetalleMineralRegistro,
   GuardarRegistroMineralRequest,
-  LeyUnidad,
+  RegistroMineral,
 } from '../../models/registro-mineral.models';
 import { RegistroMineralService } from '../../services/registro-mineral.service';
 import { MatCardModule } from '@angular/material/card';
@@ -39,15 +42,25 @@ import {
   PersonaFormDialogData,
 } from 'src/app/pages/configurations/gestion-clientes/persona-form-dialog/persona-form-dialog.component';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-
 import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog/confirm-dialog.component';
+import { MayusculasDirective } from 'src/app/shared/directives/mayusculas.directive';
+import { sinSoloEspacios } from 'src/app/shared/utils/texto.util';
+import { abrirBlobEnPestana } from 'src/app/shared/utils/descarga-archivo.util';
+import { nombrePersona } from '../../../contabilidad/components/personal-interno.util';
+
 import {
   abrirReciboAnticipo,
   faltaReciboAnticipo,
 } from '../recibo-anticipo.util';
 
-const ID_TIPO_PERSONA_PROVEEDOR = 1;
 const ID_TIPO_PERSONA_MUESTRERO = 6;
+
+/** Actor reservado a la propia empresa (TINKURIKUNA): no se le compra mineral. */
+const ID_ACTOR_EMPRESA = '1';
+
+/** Quién deja el mineral: persona registrada (incluye personal interno),
+ *  actor productivo o un externo del que solo se anota el nombre. */
+type ProveedorTipo = 'PERSONA' | 'ACTOR' | 'TEXTO';
 
 /** Palabra clave para identificar, por código o nombre, la codificación de tipo "cargas"
  *  (para esa codificación el N° de sacos no es obligatorio) */
@@ -57,19 +70,6 @@ const CLAVE_CODIFICACION_CARGAS = 'CARGA';
  *  tampoco exige N° de sacos: se identifica igual que ahí, por id o por nombre. */
 const ID_CODIFICACION_RAM = '5';
 const CLAVE_CODIFICACION_RAM = 'RAM';
-
-/** Unidades disponibles para expresar la ley de un mineral */
-export const LEY_UNIDADES: LeyUnidad[] = ['%', 'g/TM'];
-const LEY_UNIDAD_POR_DEFECTO: LeyUnidad = '%';
-
-/** Fila de la sección dinámica de leyes: una por cada mineral que integra la codificación elegida */
-// interface DetalleFormRow {
-//   idMineral: string;
-//   descripcion: string;
-//   simbolo?: string;
-//   control: FormControl<number | null>;
-//   unidadControl: FormControl<LeyUnidad>;
-// }
 
 @Component({
   selector: 'app-recepcion-mineral-form',
@@ -82,10 +82,13 @@ const LEY_UNIDAD_POR_DEFECTO: LeyUnidad = '%';
     MatSelectModule,
     MatAutocompleteModule,
     MatButtonModule,
+    MatButtonToggleModule,
     MatIconModule,
     MatProgressSpinnerModule,
     MatCardModule,
     MatDialogModule,
+    MatTooltipModule,
+    MayusculasDirective,
   ],
   templateUrl: './recepcion-mineral-form.component.html',
   styleUrl: './recepcion-mineral-form.component.scss',
@@ -99,15 +102,19 @@ export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
 
-  /** Opciones de unidad de ley disponibles en el select de cada fila de mineral */
-  readonly leyUnidades = LEY_UNIDADES;
-
   readonly codificaciones = signal<CodificacionCatalogo[]>([]);
+  /** Personas activas que se ofrecen como proveedor (tengan o no kardex: a
+   *  qué kardex va el dinero se decide al procesar el recibo). */
   readonly proveedores = signal<PersonaCI[]>([]);
   /** Personas con tipo "muestrero" (idTipoPersona = 6), para el select de muestrero */
   readonly muestreros = signal<PersonaCI[]>([]);
   readonly actoresMinero = signal<ActorProductivoMinero[]>([]);
   readonly lugaresAcopio = signal<LugarAcopio[]>([]);
+  /** Solo laboratorios activos (el back rechaza los inactivos con 404). */
+  readonly laboratorios = signal<Laboratorio[]>([]);
+  /** Laboratorio con el que se cargó la recepción al editar: solo se envía
+   *  idLaboratorio si cambió (sin enviarlo, el back conserva el que tenía). */
+  private idLaboratorioInicial: string | null = null;
   readonly cargandoCatalogos = signal(true);
   readonly cargandoRegistro = signal(false);
   readonly guardando = signal(false);
@@ -117,11 +124,6 @@ export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
    *  o mientras se está guardando, y se puede reanudar con el botón del campo. */
   readonly horaAutomatica = signal(true);
   private tickHoraInterval?: ReturnType<typeof setInterval>;
-
-  /** Filas dinámicas de ley por mineral, generadas a partir de la codificación elegida */
-  // readonly detalleControls = signal<DetalleFormRow[]>([]);
-  /** Detalles del registro que se está editando, para pre-cargar sus leyes al reconstruir las filas */
-  // private detallesIniciales?: DetalleMineralRegistro[];
 
   registroId: string | null = null;
   get esEdicion(): boolean {
@@ -163,30 +165,53 @@ export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
     idMuestrero: new FormControl<string | null>(null, [Validators.required]),
     /** Descripción del lugar de acopio elegido del catálogo. Obligatorio. */
     lugarAcopio: new FormControl<string | null>(null, [Validators.required]),
+    /** Laboratorio al que va la muestra. Opcional: la valorización lo precarga. */
+    idLaboratorio: new FormControl<string | null>(null),
   });
 
-  /** Control independiente para el autocomplete: guarda el objeto PersonaCI
-   *  completo cuando se selecciona una opción, o el texto libre mientras se
-   *  escribe. El id real que se envía al backend sale de aquí, no del form. */
+  /** Mismo selector que "Recibí de / Entregué a" del recibo (sin Cliente):
+   *  de los tres controles de abajo solo cuenta el del tipo elegido. */
+  readonly proveedorTipo = new FormControl<ProveedorTipo>('PERSONA', {
+    nonNullable: true,
+  });
+
+  /** Autocomplete de persona: guarda el objeto PersonaCI elegido, o el texto
+   *  libre mientras se escribe (inválido al guardar). */
   readonly proveedorControl = new FormControl<PersonaCI | string | null>(null, [
-    Validators.required,
-    this.proveedorValidoValidator,
+    this.seleccionDeLista,
   ]);
 
-  /** Control independiente (opcional) para filtrar/relacionar por actor productivo minero.
-   *  Se autocompleta al elegir un proveedor, o el usuario puede elegirlo primero para
-   *  acotar la lista de proveedores a los que pertenecen a ese actor. */
+  /** Autocomplete de actor productivo: mismo criterio que el de persona. */
   readonly actorControl = new FormControl<
     ActorProductivoMinero | string | null
-  >(null);
+  >(null, [this.seleccionDeLista]);
+
+  /** Externo sin registro: solo nombre y apellido. */
+  readonly externoControl = new FormControl('', {
+    nonNullable: true,
+    validators: [Validators.required, sinSoloEspacios, Validators.maxLength(255)],
+  });
 
   filtroProveedores!: Observable<PersonaCI[]>;
   filtroActores!: Observable<ActorProductivoMinero[]>;
 
-  private proveedorValidoValidator(control: AbstractControl) {
+  /** Obligatorio y elegido de la lista (un texto suelto no vale). */
+  private seleccionDeLista(control: AbstractControl) {
     const valor = control.value;
     if (!valor) return { required: true };
     return typeof valor === 'object' ? null : { proveedorInvalido: true };
+  }
+
+  /** Control que vale según el tipo de proveedor elegido. */
+  private get controlProveedorActivo(): AbstractControl {
+    switch (this.proveedorTipo.value) {
+      case 'ACTOR':
+        return this.actorControl;
+      case 'TEXTO':
+        return this.externoControl;
+      default:
+        return this.proveedorControl;
+    }
   }
 
   get f() {
@@ -213,65 +238,28 @@ export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
       });
     }
 
-    // Recalcula la lista de proveedores mostrada en el autocomplete cada vez que
-    // cambia el texto escrito O el actor elegido (para acotar por actor).
-    this.filtroProveedores = merge(
-      this.proveedorControl.valueChanges,
-      this.actorControl.valueChanges,
-    ).pipe(
+    // Listas de los autocompletes: se filtran con lo que se va escribiendo;
+    // con una opción ya elegida se muestra la lista completa.
+    this.filtroProveedores = this.proveedorControl.valueChanges.pipe(
       startWith(null),
       map(() => {
         const valor = this.proveedorControl.value;
-        const texto =
-          typeof valor === 'string' ? valor : this.displayProveedor(valor);
-        return this.filtrarProveedores(texto);
+        return this.filtrarProveedores(typeof valor === 'string' ? valor : '');
       }),
     );
 
     this.filtroActores = this.actorControl.valueChanges.pipe(
-      startWith(''),
-      map((valor) => {
-        const texto =
-          typeof valor === 'string' ? valor : this.displayActor(valor);
-        return this.filtrarActores(texto);
+      startWith(null),
+      map(() => {
+        const valor = this.actorControl.value;
+        return this.filtrarActores(typeof valor === 'string' ? valor : '');
       }),
     );
 
-    // Al elegir un proveedor, se autocompleta el actor productivo relacionado.
-    this.proveedorControl.valueChanges.subscribe((valor) => {
-      if (!valor || typeof valor !== 'object') return;
-      const actorDePersona = this.resolverActorDePersona(valor);
-      const actorActual = this.actorControl.value;
-      const yaCoincide =
-        actorActual &&
-        typeof actorActual === 'object' &&
-        actorDePersona &&
-        String(actorActual.id) === String(actorDePersona.id);
-      if (!yaCoincide) {
-        this.actorControl.setValue(actorDePersona);
-      }
-    });
-
-    // Si se cambia el actor y el proveedor ya elegido no pertenece a él, se limpia
-    // para forzar a elegir uno de la lista filtrada por ese actor.
-    this.actorControl.valueChanges.subscribe((valor) => {
-      if (!valor || typeof valor !== 'object') return;
-      const proveedorActual = this.proveedorControl.value;
-      if (
-        proveedorActual &&
-        typeof proveedorActual === 'object' &&
-        this.idActorDePersona(proveedorActual) !== String(valor.id)
-      ) {
-        this.proveedorControl.setValue(null);
-      }
-    });
-
-    // Reconstruye las filas de leyes por mineral cada vez que cambia la codificación,
-    // y ajusta si el N° de sacos es obligatorio o no (no lo es para la codificación "cargas").
-    this.form.controls.idCodificacion.valueChanges.subscribe((id) => {
-      //this.actualizarDetalles(id, this.detallesIniciales);
-      this.actualizarValidadorSacos(id);
-    });
+    // El N° de sacos no es obligatorio para la codificación "cargas" ni RAM.
+    this.form.controls.idCodificacion.valueChanges.subscribe((id) =>
+      this.actualizarValidadorSacos(id),
+    );
 
     // Todo lo que se escriba en observaciones se normaliza a mayúsculas.
     this.form.controls.observaciones.valueChanges.subscribe((valor) => {
@@ -297,6 +285,10 @@ export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
       }),
       actoresMinero: this.personaService.getAllActoresMineros(),
       lugaresAcopio: this.parametricasService.obtenerLugaresAcopio(),
+      // Es opcional: si falla, el formulario igual carga sin laboratorios.
+      laboratorios: this.parametricasService
+        .obtenerLaboratorios()
+        .pipe(catchError(() => of([] as Laboratorio[]))),
     }).subscribe({
       next: ({
         codificaciones,
@@ -304,12 +296,16 @@ export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
         muestreros,
         actoresMinero,
         lugaresAcopio,
+        laboratorios,
       }) => {
+        this.laboratorios.set(laboratorios.filter((l) => l.activo));
         this.lugaresAcopio.set(lugaresAcopio);
         this.codificaciones.set(codificaciones);
         this.proveedores.set(proveedores.data);
         this.muestreros.set(muestreros.data);
-        this.actoresMinero.set(actoresMinero);
+        this.actoresMinero.set(
+          actoresMinero.filter((a) => String(a.id) !== ID_ACTOR_EMPRESA),
+        );
         this.cargandoCatalogos.set(false);
 
         if (this.esEdicion) {
@@ -326,28 +322,35 @@ export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * No existe (por ahora) un GET por id de registro_mineral, así que buscamos
-   * el registro dentro del listado ya cargado del componente padre vía
-   * navegación. Si no se encuentra (ej. se entró directo por URL con F5),
-   * mostramos un error y regresamos al listado.
+   * Usa el registro que la bandeja pasa por navegación; si no viene (se entró
+   * directo por URL o se recargó con F5) lo pide al back por id.
    */
   private cargarRegistroParaEditar(): void {
-    const registro = history.state?.registro;
-
-    if (!registro || registro.id !== this.registroId) {
-      this.snackBar.open(
-        'No se encontró el registro a editar (recarga la página desde el listado)',
-        'Cerrar',
-        { duration: 5000 },
-      );
-      this.router.navigate(['/ui-components/recepcion-minerales']);
+    const registro = history.state?.registro as RegistroMineral | undefined;
+    if (registro && String(registro.id) === String(this.registroId)) {
+      this.precargarRegistro(registro);
       return;
     }
 
-    // Se guarda antes del patchValue: la reconstrucción de filas de leyes (disparada
-    // por el valueChanges de idCodificacion dentro del patch) ya la necesita lista.
-    //this.detallesIniciales = registro.detalles;
+    const noEncontrado = () => {
+      this.cargandoRegistro.set(false);
+      this.snackBar.open('No se encontró la recepción a editar', 'Cerrar', {
+        duration: 5000,
+      });
+      this.volverALista();
+    };
+    this.cargandoRegistro.set(true);
+    this.registroMineralService.obtenerPorId(this.registroId!).subscribe({
+      next: (encontrado) => {
+        if (!encontrado) return noEncontrado();
+        this.cargandoRegistro.set(false);
+        this.precargarRegistro(encontrado);
+      },
+      error: noEncontrado,
+    });
+  }
 
+  private precargarRegistro(registro: RegistroMineral): void {
     const fechaHoraRegistro = registro.fechaRecepcion
       ? new Date(registro.fechaRecepcion)
       : new Date();
@@ -363,7 +366,22 @@ export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
       observaciones: registro.observaciones ?? '',
       idMuestrero: registro.idPersonalInterno ?? null,
       lugarAcopio: registro.lugarAcopio || null,
+      idLaboratorio: registro.idLaboratorio ?? null,
     });
+    this.idLaboratorioInicial = registro.idLaboratorio ?? null;
+
+    // Igual que el lugar de acopio: si el laboratorio guardado ya no está activo,
+    // se conserva como opción para no perderlo al editar.
+    const labGuardado = registro.laboratorio as Laboratorio | undefined;
+    if (
+      labGuardado &&
+      !this.laboratorios().some((l) => String(l.id) === String(labGuardado.id))
+    ) {
+      this.laboratorios.update((lista) => [
+        ...lista,
+        { ...labGuardado, activo: false },
+      ]);
+    }
 
     // Si el valor guardado ya no está en el catálogo activo, se conserva como opción
     // para no perderlo al editar.
@@ -378,10 +396,30 @@ export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
       ]);
     }
 
-    const proveedor = this.proveedores().find(
-      (p) => p.id === registro.idPersona,
-    );
-    this.proveedorControl.setValue(proveedor ?? null);
+    // Proveedor: persona, actor productivo o externo. Si el registro elegido
+    // ya no está en el catálogo activo, se usa el que trae la recepción.
+    if (registro.idPersona) {
+      const persona =
+        this.proveedores().find(
+          (p) => String(p.id) === String(registro.idPersona),
+        ) ??
+        (registro.persona as PersonaCI | undefined) ??
+        null;
+      this.proveedorTipo.setValue('PERSONA');
+      this.proveedorControl.setValue(persona);
+    } else if (registro.idActorProductivoMinero) {
+      const actor =
+        this.actoresMinero().find(
+          (a) => String(a.id) === String(registro.idActorProductivoMinero),
+        ) ??
+        (registro.actorProductivoMinero as ActorProductivoMinero | undefined) ??
+        null;
+      this.proveedorTipo.setValue('ACTOR');
+      this.actorControl.setValue(actor);
+    } else {
+      this.proveedorTipo.setValue('TEXTO');
+      this.externoControl.setValue(registro.nombresApellidos ?? '');
+    }
   }
 
   displayProveedor = (persona: PersonaCI | string | null): string => {
@@ -394,42 +432,19 @@ export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
     return actor.nombre;
   };
 
-  /** Lista base de proveedores: si hay un actor elegido, se acota a los que le pertenecen */
-  private baseProveedores(): PersonaCI[] {
-    // Excluye por seguridad a los muestreros de la lista de proveedores, aunque
-    // ya vengan filtrados por idTipoPersona desde el backend.
-    const idsMuestreros = new Set(this.muestreros().map((m) => String(m.id)));
-    const proveedores = this.proveedores().filter(
-      (p) => !idsMuestreros.has(String(p.id)),
-    );
-
-    // Con actor elegido se listan todos sus asociados (SOCIO, CHOFER, etc.);
-    // sin actor, solo las personas de tipo proveedor de mineral.
-    const actor = this.actorControl.value;
-    if (actor && typeof actor === 'object') {
-      return proveedores.filter(
-        (p) => this.idActorDePersona(p) === String(actor.id),
-      );
-    }
-    return proveedores.filter((p) =>
-      p.personaTipos?.some(
-        (t) => Number(t.idPersonaTipo) === ID_TIPO_PERSONA_PROVEEDOR,
-      ),
-    );
-  }
-
+  /** Hasta 50 personas cuyo nombre o documento contiene lo escrito. */
   private filtrarProveedores(texto: string): PersonaCI[] {
     const busqueda = texto.trim().toLowerCase();
-    const base = this.baseProveedores();
-    if (!busqueda) return base;
+    const lista = this.proveedores();
+    if (!busqueda) return lista.slice(0, 50);
 
-    return base.filter((p) => {
-      const nombreCompleto = this.nombreProveedor(p).toLowerCase();
-      return (
-        nombreCompleto.includes(busqueda) ||
-        p.numeroDocumento.toLowerCase().includes(busqueda)
-      );
-    });
+    return lista
+      .filter(
+        (p) =>
+          this.nombreProveedor(p).toLowerCase().includes(busqueda) ||
+          (p.numeroDocumento ?? '').toLowerCase().includes(busqueda),
+      )
+      .slice(0, 50);
   }
 
   private filtrarActores(texto: string): ActorProductivoMinero[] {
@@ -439,74 +454,33 @@ export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
     return lista.filter((a) => a.nombre.toLowerCase().includes(busqueda));
   }
 
-  /** Id del actor de una persona: el listado lo trae anidado (actorProductivoMinero.id)
-   *  y no siempre como idActorProductivoMinero. */
-  private idActorDePersona(persona: PersonaCI): string {
-    return String(
-      persona.actorProductivoMinero?.id ?? persona.idActorProductivoMinero ?? '',
-    );
+  /** Lo que se envía según el tipo de proveedor elegido (uno de los tres). */
+  private proveedorRequest(): Pick<
+    GuardarRegistroMineralRequest,
+    'idPersona' | 'idActorProductivoMinero' | 'nombresApellidos'
+  > {
+    switch (this.proveedorTipo.value) {
+      case 'ACTOR':
+        return {
+          idActorProductivoMinero: String(
+            (this.actorControl.value as ActorProductivoMinero).id,
+          ),
+        };
+      case 'TEXTO':
+        return {
+          nombresApellidos: this.externoControl.value
+            .trim()
+            .replace(/\s+/g, ' ')
+            .toUpperCase(),
+        };
+      default:
+        return {
+          idPersona: String((this.proveedorControl.value as PersonaCI).id),
+        };
+    }
   }
 
-  /** Resuelve el actor productivo minero de una persona: usa el objeto anidado si
-   *  viene incluido, o lo busca por id dentro del catálogo ya cargado. */
-  private resolverActorDePersona(
-    persona: PersonaCI,
-  ): ActorProductivoMinero | null {
-    if (persona.actorProductivoMinero) return persona.actorProductivoMinero;
-    const idActor = this.idActorDePersona(persona);
-    if (!idActor) return null;
-    return this.actoresMinero().find((a) => String(a.id) === idActor) ?? null;
-  }
-
-  // /** Reconstruye las filas de ley por mineral según la codificación elegida.
-  //  *  Si se pasan detalles previos (edición), pre-carga sus leyes por idMineral. */
-  // private actualizarDetalles(
-  //   idCodificacion: string | null,
-  //   detallesPrevios?: DetalleMineralRegistro[],
-  // ): void {
-  //   const codificacion = this.codificaciones().find(
-  //     (c) => String(c.id) === String(idCodificacion),
-  //   );
-  //   const minerales = codificacion?.minerales ?? [];
-
-  //   const filas: DetalleFormRow[] = minerales.map((m) => {
-  //     const previa = detallesPrevios?.find(
-  //       (d) => String(d.idMineral) === String(m.id),
-  //     );
-  //     const leyInicial = previa ? Number(previa.ley) : 0;
-  //     const unidadInicial: LeyUnidad =
-  //       previa?.leyUnidad ?? LEY_UNIDAD_POR_DEFECTO;
-
-  //     const control = new FormControl<number | null>(
-  //       leyInicial,
-  //       this.validadoresLey(unidadInicial),
-  //     );
-  //     const unidadControl = new FormControl<LeyUnidad>(unidadInicial, {
-  //       nonNullable: true,
-  //     });
-
-  //     // Si cambian la unidad (% <-> g/TM), se recalculan los límites de la ley
-  //     // (100 como tope solo aplica a %; g/TM queda libre).
-  //     unidadControl.valueChanges.subscribe((unidad) => {
-  //       control.setValidators(this.validadoresLey(unidad));
-  //       control.updateValueAndValidity({ emitEvent: false });
-  //     });
-
-  //     return {
-  //       idMineral: String(m.id),
-  //       descripcion: m.descripcion,
-  //       simbolo: m.simbolo,
-  //       control,
-  //       unidadControl,
-  //     };
-  //   });
-
-  //   this.detalleControls.set(filas);
-  // }
-
-  nombreProveedor(persona: PersonaCI): string {
-    return `${persona.nombres} ${persona.apellidoPaterno} ${persona.apellidoMaterno}`.trim();
-  }
+  readonly nombreProveedor = nombrePersona;
 
   /** Formatea una fecha al valor que espera un input nativo type="datetime-local":
    *  "YYYY-MM-DDTHH:mm", en hora local (sin offset). */
@@ -574,13 +548,6 @@ export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** Validadores de la ley según su unidad: en "%" no puede superar 100,
-   *  en "g/TM" no tiene tope superior. Ambas permiten decimales y nunca negativos. */
-  private validadoresLey(unidad: LeyUnidad): ValidatorFn[] {
-    const base: ValidatorFn[] = [Validators.required, Validators.min(0)];
-    return unidad === '%' ? [...base, Validators.max(100)] : base;
-  }
-
   /** true si la codificación (por id, código o nombre) corresponde al tipo "cargas"
    *  o a RAM, para las cuales el N° de sacos no es obligatorio */
   private codificacionEsCargas(idCodificacion: string | null): boolean {
@@ -607,6 +574,14 @@ export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
     control.updateValueAndValidity({ emitEvent: false });
   }
 
+  /** true si el laboratorio elegido difiere del que tenía la recepción
+   *  (en una nueva, del vacío). */
+  private laboratorioCambio(idLaboratorio: string | null): boolean {
+    return (
+      String(idLaboratorio ?? '') !== String(this.idLaboratorioInicial ?? '')
+    );
+  }
+
   ngOnDestroy(): void {
     if (this.tickHoraInterval) clearInterval(this.tickHoraInterval);
   }
@@ -622,24 +597,15 @@ export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
   }
 
   cancelar(): void {
-    this.router.navigate(['/ui-components/recepcion-minerales']);
+    this.volverALista();
   }
 
   guardar(): void {
-    // const filasInvalidas = this.detalleControls().some(
-    //   (d) => d.control.invalid,
-    // );
-    // const sinMinerales = this.detalleControls().length === 0;
+    if (this.guardando()) return;
 
-    if (
-      this.form.invalid ||
-      this.proveedorControl.invalid // ||
-      // filasInvalidas ||
-      // sinMinerales
-    ) {
+    if (this.form.invalid || this.controlProveedorActivo.invalid) {
       this.form.markAllAsTouched();
-      this.proveedorControl.markAsTouched();
-      //this.detalleControls().forEach((d) => d.control.markAsTouched());
+      this.controlProveedorActivo.markAsTouched();
 
       const mensaje = this.f.fechaHoraRecepcion.hasError('fechaFutura')
         ? 'La fecha y hora de operación no puede ser futura'
@@ -650,7 +616,6 @@ export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
 
     this.guardando.set(true);
     const v = this.form.getRawValue();
-    const proveedor = this.proveedorControl.value as PersonaCI;
     const fechaHora = new Date(v.fechaHoraRecepcion!);
     const observaciones =
       (v.observaciones ?? '').trim().toUpperCase() || 'SIN OBSERVACIONES';
@@ -658,7 +623,7 @@ export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
     const request: GuardarRegistroMineralRequest = {
       ...(this.esEdicion ? { id: this.registroId! } : {}),
       idCodificacion: v.idCodificacion!,
-      idPersona: proveedor.id,
+      ...this.proveedorRequest(),
       numeroSacos: v.numeroSacos ?? null,
       balanzaL: v.balanzaL!,
       balanzaT: v.balanzaT ?? 0,
@@ -666,13 +631,12 @@ export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
       humedad: v.humedad ?? 0,
       idPersonalInterno: v.idMuestrero!,
       lugarAcopio: v.lugarAcopio!,
+      // Al crear solo va si se eligió; al editar solo si cambió (null lo quita).
+      ...(this.laboratorioCambio(v.idLaboratorio)
+        ? { idLaboratorio: v.idLaboratorio ?? null }
+        : {}),
       fechaRecepcion: this.formatFechaHora(fechaHora),
       observaciones,
-      // detalles: this.detalleControls().map((d) => ({
-      //   idMineral: Number(d.idMineral),
-      //   ley: d.control.value ?? 0,
-      //   leyUnidad: d.unidadControl.value,
-      // })),
     };
 
     this.registroMineralService.guardarRegistro(request).subscribe({
@@ -685,29 +649,39 @@ export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
           'Cerrar',
           { duration: 3000 },
         );
-        // Con anticipo y sin recibo vigente, se ofrece generar el recibo (BORRADOR)
-        // antes de volver a la bandeja.
+        // El comprobante RM- se emite para toda recepción nueva, tenga o no
+        // anticipo; al editar se reimprime desde la bandeja.
+        const finalizar = () => {
+          if (!this.esEdicion && registro?.id) this.abrirComprobante(registro);
+          this.volverALista();
+        };
+        // Con anticipo y sin recibo vigente: Aceptar abre "Procesar recibo"
+        // (one-shot); Cancelar lo deja en BORRADOR. Si el diálogo del recibo se
+        // cierra sin guardar, queda pendiente en la bandeja.
         if (registro?.id && faltaReciboAnticipo(registro)) {
           this.dialog
             .open(ConfirmDialogComponent, {
+              disableClose: true,
               data: {
                 title: 'Anticipo registrado',
-                message: 'La recepción tiene anticipo, ¿generar el recibo?',
-                confirmLabel: 'Generar recibo',
-                cancelLabel: 'Ahora no',
+                message:
+                  'La recepción tiene anticipo, ¿proceder a procesar el recibo? Si cancelas, el recibo se genera en borrador.',
+                confirmLabel: 'Aceptar',
+                cancelLabel: 'Cancelar',
                 icon: 'receipt_long',
               },
             })
             .afterClosed()
             .subscribe((confirmado) => {
-              if (!confirmado) return this.volverALista();
-              abrirReciboAnticipo(this.dialog, registro).subscribe(() =>
-                this.volverALista(),
-              );
+              abrirReciboAnticipo(
+                this.dialog,
+                registro,
+                confirmado ? 'PROCESAR' : 'GENERAR',
+              ).subscribe(finalizar);
             });
           return;
         }
-        this.router.navigate(['/ui-components/recepcion-minerales']);
+        finalizar();
       },
       error: (err) => {
         this.guardando.set(false);
@@ -732,6 +706,29 @@ export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
       });
   }
 
+  /** Abre el comprobante RM- en otra pestaña. Si el navegador bloquea la
+   *  ventana (ya pasó el clic del usuario), queda un aviso para abrirlo a mano. */
+  private abrirComprobante(registro: RegistroMineral): void {
+    this.registroMineralService.obtenerPdf(registro.id).subscribe({
+      next: (blob) => {
+        if (abrirBlobEnPestana(blob, 5 * 60000)) return;
+        this.snackBar
+          .open(`Comprobante de ${registro.codigoOperacion} listo`, 'Abrir', {
+            duration: 15000,
+          })
+          .onAction()
+          .subscribe(() => abrirBlobEnPestana(blob));
+      },
+      error: (err) =>
+        this.snackBar.open(
+          err?.error?.message ??
+            'No se pudo generar el comprobante de la recepción',
+          'Cerrar',
+          { duration: 5000 },
+        ),
+    });
+  }
+
   private volverALista(): void {
     this.router.navigate(['/ui-components/recepcion-minerales']);
   }
@@ -747,8 +744,13 @@ export class RecepcionMineralFormComponent implements OnInit, OnDestroy {
         this.proveedores.set(resp.data);
 
         if (idParaSeleccionar) {
-          const nuevo = resp.data.find((p) => p.id === idParaSeleccionar);
-          if (nuevo) this.proveedorControl.setValue(nuevo);
+          const nuevo = resp.data.find(
+            (p) => String(p.id) === String(idParaSeleccionar),
+          );
+          if (nuevo) {
+            this.proveedorTipo.setValue('PERSONA');
+            this.proveedorControl.setValue(nuevo);
+          }
         }
       });
   }

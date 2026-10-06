@@ -1,9 +1,11 @@
-<div class="blue_theme" [class.light-theme]="!isDarkMode()" [class.dark-theme]="isDarkMode()" dir="ltr">
+<div class="blue_theme" [class.tema-comercio]="temaModulo() === 'tema-comercio'"
+  [class.tema-contabilidad]="temaModulo() === 'tema-contabilidad'"
+  [class.tema-configuracion]="temaModulo() === 'tema-configuracion'" [class.light-theme]="!isDarkMode()" [class.dark-theme]="isDarkMode()" dir="ltr">
 
 
   <!-- <app-topstrip></app-topstrip> -->
 
-  <mat-sidenav-container class="mainWrapper" autosize autoFocus>
+  <mat-sidenav-container class="mainWrapper" [class.sidebarNav-mini]="sidebarMini()" autosize autoFocus>
     <!-- ============================================================== -->
     <!-- Vertical Sidebar -->
     <!-- ============================================================== -->
@@ -14,7 +16,7 @@
         <ng-scrollbar class="position-relative sidebar-scroll">
           <mat-nav-list class="sidebar-list">
             @for(item of navItems | filterByRole; track item) {
-            <app-nav-item [item]="item" (notify)="sidenav.toggle()">
+            <app-nav-item [item]="item" (notify)="cerrarSiSuperpuesto()">
             </app-nav-item>
             }
           </mat-nav-list>

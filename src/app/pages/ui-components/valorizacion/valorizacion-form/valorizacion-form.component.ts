@@ -4,6 +4,7 @@ import {
   Component,
   OnDestroy,
   OnInit,
+  WritableSignal,
   computed,
   inject,
   signal,
@@ -32,7 +33,7 @@ import { StepperSelectionEvent } from '@angular/cdk/stepper';
 import { MatStepperModule } from '@angular/material/stepper';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { finalize, forkJoin, switchMap } from 'rxjs';
+import { finalize, forkJoin, switchMap, tap } from 'rxjs';
 import { CotizacionFormDialogComponent } from 'src/app/pages/configurations/parametricas/cotizacion/cotizacion-form-dialog.component';
 import { EscalaPrecioFormDialogComponent } from 'src/app/pages/configurations/parametricas/escala-precio/escala-precio-form-dialog.component';
 import {
@@ -52,9 +53,15 @@ import {
   CodificacionCatalogo,
   LeyUnidad,
   MineralResumen,
+  actorProveedorRecepcion,
+  nombreProveedorRecepcion,
+  recepcionImprimible,
 } from '../../models/registro-mineral.models';
 import { RegistroMineralService } from '../../services/registro-mineral.service';
-import { VerRecepcionDialogComponent } from '../../recepcion-mineral/ver-recepcion-dialog/ver-recepcion-dialog.component';
+import {
+  VerRecepcionDialogComponent,
+  VerRecepcionDialogData,
+} from '../../recepcion-mineral/ver-recepcion-dialog/ver-recepcion-dialog.component';
 import {
   ActualizarValorizacionRequest,
   AporteValorizacionRequest,
@@ -77,9 +84,18 @@ import {
 } from './ver-valorizacion-dialog/ver-valorizacion-dialog.component';
 import { VerTablaPrecioDialogComponent } from './ver-tabla-precio-dialog/ver-tabla-precio-dialog.component';
 import {
-  abrirReciboValorizacion,
-  faltaReciboValorizacion,
-} from '../recibo-valorizacion.util';
+  ElegirCotizacionDialogComponent,
+  ElegirCotizacionDialogData,
+} from './elegir-cotizacion-dialog/elegir-cotizacion-dialog.component';
+import {
+  fechaDeIso,
+  formatearFechaBolivia,
+} from 'src/app/shared/utils/fecha-bolivia.util';
+import { formatFechaIso } from 'src/app/pages/contabilidad/components/personal-interno.util';
+import {
+  abrirPagoValorizacion,
+  faltaPagoValorizacion,
+} from '../pago-valorizacion.util';
 
 /** Unidades disponibles para expresar la ley de un mineral. */
 const LEY_UNIDADES: LeyUnidad[] = ['%', 'g/TM'];
@@ -159,6 +175,24 @@ interface FilaLeyMineral {
   factorPorsentaje?: number | null;
 }
 
+/** Mineral de una fila de ley, para los avisos de precio vigente faltante. */
+interface MineralFila {
+  id: number;
+  descripcion: string;
+  simbolo?: string;
+}
+
+/** Campos de `extras` de una fila de `calculos` que se restauran al abrir. */
+type CampoExtraCalculo =
+  | 'ley'
+  | 'leyLibre'
+  | 'cargo'
+  | 'cada'
+  | 'importeManual'
+  | 'actual'
+  | 'base'
+  | 'escalador';
+
 /** Estado del autoguardado del borrador (se muestra junto a los botones). */
 type EstadoAutoguardado = 'inactivo' | 'guardando' | 'guardado' | 'error';
 
@@ -168,8 +202,15 @@ type EstadoAutoguardado = 'inactivo' | 'guardando' | 'guardado' | 'error';
  *  mineral, no uno solo global para toda la valorización. */
 interface CotizacionMineralEstado {
   cargando: boolean;
+  /** No hay cotización con la cual calcular: ni vigente ni elegida a mano. */
   sinCotizacion: boolean;
+  /** La cotización que se usa en los cálculos y se guarda en el detalle. */
   cotizacion: Cotizacion | null;
+  /** La vigente hoy del mineral (null si no tiene): es la de por defecto. */
+  vigente?: Cotizacion | null;
+  /** true si `cotizacion` se eligió a mano del historial (o venía guardada
+   *  y ya no es la vigente): no se reemplaza sola por la vigente. */
+  elegida?: boolean;
 }
 
 /** Igual que CotizacionMineralEstado pero para la tabla de Escala de Precio
@@ -457,38 +498,39 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     null,
   );
 
-  /** Solo en la codificación RAM el mineral es de libre elección; en el resto,
-   *  el mineral viene fijo por la codificación de la recepción. */
-  readonly esCodificacionRam = computed(() => {
+  /** Código y nombre de la codificación efectiva, en mayúsculas ('' si
+   *  todavía no cargó): base de las detecciones por texto de abajo. */
+  private readonly textoCodificacion = computed(() => {
+    const cod = this.codificacion();
+    return cod ? `${cod.codigo ?? ''} ${cod.nombre ?? ''}`.toUpperCase() : '';
+  });
+
+  private esCodificacion(id: string | null, clave: string): boolean {
     const cod = this.codificacion();
     if (!cod) return false;
-    const texto = `${cod.codigo ?? ''} ${cod.nombre ?? ''}`.toUpperCase();
     return (
-      String(cod.id) === ID_CODIFICACION_RAM ||
-      texto.includes(CLAVE_CODIFICACION_RAM)
+      (id != null && String(cod.id) === id) ||
+      this.textoCodificacion().includes(clave)
     );
-  });
+  }
+
+  /** Solo en la codificación RAM el mineral es de libre elección; en el resto,
+   *  el mineral viene fijo por la codificación de la recepción. */
+  readonly esCodificacionRam = computed(() =>
+    this.esCodificacion(ID_CODIFICACION_RAM, CLAVE_CODIFICACION_RAM),
+  );
 
   /** BCL (Plata + Plomo): fórmula propia del contrato de fundición (ver
    *  recalcularFilaLeyBcl), separada de la estándar y de RAM. */
-  readonly esCodificacionBcl = computed(() => {
-    const cod = this.codificacion();
-    if (!cod) return false;
-    const texto = `${cod.codigo ?? ''} ${cod.nombre ?? ''}`.toUpperCase();
-    return (
-      String(cod.id) === ID_CODIFICACION_BCL ||
-      texto.includes(CLAVE_CODIFICACION_BCL)
-    );
-  });
+  readonly esCodificacionBcl = computed(() =>
+    this.esCodificacion(ID_CODIFICACION_BCL, CLAVE_CODIFICACION_BCL),
+  );
 
   /** BZL (Plata + Zinc): mismo contrato de fundición que BCL, ver
-   *  recalcularFilaLeyBcl. */
-  readonly esCodificacionBzl = computed(() => {
-    const cod = this.codificacion();
-    if (!cod) return false;
-    const texto = `${cod.codigo ?? ''} ${cod.nombre ?? ''}`.toUpperCase();
-    return texto.includes(CLAVE_CODIFICACION_BZL);
-  });
+   *  recalcularFilaLeyBcl. Sin id conocido: se detecta solo por texto. */
+  readonly esCodificacionBzl = computed(() =>
+    this.esCodificacion(null, CLAVE_CODIFICACION_BZL),
+  );
 
   /** BCL y BZL comparten exactamente la misma mecánica de cálculo y de UI
    *  (contrato de fundición de concentrados: Plata + un metal base). Se usa
@@ -538,24 +580,22 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     return this.idsMineralesEnFilas().some((id) => estados[id]?.cargando);
   }
 
+  private resumenMineral(id: number): MineralFila {
+    const mineral = this.buscarMineralPorId(id);
+    return {
+      id,
+      descripcion: mineral?.descripcion ?? `Mineral #${id}`,
+      simbolo: mineral?.simbolo,
+    };
+  }
+
   /** Minerales usados en las filas de ley que NO tienen cotización vigente
    *  ahora mismo; mientras esta lista no esté vacía no se puede guardar. */
-  get mineralesSinCotizacion(): Array<{
-    id: number;
-    descripcion: string;
-    simbolo?: string;
-  }> {
+  get mineralesSinCotizacion(): MineralFila[] {
     const estados = this.cotizacionesPorMineral();
     return this.idsMineralesEnFilas()
       .filter((id) => estados[id]?.sinCotizacion)
-      .map((id) => {
-        const mineral = this.buscarMineralPorId(id);
-        return {
-          id,
-          descripcion: mineral?.descripcion ?? `Mineral #${id}`,
-          simbolo: mineral?.simbolo,
-        };
-      });
+      .map((id) => this.resumenMineral(id));
   }
 
   /** Igual que verificandoCotizacion pero consultando la tabla de Escala de
@@ -567,22 +607,11 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
 
   /** Igual que mineralesSinCotizacion pero para minerales sin tabla de
    *  Escala de Precio vigente (solo relevante en RAM). */
-  get mineralesSinEscalaPrecio(): Array<{
-    id: number;
-    descripcion: string;
-    simbolo?: string;
-  }> {
+  get mineralesSinEscalaPrecio(): MineralFila[] {
     const estados = this.escalaPrecioPorMineral();
     return this.idsMineralesEnFilas()
       .filter((id) => estados[id]?.sinTabla)
-      .map((id) => {
-        const mineral = this.buscarMineralPorId(id);
-        return {
-          id,
-          descripcion: mineral?.descripcion ?? `Mineral #${id}`,
-          simbolo: mineral?.simbolo,
-        };
-      });
+      .map((id) => this.resumenMineral(id));
   }
 
   /** Fuente de verdad para el gating de guardado: cotización de mercado en
@@ -603,11 +632,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     return this.verificandoCotizacion;
   }
 
-  get mineralesSinPrecioVigente(): Array<{
-    id: number;
-    descripcion: string;
-    simbolo?: string;
-  }> {
+  get mineralesSinPrecioVigente(): MineralFila[] {
     if (this.esCodificacionRam()) return this.mineralesSinEscalaPrecio;
     if (this.esCodificacionAc()) {
       const escalas = this.escalaPrecioPorMineral();
@@ -618,14 +643,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
             ? escalas[id]?.sinTabla
             : cotis[id]?.sinCotizacion,
         )
-        .map((id) => {
-          const mineral = this.buscarMineralPorId(id);
-          return {
-            id,
-            descripcion: mineral?.descripcion ?? `Mineral #${id}`,
-            simbolo: mineral?.simbolo,
-          };
-        });
+        .map((id) => this.resumenMineral(id));
     }
     return this.mineralesSinCotizacion;
   }
@@ -648,67 +666,50 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     return deCodificacion.find((m) => Number(m.id) === id);
   }
 
-  /** true si el mineral de la fila es Plata (por nombre o símbolo del
-   *  catálogo): en BCL esto es lo que determina la fórmula/campos de la
-   *  fila (ver recalcularFilaLeyBcl), NO la unidad de ley elegida —
-   *  "leyUnidad" es solo una etiqueta que se muestra junto al número, sin
-   *  ningún efecto en el cálculo ni en qué campos se ven. */
-  esMineralPlata(idMineral: number | string | null | undefined): boolean {
+  /** true si el mineral (por símbolo exacto o por nombre del catálogo) es el
+   *  indicado. */
+  private mineralEs(
+    idMineral: number | string | null | undefined,
+    simbolo: string,
+    ...nombres: string[]
+  ): boolean {
     if (idMineral == null) return false;
     const mineral = this.buscarMineralPorId(Number(idMineral));
     if (!mineral) return false;
     const descripcion = (mineral.descripcion ?? '').toUpperCase();
-    const simbolo = (mineral.simbolo ?? '').toUpperCase();
-    return descripcion.includes('PLATA') || simbolo === 'AG';
-  }
-
-  /** true si el mineral de la fila es Plomo (por nombre o símbolo del
-   *  catálogo): en BCL determina la fórmula de USD/TM (ver
-   *  recalcularFilaLeyBcl) — Plomo y Zinc comparten la misma fórmula de
-   *  metal base (ver esMineralZinc). */
-  esMineralPlomo(idMineral: number | string | null | undefined): boolean {
-    if (idMineral == null) return false;
-    const mineral = this.buscarMineralPorId(Number(idMineral));
-    if (!mineral) return false;
-    const descripcion = (mineral.descripcion ?? '').toUpperCase();
-    const simbolo = (mineral.simbolo ?? '').toUpperCase();
-    return descripcion.includes('PLOMO') || simbolo === 'PB';
-  }
-
-  /** true si el mineral de la fila es Zinc (por nombre o símbolo del
-   *  catálogo): en BZL determina la fórmula de USD/TM (ver
-   *  recalcularFilaLeyBcl) — misma fórmula que Plomo, confirmada por el
-   *  usuario 2026-08-25. */
-  esMineralZinc(idMineral: number | string | null | undefined): boolean {
-    if (idMineral == null) return false;
-    const mineral = this.buscarMineralPorId(Number(idMineral));
-    if (!mineral) return false;
-    const descripcion = (mineral.descripcion ?? '').toUpperCase();
-    const simbolo = (mineral.simbolo ?? '').toUpperCase();
-    return descripcion.includes('ZINC') || simbolo === 'ZN';
-  }
-
-  /** true si el mineral de la fila es Estaño (por nombre o símbolo del
-   *  catálogo). En AC, la fila de Estaño toma el precio de la tabla de Escala
-   *  de Precio (ver mineralUsaEscalaPrecio); la de Plata sigue con cotización. */
-  esMineralEstano(idMineral: number | string | null | undefined): boolean {
-    if (idMineral == null) return false;
-    const mineral = this.buscarMineralPorId(Number(idMineral));
-    if (!mineral) return false;
-    const descripcion = (mineral.descripcion ?? '').toUpperCase();
-    const simbolo = (mineral.simbolo ?? '').toUpperCase();
     return (
-      descripcion.includes('ESTAÑO') ||
-      descripcion.includes('ESTANO') ||
-      simbolo === 'SN'
+      nombres.some((nombre) => descripcion.includes(nombre)) ||
+      (mineral.simbolo ?? '').toUpperCase() === simbolo
     );
+  }
+
+  /** En BCL/BZL el mineral de la fila es lo que determina su fórmula y sus
+   *  campos (ver recalcularFilaLeyBcl), NO la unidad de ley elegida:
+   *  "leyUnidad" es solo una etiqueta junto al número. Plomo y Zinc comparten
+   *  la misma fórmula de metal base. */
+  esMineralPlata(idMineral: number | string | null | undefined): boolean {
+    return this.mineralEs(idMineral, 'AG', 'PLATA');
+  }
+
+  esMineralPlomo(idMineral: number | string | null | undefined): boolean {
+    return this.mineralEs(idMineral, 'PB', 'PLOMO');
+  }
+
+  esMineralZinc(idMineral: number | string | null | undefined): boolean {
+    return this.mineralEs(idMineral, 'ZN', 'ZINC');
+  }
+
+  /** En AC, la fila de Estaño toma el precio de la tabla de Escala de Precio
+   *  (ver mineralUsaEscalaPrecio); la de Plata sigue con cotización. */
+  esMineralEstano(idMineral: number | string | null | undefined): boolean {
+    return this.mineralEs(idMineral, 'SN', 'ESTAÑO', 'ESTANO');
   }
 
   /** true si, en la codificación actual, el precio de ESE mineral sale de la
    *  tabla de Escala de Precio y no de la cotización de mercado: siempre en
    *  RAM; en AC solo el Estaño. Ruteo único para gating / diálogos /
    *  verificación de vigencia. */
-  private mineralUsaEscalaPrecio(
+  mineralUsaEscalaPrecio(
     idMineral: number | string | null | undefined,
   ): boolean {
     if (this.esCodificacionRam()) return true;
@@ -865,9 +866,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     // manual (programarAutoguardado), un PATCH parcial. Mientras se hidratan
     // los datos iniciales (cargandoInicial) se ignora para no autoguardar
     // apenas se abre el formulario.
-    this.form.valueChanges.subscribe(() => {
-      if (!this.cargandoInicial) this.programarAutoguardado();
-    });
+    this.form.valueChanges.subscribe(() => this.programarAutoguardado());
 
     this.parametricasService.obtenerLaboratorios().subscribe((data) => {
       this.laboratorios.set(data);
@@ -902,12 +901,19 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
             tipoCalculo.otros,
           );
         },
-        error: () => {},
+        error: () =>
+          this.snackBar.open(
+            'No se pudieron cargar los catálogos de la valorización',
+            'Cerrar',
+            { duration: 4000 },
+          ),
       });
   }
 
   ngOnDestroy(): void {
-    if (this.autoguardadoTimeout) clearTimeout(this.autoguardadoTimeout);
+    // Cambios tecleados hace menos de 1.5s (debounce todavía pendiente): se
+    // guardan ahora, para no perderlos al salir de la página.
+    if (this.cancelarAutoguardadoPendiente()) this.autoguardarBorrador();
     if (this.timeoutResaltado) clearTimeout(this.timeoutResaltado);
   }
 
@@ -946,17 +952,20 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     // patchValue de abajo): si no están cargadas todavía, los totales de
     // gastos/penalidades BCL salen en 0 y se corrigen recién con la
     // primera edición manual.
-    this.leyesPenalidad.set(this.resolverLeyesPenalidadInicial(v));
-    this.leyesLibrePenalidadBcl.set(this.resolverLeyesLibrePenalidadInicial(v));
-    this.cargosPenalidadBcl.set(this.resolverCargosPenalidadInicial(v));
-    this.cadaPenalidadBcl.set(this.resolverCadaPenalidadInicial(v));
+    // extras.ley solo existe en penalidades y extras.actual solo en gastos
+    // de tratamiento: sirven para no confundir ambos tipos de fila.
+    this.leyesPenalidad.set(this.extrasGuardados(v, 'ley'));
+    this.leyesLibrePenalidadBcl.set(this.extrasGuardados(v, 'leyLibre', 'ley'));
+    this.cargosPenalidadBcl.set(this.extrasGuardados(v, 'cargo', 'ley'));
+    this.cadaPenalidadBcl.set(this.extrasGuardados(v, 'cada', 'ley'));
     this.importesManualesPenalidadBcl.set(
-      this.resolverImportesManualesPenalidadInicial(v),
+      this.extrasGuardados(v, 'importeManual', 'ley'),
     );
-    this.actualesGastoBcl.set(this.resolverActualesGastoInicial(v));
-    this.basesGastoBcl.set(this.resolverBasesGastoInicial(v));
-    this.escaladoresGastoBcl.set(this.resolverEscaladoresGastoInicial(v));
-    this.importesGastoSimpleBcl.set(this.resolverImportesGastoSimpleInicial(v));
+    this.actualesGastoBcl.set(this.extrasGuardados(v, 'actual'));
+    this.basesGastoBcl.set(this.extrasGuardados(v, 'base', 'actual'));
+    this.escaladoresGastoBcl.set(this.extrasGuardados(v, 'escalador', 'actual'));
+    this.importesGastoSimpleBcl.set(this.extrasGuardados(v, 'importeManual'));
+    this.textosGastoSimpleBcl.set({});
 
     // Se usa solo para el encabezado (nombre a mostrar); la codificación
     // puede traer varios minerales (ej. BZL -> Plata + Zinc), cada uno se
@@ -1090,6 +1099,13 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
       : (v.detalles ?? []);
 
     detallesGuardados.forEach((d) => {
+      // Cotización con la que se guardó esta fila: si ya no es la vigente,
+      // se respeta (ver verificarCotizacionMineral) en vez de recalcular
+      // con la de hoy.
+      const guardada = d['cotizacionMineral'] as Cotizacion | null | undefined;
+      if (guardada?.id != null) {
+        this.cotizacionesGuardadas[Number(d['idMineral'])] = guardada;
+      }
       this.agregarFilaLey(
         {
           idMineral: Number(d['idMineral']),
@@ -1383,15 +1399,24 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     return this.penalidadesActivasBcl[0]?.extras?.unidadCargo ?? '';
   }
 
+  /** Guarda en `destino` el valor tecleado para la fila `id` de gastos o
+   *  penalidades (vacío o inválido = 0), recalcula y autoguarda. */
+  private fijarValorBcl(
+    destino: WritableSignal<Record<number, number>>,
+    id: number,
+    valor: string,
+  ): void {
+    destino.update((actual) => ({ ...actual, [id]: Number(valor) || 0 }));
+    this.recalcularTotales();
+    this.programarAutoguardado();
+  }
+
   leyPenalidad(id: number): number {
     return this.leyesPenalidad()[id] ?? 0;
   }
 
   onLeyPenalidadChange(id: number, valor: string): void {
-    const ley = Number(valor) || 0;
-    this.leyesPenalidad.update((actual) => ({ ...actual, [id]: ley }));
-    this.recalcularTotales();
-    if (!this.cargandoInicial) this.programarAutoguardado();
+    this.fijarValorBcl(this.leyesPenalidad, id, valor);
   }
 
   gastoActual(id: number): number {
@@ -1399,10 +1424,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
   }
 
   onGastoActualChange(id: number, valor: string): void {
-    const actual = Number(valor) || 0;
-    this.actualesGastoBcl.update((actuales) => ({ ...actuales, [id]: actual }));
-    this.recalcularTotales();
-    if (!this.cargandoInicial) this.programarAutoguardado();
+    this.fijarValorBcl(this.actualesGastoBcl, id, valor);
   }
 
   /** Base de un Gasto de Tratamiento: se precarga con la del catálogo
@@ -1415,10 +1437,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
   }
 
   onGastoBaseChange(id: number, valor: string): void {
-    const base = Number(valor) || 0;
-    this.basesGastoBcl.update((bases) => ({ ...bases, [id]: base }));
-    this.recalcularTotales();
-    if (!this.cargandoInicial) this.programarAutoguardado();
+    this.fijarValorBcl(this.basesGastoBcl, id, valor);
   }
 
   /** Escalador de un Gasto de Tratamiento: se precarga con el del catálogo
@@ -1430,13 +1449,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
   }
 
   onGastoEscaladorChange(id: number, valor: string): void {
-    const escalador = Number(valor) || 0;
-    this.escaladoresGastoBcl.update((actuales) => ({
-      ...actuales,
-      [id]: escalador,
-    }));
-    this.recalcularTotales();
-    if (!this.cargandoInicial) this.programarAutoguardado();
+    this.fijarValorBcl(this.escaladoresGastoBcl, id, valor);
   }
 
   /** Importe (Bs) de un gasto "simple" (ver esGastoSimple), tecleado
@@ -1473,7 +1486,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
       }));
       this.recalcularTotales();
     }
-    if (!this.cargandoInicial) this.programarAutoguardado();
+    this.programarAutoguardado();
   }
 
   /** Peso neto seco en toneladas métricas secas (TMS): base de cálculo de
@@ -1519,13 +1532,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
   }
 
   onPenalidadLeyLibreChange(id: number, valor: string): void {
-    const leyLibre = Number(valor) || 0;
-    this.leyesLibrePenalidadBcl.update((actuales) => ({
-      ...actuales,
-      [id]: leyLibre,
-    }));
-    this.recalcularTotales();
-    if (!this.cargandoInicial) this.programarAutoguardado();
+    this.fijarValorBcl(this.leyesLibrePenalidadBcl, id, valor);
   }
 
   /** "Cargo" de una Penalidad: se precarga con el del catálogo
@@ -1537,10 +1544,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
   }
 
   onPenalidadCargoChange(id: number, valor: string): void {
-    const cargo = Number(valor) || 0;
-    this.cargosPenalidadBcl.update((actuales) => ({ ...actuales, [id]: cargo }));
-    this.recalcularTotales();
-    if (!this.cargandoInicial) this.programarAutoguardado();
+    this.fijarValorBcl(this.cargosPenalidadBcl, id, valor);
   }
 
   /** "Cada" de una Penalidad: se precarga con la del catálogo
@@ -1552,10 +1556,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
   }
 
   onPenalidadCadaChange(id: number, valor: string): void {
-    const cada = Number(valor) || 0;
-    this.cadaPenalidadBcl.update((actuales) => ({ ...actuales, [id]: cada }));
-    this.recalcularTotales();
-    if (!this.cargandoInicial) this.programarAutoguardado();
+    this.fijarValorBcl(this.cadaPenalidadBcl, id, valor);
   }
 
   /** "Importe (Bs)" de una Penalidad tecleado directo por el liquidador:
@@ -1566,13 +1567,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
   }
 
   onPenalidadImporteChange(id: number, valor: string): void {
-    const importe = Number(valor) || 0;
-    this.importesManualesPenalidadBcl.update((actuales) => ({
-      ...actuales,
-      [id]: importe,
-    }));
-    this.recalcularTotales();
-    if (!this.cargandoInicial) this.programarAutoguardado();
+    this.fijarValorBcl(this.importesManualesPenalidadBcl, id, valor);
   }
 
   /** Penalidad, tal cual la sección "PENALIDADES" del contrato de fundición
@@ -1675,8 +1670,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
             diferencia,
             escalador,
             // Solo gastos "simples" (ej. Maquila): el Importe (Bs) tecleado
-            // directo, para poder restaurarlo (ver
-            // resolverImportesGastoSimpleInicial).
+            // directo, para poder restaurarlo (ver extrasGuardados).
             importeManual: esSimple ? importeBs : undefined,
           },
         };
@@ -1706,7 +1700,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
             cargo: this.penalidadCargo(p),
             cada: this.penalidadCada(p),
             // Solo si el liquidador tecleó el Importe (Bs) directo, pisando
-            // la fórmula (ver penalidadImporteManual/resolverImportesManualesPenalidadInicial).
+            // la fórmula (ver penalidadImporteManual/extrasGuardados).
             importeManual: this.penalidadImporteManual(p.id),
           },
         };
@@ -1749,173 +1743,27 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     return [...gastos, ...penalidades, ...otros];
   }
 
-  /** Restaura las leyes de penalidad ya guardadas (extras.ley de cada fila
-   *  de `calculos`), indexadas por id del catálogo. */
-  private resolverLeyesPenalidadInicial(
+  /** Restaura de `calculos` (lo ya guardado) el valor `campo` de `extras`
+   *  de cada fila, indexado por id del catálogo. Con `distintivo` solo toma
+   *  las filas que además traen ese otro campo: `ley` identifica una
+   *  penalidad y `actual` un gasto de tratamiento. Lo que no esté guardado
+   *  cae al valor del catálogo (ver gastoBase, penalidadCargo, etc.). */
+  private extrasGuardados(
     v: ValorizacionMineral,
-  ): Record<number, number> {
-    const leyes: Record<number, number> = {};
-    (v.calculos ?? []).forEach((c) => {
-      const id = Number(c['idTipoCalculoValorizacion']);
-      const extras = c['extras'] as { ley?: number } | undefined;
-      if (!Number.isNaN(id) && extras?.ley != null) {
-        leyes[id] = Number(extras.ley);
-      }
-    });
-    return leyes;
-  }
-
-  /** Restaura "Ley libre"/"Cargo"/"Cada" de penalidad ya guardados
-   *  (extras.ley identifica una fila de penalidad, ver
-   *  resolverLeyesPenalidadInicial), indexados por id del catálogo. */
-  private resolverLeyesLibrePenalidadInicial(
-    v: ValorizacionMineral,
+    campo: CampoExtraCalculo,
+    distintivo?: 'ley' | 'actual',
   ): Record<number, number> {
     const valores: Record<number, number> = {};
-    (v.calculos ?? []).forEach((c) => {
+    for (const c of v.calculos ?? []) {
       const id = Number(c['idTipoCalculoValorizacion']);
       const extras = c['extras'] as
-        | { ley?: number; leyLibre?: number }
+        | Partial<Record<CampoExtraCalculo, number | null>>
         | undefined;
-      if (!Number.isNaN(id) && extras?.ley != null && extras?.leyLibre != null) {
-        valores[id] = Number(extras.leyLibre);
-      }
-    });
+      if (Number.isNaN(id) || extras?.[campo] == null) continue;
+      if (distintivo && extras[distintivo] == null) continue;
+      valores[id] = Number(extras[campo]);
+    }
     return valores;
-  }
-
-  private resolverCargosPenalidadInicial(
-    v: ValorizacionMineral,
-  ): Record<number, number> {
-    const valores: Record<number, number> = {};
-    (v.calculos ?? []).forEach((c) => {
-      const id = Number(c['idTipoCalculoValorizacion']);
-      const extras = c['extras'] as
-        | { ley?: number; cargo?: number }
-        | undefined;
-      if (!Number.isNaN(id) && extras?.ley != null && extras?.cargo != null) {
-        valores[id] = Number(extras.cargo);
-      }
-    });
-    return valores;
-  }
-
-  private resolverCadaPenalidadInicial(
-    v: ValorizacionMineral,
-  ): Record<number, number> {
-    const valores: Record<number, number> = {};
-    (v.calculos ?? []).forEach((c) => {
-      const id = Number(c['idTipoCalculoValorizacion']);
-      const extras = c['extras'] as { ley?: number; cada?: number } | undefined;
-      if (!Number.isNaN(id) && extras?.ley != null && extras?.cada != null) {
-        valores[id] = Number(extras.cada);
-      }
-    });
-    return valores;
-  }
-
-  /** Restaura el "Importe (Bs)" manual de penalidad ya guardado (ver
-   *  importesManualesPenalidadBcl/onPenalidadImporteChange), indexado por
-   *  id del catálogo. Mismo campo `extras.importeManual` que usan los
-   *  gastos "simples" (ver resolverImportesGastoSimpleInicial). */
-  private resolverImportesManualesPenalidadInicial(
-    v: ValorizacionMineral,
-  ): Record<number, number> {
-    const valores: Record<number, number> = {};
-    (v.calculos ?? []).forEach((c) => {
-      const id = Number(c['idTipoCalculoValorizacion']);
-      const extras = c['extras'] as
-        | { ley?: number; importeManual?: number }
-        | undefined;
-      if (
-        !Number.isNaN(id) &&
-        extras?.ley != null &&
-        extras?.importeManual != null
-      ) {
-        valores[id] = Number(extras.importeManual);
-      }
-    });
-    return valores;
-  }
-
-  /** Restaura los "Actual" de gastos de tratamiento ya guardados
-   *  (extras.actual de cada fila de `calculos`), indexados por id del
-   *  catálogo. */
-  private resolverActualesGastoInicial(
-    v: ValorizacionMineral,
-  ): Record<number, number> {
-    const actuales: Record<number, number> = {};
-    (v.calculos ?? []).forEach((c) => {
-      const id = Number(c['idTipoCalculoValorizacion']);
-      const extras = c['extras'] as { actual?: number } | undefined;
-      if (!Number.isNaN(id) && extras?.actual != null) {
-        actuales[id] = Number(extras.actual);
-      }
-    });
-    return actuales;
-  }
-
-  /** Restaura las "Base" de gastos de tratamiento ya guardadas/sobrescritas
-   *  (extras.base de cada fila de `calculos`), indexadas por id del
-   *  catálogo. Si la valorización todavía no tiene nada guardado,
-   *  gastoBase() cae de todos modos al `extras.base` del catálogo. */
-  private resolverBasesGastoInicial(
-    v: ValorizacionMineral,
-  ): Record<number, number> {
-    const bases: Record<number, number> = {};
-    (v.calculos ?? []).forEach((c) => {
-      const id = Number(c['idTipoCalculoValorizacion']);
-      const extras = c['extras'] as
-        | { actual?: number; base?: number }
-        | undefined;
-      // extras.actual solo existe en gastos de tratamiento, no en
-      // penalidades (ver resolverLeyesPenalidadInicial): sirve para no
-      // confundir ambos tipos de fila de `calculos`.
-      if (!Number.isNaN(id) && extras?.actual != null && extras?.base != null) {
-        bases[id] = Number(extras.base);
-      }
-    });
-    return bases;
-  }
-
-  /** Restaura los "Escalador" de gastos de tratamiento ya guardados/
-   *  sobrescritos (extras.escalador de cada fila de `calculos`), indexados
-   *  por id del catálogo. Mismo patrón que resolverBasesGastoInicial. */
-  private resolverEscaladoresGastoInicial(
-    v: ValorizacionMineral,
-  ): Record<number, number> {
-    const escaladores: Record<number, number> = {};
-    (v.calculos ?? []).forEach((c) => {
-      const id = Number(c['idTipoCalculoValorizacion']);
-      const extras = c['extras'] as
-        | { actual?: number; escalador?: number }
-        | undefined;
-      if (
-        !Number.isNaN(id) &&
-        extras?.actual != null &&
-        extras?.escalador != null
-      ) {
-        escaladores[id] = Number(extras.escalador);
-      }
-    });
-    return escaladores;
-  }
-
-  /** Restaura los "Importe (Bs)" de gastos "simples" ya guardados
-   *  (extras.importeManual de cada fila de `calculos`, ver esGastoSimple),
-   *  indexados por id del catálogo. */
-  private resolverImportesGastoSimpleInicial(
-    v: ValorizacionMineral,
-  ): Record<number, number> {
-    const importes: Record<number, number> = {};
-    (v.calculos ?? []).forEach((c) => {
-      const id = Number(c['idTipoCalculoValorizacion']);
-      const extras = c['extras'] as { importeManual?: number } | undefined;
-      if (!Number.isNaN(id) && extras?.importeManual != null) {
-        importes[id] = Number(extras.importeManual);
-      }
-    });
-    return importes;
   }
 
   private recalcularFilaLeyEstandar(fila: AbstractControl): void {
@@ -2289,27 +2137,29 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     // Ya hay una consulta en curso para este mineral: no duplicar la llamada.
     if (this.cotizacionesPorMineral()[id]?.cargando) return;
 
+    const previo = this.cotizacionesPorMineral()[id];
     this.actualizarEstadoCotizacion(id, {
+      ...previo,
       cargando: true,
       sinCotizacion: false,
-      cotizacion: this.cotizacionesPorMineral()[id]?.cotizacion ?? null,
+      cotizacion: previo?.cotizacion ?? null,
     });
 
     this.parametricasService.obtenerCotizacionVigentePorMineral(id).subscribe({
-      next: (cotizacion) => {
-        this.actualizarEstadoCotizacion(id, {
-          cargando: false,
-          sinCotizacion: false,
-          cotizacion,
-        });
+      next: (vigente) => {
+        this.actualizarEstadoCotizacion(
+          id,
+          this.estadoConVigente(id, vigente),
+        );
         this.recalcularFilasDelMineral(id);
       },
       error: (err) => {
         const esSinCotizacion = err?.status === 404;
+        const estado = this.estadoConVigente(id, null);
         this.actualizarEstadoCotizacion(id, {
-          cargando: false,
-          sinCotizacion: esSinCotizacion,
-          cotizacion: null,
+          ...estado,
+          // Sin vigente pero con una elegida del historial se puede calcular.
+          sinCotizacion: esSinCotizacion && !estado.cotizacion,
         });
         if (!esSinCotizacion) {
           this.snackBar.open(
@@ -2321,6 +2171,150 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
         this.recalcularFilasDelMineral(id);
       },
     });
+  }
+
+  /** Cotización con la que se guardó cada mineral de esta valorización
+   *  (viene en el detalle). Solo se usa para restaurarla al abrir. */
+  private readonly cotizacionesGuardadas: Record<number, Cotizacion> = {};
+
+  /**
+   * Decide qué cotización usa el mineral una vez conocida la vigente:
+   *  - la que el usuario eligió a mano del historial, si eligió;
+   *  - si no, la que venía guardada en la valorización cuando ya no es la
+   *    vigente (para no recalcular con la de hoy lo que se valorizó con otra);
+   *  - si no, la vigente (lo normal).
+   */
+  private estadoConVigente(
+    id: number,
+    vigente: Cotizacion | null,
+  ): CotizacionMineralEstado {
+    const previo = this.cotizacionesPorMineral()[id];
+    let elegida = previo?.elegida ? (previo.cotizacion ?? null) : null;
+
+    const guardada = this.cotizacionesGuardadas[id];
+    if (!elegida && guardada && Number(guardada.id) !== Number(vigente?.id)) {
+      // El detalle guardado no trae el mineral de la cotización (de ahí sale
+      // el factor de conversión): se completa con el de la vigente o el catálogo.
+      elegida = {
+        ...guardada,
+        mineral:
+          guardada.mineral ??
+          vigente?.mineral ??
+          (this.buscarMineralPorId(id) as Cotizacion['mineral']),
+      };
+    }
+    // Ya se resolvió: la guardada solo cuenta la primera vez (al abrir).
+    delete this.cotizacionesGuardadas[id];
+
+    // Elegir a mano justo la vigente equivale a volver al comportamiento normal.
+    const esLaVigente =
+      !!elegida && !!vigente && Number(elegida.id) === Number(vigente.id);
+    const usaElegida = !!elegida && !esLaVigente;
+    return {
+      cargando: false,
+      sinCotizacion: false,
+      cotizacion: usaElegida ? elegida : vigente,
+      vigente,
+      elegida: usaElegida,
+    };
+  }
+
+  // ---------- Elegir una cotización anterior ----------
+
+  /** true si la fila del mineral se está valorizando con una cotización
+   *  elegida del historial en vez de la vigente de hoy. */
+  usaCotizacionElegida(idMineral: number | string | null | undefined): boolean {
+    if (idMineral == null) return false;
+    return this.cotizacionesPorMineral()[Number(idMineral)]?.elegida === true;
+  }
+
+  /** Etiqueta del campo de la fila: "Cotización vigente" o "Cotización del
+   *  dd/mm/aaaa" cuando se eligió una anterior. */
+  etiquetaCotizacion(idMineral: number | string | null | undefined): string {
+    if (!this.usaCotizacionElegida(idMineral)) return 'Cotización vigente';
+    const c = this.cotizacionesPorMineral()[Number(idMineral)]?.cotizacion;
+    return `Cotización del ${formatearFechaBolivia(c?.fechaVigenciaInicial)}`;
+  }
+
+  /** "20/09/2026 al 27/09/2026" de la cotización en uso del mineral. */
+  vigenciaCotizacionEnUso(idMineral: number | string | null | undefined): string {
+    if (idMineral == null) return '';
+    const c = this.cotizacionesPorMineral()[Number(idMineral)]?.cotizacion;
+    if (!c) return '';
+    return `${formatearFechaBolivia(c.fechaVigenciaInicial)} al ${formatearFechaBolivia(c.fechaVigenciaFinal)}`;
+  }
+
+  /** Minerales de las filas que se valorizan con una cotización elegida
+   *  (no la vigente): se avisa arriba para que no pase desapercibido. */
+  get mineralesConCotizacionElegida(): Array<{
+    id: number;
+    descripcion: string;
+    cotizacion: number;
+    vigencia: string;
+    hayVigente: boolean;
+  }> {
+    const estados = this.cotizacionesPorMineral();
+    return this.idsMineralesEnFilas()
+      .filter((id) => !this.mineralUsaEscalaPrecio(id) && estados[id]?.elegida)
+      .map((id) => ({
+        id,
+        descripcion:
+          this.buscarMineralPorId(id)?.descripcion ?? `Mineral #${id}`,
+        cotizacion: estados[id]?.cotizacion?.cotizacionMineralDolares ?? 0,
+        vigencia: this.vigenciaCotizacionEnUso(id),
+        hayVigente: !!estados[id]?.vigente,
+      }));
+  }
+
+  /** Abre el historial de cotizaciones del mineral para elegir con cuál
+   *  valorizar (ej. la que regía cuando se recepcionó). */
+  elegirCotizacion(idMineral: number | string | null | undefined): void {
+    if (idMineral == null || !this.esEditable) return;
+    // Los minerales con tabla de Escala de Precio no usan cotización de mercado.
+    if (this.mineralUsaEscalaPrecio(idMineral)) return;
+    const id = Number(idMineral);
+    const mineral = this.buscarMineralPorId(id);
+    const data: ElegirCotizacionDialogData = {
+      idMineral: id,
+      mineral: mineral
+        ? `${mineral.descripcion}${mineral.simbolo ? ' (' + mineral.simbolo + ')' : ''}`
+        : `Mineral #${id}`,
+      idCotizacionEnUso:
+        this.cotizacionesPorMineral()[id]?.cotizacion?.id ?? null,
+      fechaRecepcion: this.valorizacion()?.recepcionMineral?.fechaRecepcion,
+    };
+    this.dialog
+      .open(ElegirCotizacionDialogComponent, {
+        data,
+        width: '720px',
+        maxWidth: '95vw',
+        autoFocus: false,
+      })
+      .afterClosed()
+      .subscribe((elegida: Cotizacion | undefined) => {
+        if (elegida) this.aplicarCotizacion(id, elegida);
+      });
+  }
+
+  /** Vuelve a la cotización vigente de hoy para ese mineral. */
+  usarCotizacionVigente(idMineral: number): void {
+    const vigente = this.cotizacionesPorMineral()[idMineral]?.vigente;
+    if (vigente) this.aplicarCotizacion(idMineral, vigente);
+  }
+
+  private aplicarCotizacion(id: number, cotizacion: Cotizacion): void {
+    const previo = this.cotizacionesPorMineral()[id];
+    const vigente = previo?.vigente ?? null;
+    this.actualizarEstadoCotizacion(id, {
+      cargando: false,
+      sinCotizacion: false,
+      cotizacion,
+      vigente,
+      elegida: Number(cotizacion.id) !== Number(vigente?.id),
+    });
+    this.recalcularFilasDelMineral(id);
+    this.recalcularTotales();
+    this.programarAutoguardado();
   }
 
   private actualizarEstadoCotizacion(
@@ -2496,26 +2490,20 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** Estados de la recepción con PDF de impresión disponible (mismo criterio
-   *  que recepcion-mineral.component.ts): APROBADO, RECHAZADO A TOL, TRANZADO y REMUESTREO. */
-  private readonly ESTADOS_RECEPCION_CON_IMPRESION = new Set([2, 3, 5, 6]);
-
   /** Abre la vista previa (solo lectura) de la recepción de mineral asociada
    *  a esta valorización, con el mismo diálogo que usa la bandeja de recepciones. */
   abrirVistaPreviaRecepcion(): void {
     const registro = this.valorizacion()?.recepcionMineral;
     if (!registro) return;
 
+    const data: VerRecepcionDialogData = {
+      registro,
+      puedeImprimir: recepcionImprimible(registro.idEstado),
+    };
     this.dialog.open(VerRecepcionDialogComponent, {
       width: '640px',
       maxWidth: '95vw',
-      data: {
-        registro,
-        puedeImprimir: this.ESTADOS_RECEPCION_CON_IMPRESION.has(
-          registro.idEstado,
-        ),
-        autoImprimir: false,
-      },
+      data,
     });
   }
 
@@ -2549,9 +2537,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
       )
       .map((c) => {
         const idEntidad = c.get('idEntidadAporte')?.value;
-        const entidad = this.entidadesAporte().find(
-          (e) => Number(e.id) === Number(idEntidad),
-        );
+        const entidad = this.buscarEntidadAporte(idEntidad);
         return {
           entidad: entidad?.descripcion ?? `Entidad #${idEntidad}`,
           porcentaje: Number(c.get('porcentajeAporte')?.value ?? 0),
@@ -2565,10 +2551,9 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
       cliente: this.clienteTexto(v),
       numeroDocumento: v.recepcionMineral?.persona?.numeroDocumento ?? '—',
       lote: v.recepcionMineral?.codigoOperacion ?? '—',
-      fechaEntrega: this.formatFechaSolo(v.recepcionMineral?.fechaRecepcion),
+      fechaEntrega: fechaDeIso(v.recepcionMineral?.fechaRecepcion),
       fechaTransaccion: this.fechaTransaccionTexto,
-      cooperativa:
-        v.recepcionMineral?.persona?.actorProductivoMinero?.nombre ?? '—',
+      cooperativa: this.actorProveedorTexto(v),
       pesoBruto: this.pesoBrutoHumedo(),
       pesoNeto: Number(this.form.get('pesoNetoSecoKilogramos')?.value ?? 0),
       leyesYPrecios,
@@ -2741,7 +2726,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     const idEntidad = this.aportesArray
       .at(indiceFila)
       ?.get('idEntidadAporte')?.value;
-    const entidad = this.entidadesAporte().find((e) => e.id === idEntidad);
+    const entidad = this.buscarEntidadAporte(idEntidad);
     const bases = entidad?.detalleAporte?.map((d) => d.tipoBaseAporte) ?? [];
     const basesUnicas = Array.from(new Set(bases));
     return basesUnicas.length > 0 ? basesUnicas : this.basesAporte;
@@ -2765,7 +2750,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     let alicuota: number;
     if (controlPorcentaje.pristine) {
       alicuota =
-        idEntidad === ID_REGALIA_MINERA
+        Number(idEntidad) === ID_REGALIA_MINERA
           ? this.sumaAlicuotaInternaMinerales()
           : this.buscarAlicuotaAporte(idEntidad, base);
       controlPorcentaje.setValue(alicuota, { emitEvent: false });
@@ -2785,6 +2770,24 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     );
 
     this.recalcularTotalesAportes();
+  }
+
+  /** Al elegir otra entidad en una fila, la alícuota vuelve a ser la
+   *  sugerida de la entidad nueva (deja de valer la tecleada o restaurada
+   *  para la entidad anterior). */
+  onEntidadAporteChange(i: number): void {
+    this.aportesArray.at(i)?.get('porcentajeAporte')?.markAsPristine();
+    this.recalcularAporte(i);
+  }
+
+  /** Los ids pueden llegar como number o string según el endpoint. */
+  private buscarEntidadAporte(
+    idEntidad: number | string | null | undefined,
+  ): EntidadAporte | undefined {
+    if (idEntidad == null) return undefined;
+    return this.entidadesAporte().find(
+      (e) => Number(e.id) === Number(idEntidad),
+    );
   }
 
   recalcularTodosLosAportes(): void {
@@ -2825,8 +2828,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     base: TipoBaseAporteCatalogo | null | undefined,
   ): number {
     if (idEntidad == null || !base) return 0;
-    const entidad = this.entidadesAporte().find((e) => e.id === idEntidad);
-    const detalle = entidad?.detalleAporte?.find(
+    const detalle = this.buscarEntidadAporte(idEntidad)?.detalleAporte?.find(
       (d) => d.tipoBaseAporte === base,
     );
     return detalle?.alicuota ?? 0;
@@ -2989,7 +2991,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     const v = this.form.getRawValue();
 
     const payload: ActualizarValorizacionRequest = {
-      fechaValorizacion: this.formatFecha(v.fechaValorizacion),
+      fechaValorizacion: formatFechaIso(v.fechaValorizacion),
       pesoBrutoHumedoKilogramos: this.pesoBrutoHumedo(),
       // pesoNetoHumedoKilogramos: v.pesoNetoHumedoKilogramos ?? undefined,
       pesoBrutoSecoKilogramos: v.pesoBrutoSecoKilogramos ?? undefined,
@@ -3008,17 +3010,11 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
       totalValorNetoVentaBolivianos: this.totalLiquidacion(),
     };
 
+    payload.totalValorBrutoBolivianos = this.valorBrutoVenta();
+    payload.totalAportesBolivianos = this.totalImporteAportes();
     if (this.esCodificacionRam()) {
       payload.totalValorToneladaUsd = this.totalUsdTmRam();
       payload.totalValorToneladaBolivianos = this.valorToneladaBsRam();
-      payload.totalValorBrutoBolivianos = this.valorBrutoVenta();
-      payload.totalAportesBolivianos = this.totalImporteAportes();
-    } else {
-      // TODO: cuando se implementen los descuentos de ley (fase 2), separar
-      // totalValorBrutoBolivianos (antes de descuentos) de
-      // totalValorLiquidoVentaBolivianos (después). Por ahora son el mismo valor.
-      payload.totalValorBrutoBolivianos = this.valorBrutoVenta();
-      payload.totalAportesBolivianos = this.totalImporteAportes();
     }
 
     // Ver llegoAlStepGastosBcl y el comentario de ultimoCalculosEnviados:
@@ -3095,11 +3091,22 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
    *  usuario, cancelando cualquier temporizador pendiente anterior — así un
    *  cambio nuevo siempre reinicia la espera en vez de acumular llamadas. */
   private programarAutoguardado(): void {
-    if (this.autoguardadoTimeout) clearTimeout(this.autoguardadoTimeout);
+    // Mientras se hidratan los datos iniciales no hay nada del usuario que guardar.
+    if (this.cargandoInicial) return;
+    this.cancelarAutoguardadoPendiente();
     this.autoguardadoTimeout = setTimeout(
       () => this.autoguardarBorrador(),
       1500,
     );
+  }
+
+  /** Cancela el autoguardado programado, si hay uno. Devuelve true si había
+   *  cambios esperando el debounce (todavía sin mandar al back). */
+  private cancelarAutoguardadoPendiente(): boolean {
+    if (!this.autoguardadoTimeout) return false;
+    clearTimeout(this.autoguardadoTimeout);
+    this.autoguardadoTimeout = undefined;
+    return true;
   }
 
   /** Autoguardado silencioso: se dispara solo, con debounce, ante cualquier
@@ -3117,11 +3124,6 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     }
 
     const payload = this.construirPayloadActual();
-    console.log(
-      '[autoguardado] PATCH valorizacion_mineral',
-      this.valorizacionId,
-      payload,
-    );
 
     this.guardadoEnCurso = true;
     this.estadoAutoguardado.set('guardando');
@@ -3129,15 +3131,13 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
       .actualizarValorizacion(this.valorizacionId, payload)
       .subscribe({
         next: (actualizado) => {
-          console.log('[autoguardado] respuesta OK', actualizado);
           this.guardadoEnCurso = false;
           this.valorizacion.set(actualizado);
           this.confirmarSnapshotsEnviados();
           this.estadoAutoguardado.set('guardado');
           this.resaltarAutoguardadoTemporalmente();
         },
-        error: (err) => {
-          console.log('[autoguardado] error', err);
+        error: () => {
           this.guardadoEnCurso = false;
           this.estadoAutoguardado.set('error');
         },
@@ -3175,10 +3175,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     // Cancela el debounce pendiente: si no, además de este guardado
     // inmediato, el temporizador original igual dispararía otro PATCH
     // redundante ~1.5s después.
-    if (this.autoguardadoTimeout) {
-      clearTimeout(this.autoguardadoTimeout);
-      this.autoguardadoTimeout = undefined;
-    }
+    this.cancelarAutoguardadoPendiente();
     this.autoguardarBorrador();
   }
 
@@ -3235,10 +3232,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
         revertir();
         return;
       }
-      if (this.autoguardadoTimeout) {
-        clearTimeout(this.autoguardadoTimeout);
-        this.autoguardadoTimeout = undefined;
-      }
+      this.cancelarAutoguardadoPendiente();
       const payload: ActualizarValorizacionRequest = {
         ...(this.esEditable && !this.cargandoInicial
           ? this.construirPayloadActual()
@@ -3344,10 +3338,7 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     // acá abajo ya manda el estado más reciente del form, así que ese
     // temporizador quedaría redundante (y podría disparar un PATCH en
     // paralelo con el de más abajo).
-    if (this.autoguardadoTimeout) {
-      clearTimeout(this.autoguardadoTimeout);
-      this.autoguardadoTimeout = undefined;
-    }
+    this.cancelarAutoguardadoPendiente();
 
     // El cambio de estado usa el endpoint dedicado (PATCH .../estado), que
     // valida contra lo YA guardado en el back (totalValorLiquidoVentaBolivianos > 0,
@@ -3356,13 +3347,19 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     // pisar el endpoint de estado) y recién después se dispara el cambio de
     // estado propiamente dicho.
     const payload = this.construirPayloadActual();
-    console.log('[guardar] PATCH datos', payload);
 
     this.guardando.set(true);
     this.guardadoEnCurso = true;
     this.valorizacionMineralService
       .actualizarValorizacion(this.valorizacionId, payload)
       .pipe(
+        // Los datos ya quedaron guardados aunque después falle el cambio de
+        // estado: se confirman acá para no reenviarlos (y duplicarlos) en el
+        // próximo guardado.
+        tap((guardado) => {
+          this.valorizacion.set(guardado);
+          this.confirmarSnapshotsEnviados();
+        }),
         switchMap(() =>
           this.valorizacionMineralService.cambiarEstadoValorizacion(
             this.valorizacionId,
@@ -3372,11 +3369,9 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
       )
       .subscribe({
         next: (actualizado) => {
-          console.log('[guardar] respuesta OK', actualizado);
           this.guardadoEnCurso = false;
           this.guardando.set(false);
           this.valorizacion.set(actualizado);
-          this.confirmarSnapshotsEnviados();
           this.snackBar.open(
             idEstadoValorizacion === ESTADO_VALORIZACION_VALORIZADO_ID
               ? 'Valorización finalizada correctamente'
@@ -3384,10 +3379,9 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
             'Cerrar',
             { duration: 3000 },
           );
-          this.ofrecerReciboYVolver(actualizado);
+          this.ofrecerPagoYVolver(actualizado);
         },
         error: (err) => {
-          console.log('[guardar] error', err);
           this.guardadoEnCurso = false;
           this.guardando.set(false);
           const mensaje =
@@ -3398,13 +3392,13 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
       });
   }
 
-  /** Igual que el anticipo en recepción: al quedar VALORIZADO con saldo a
-   *  pagar y sin recibo vigente, se ofrece generar el recibo (BORRADOR)
-   *  antes de volver a la bandeja. "Ahora no" lo deja pendiente en la
-   *  bandeja (botón "Generar recibo"). */
-  private ofrecerReciboYVolver(v: ValorizacionMineral): void {
+  /** Al quedar VALORIZADO no se emite recibo (el respaldo es el PDF de la
+   *  valorización firmado): se ofrece registrar el pago del líquido, que es
+   *  una transacción interna. "Ahora no" lo deja pendiente en la bandeja
+   *  (botón "Registrar pago"). */
+  private ofrecerPagoYVolver(v: ValorizacionMineral): void {
     const volver = () => this.router.navigate(['/ui-components/valorizacion']);
-    if (!faltaReciboValorizacion(v)) {
+    if (!faltaPagoValorizacion(v)) {
       volver();
       return;
     }
@@ -3412,16 +3406,16 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
       .open(ConfirmDialogComponent, {
         data: {
           title: 'Valorización finalizada',
-          message: `El líquido pagable es Bs ${formatNumeroConMiles(v.totalValorLiquidoVentaBolivianos)}, ¿generar el recibo de pago?`,
-          confirmLabel: 'Generar recibo',
+          message: `El líquido pagable es Bs ${formatNumeroConMiles(v.totalValorLiquidoVentaBolivianos)}, ¿registrar el pago ahora? No se emite recibo.`,
+          confirmLabel: 'Registrar pago',
           cancelLabel: 'Ahora no',
-          icon: 'receipt_long',
+          icon: 'payments',
         },
       })
       .afterClosed()
       .subscribe((confirmado) => {
         if (!confirmado) return void volver();
-        abrirReciboValorizacion(this.dialog, v).subscribe(() => volver());
+        abrirPagoValorizacion(this.dialog, v).subscribe(() => volver());
       });
   }
 
@@ -3430,45 +3424,32 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
   onCambioBalanza(usarT: boolean): void {
     this.usarBalanzaT.set(usarT);
     this.recalcularPesoNetoSeco();
-    if (!this.cargandoInicial) this.programarAutoguardado();
+    this.programarAutoguardado();
   }
 
   /** peso neto seco = peso bruto húmedo − (peso bruto húmedo × humedad%).
    *  RAM/estándar no aplican merma (por eso no hay peso bruto seco acá): la
    *  cadena con merma es propia de BCL (ver recalcularPesoNetoSecoBcl), para
-   *  no tocar este cálculo ya probado en el resto de codificaciones. RAM
-   *  tiene su propia variante (ver recalcularPesoNetoSecoRam) que trunca en
-   *  vez de redondear, así que esta rama queda solo para estándar/ICC. */
+   *  no tocar este cálculo ya probado en el resto de codificaciones.
+   *  Estándar/ICC redondea a 3 decimales; RAM trunca a 3 (ROUNDDOWN), tal
+   *  cual el Excel de referencia "valorizacion cargas RAM.xlsx" (hoja
+   *  "LIQ.", celda E14). */
   private recalcularPesoNetoSeco(): void {
     if (this.esCodificacionConcentrado()) {
       this.recalcularPesoNetoSecoBcl();
       return;
     }
-    if (this.esCodificacionRam()) {
-      this.recalcularPesoNetoSecoRam();
-      return;
-    }
     const bruto = this.pesoBrutoHumedo();
     const humedad = Number(this.form.get('humedadPorcentaje')?.value ?? 0);
     const neto = bruto - (bruto * humedad) / 100;
     this.form
       .get('pesoNetoSecoKilogramos')
-      ?.setValue(this.redondear(neto), { emitEvent: false });
-    this.recalcularTotales();
-  }
-
-  /** Solo RAM, tal cual el Excel de referencia "valorizacion cargas
-   *  RAM.xlsx" (hoja "LIQ.", celda E14): peso neto seco = ROUNDDOWN(peso
-   *  bruto húmedo − (peso bruto húmedo × humedad%), 3) — trunca a 3
-   *  decimales en vez de redondear (a diferencia de estándar/ICC, ver
-   *  recalcularPesoNetoSeco). */
-  private recalcularPesoNetoSecoRam(): void {
-    const bruto = this.pesoBrutoHumedo();
-    const humedad = Number(this.form.get('humedadPorcentaje')?.value ?? 0);
-    const neto = bruto - (bruto * humedad) / 100;
-    this.form
-      .get('pesoNetoSecoKilogramos')
-      ?.setValue(this.truncarDecimales(neto, 3), { emitEvent: false });
+      ?.setValue(
+        this.esCodificacionRam()
+          ? this.truncarDecimales(neto, 3)
+          : this.redondear(neto),
+        { emitEvent: false },
+      );
     this.recalcularTotales();
   }
 
@@ -3631,14 +3612,6 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     });
   }
 
-  private formatFecha(fecha: Date | string): string {
-    const d = typeof fecha === 'string' ? new Date(fecha) : fecha;
-    const anio = d.getFullYear();
-    const mes = String(d.getMonth() + 1).padStart(2, '0');
-    const dia = String(d.getDate()).padStart(2, '0');
-    return `${anio}-${mes}-${dia}`;
-  }
-
   private formatFechaHoraLocal(fecha: Date): string {
     const dia = String(fecha.getDate()).padStart(2, '0');
     const mes = String(fecha.getMonth() + 1).padStart(2, '0');
@@ -3648,15 +3621,9 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
     return `${horas}:${minutos} - ${dia}-${mes}-${anio}`;
   }
 
-  /** Igual que en el listado: extrae la fecha directo del ISO string para no
+  /** Igual que en el listado: la fecha directo del ISO string, para no
    *  depender del huso horario del navegador. */
-  formatFechaSolo(fecha: string | null | undefined): string {
-    if (!fecha) return '—';
-    const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(fecha);
-    if (!match) return fecha;
-    const [, anio, mes, dia] = match;
-    return `${dia}-${mes}-${anio}`;
-  }
+  readonly formatFechaSolo = fechaDeIso;
 
   productosTexto(v: ValorizacionMineral): string {
     const minerales = codificacionEfectiva(v)?.minerales ?? [];
@@ -3664,9 +3631,11 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
   }
 
   clienteTexto(v: ValorizacionMineral): string {
-    const p = v.recepcionMineral?.persona;
-    if (!p) return '—';
-    return `${p.nombres} ${p.apellidoPaterno} ${p.apellidoMaterno}`.trim();
+    return nombreProveedorRecepcion(v.recepcionMineral);
+  }
+
+  actorProveedorTexto(v: ValorizacionMineral): string {
+    return actorProveedorRecepcion(v.recepcionMineral);
   }
 
   volver(): void {

@@ -95,7 +95,7 @@ export interface PrepararBoletaResponse {
     salarioMensual: number | null;
   };
   /** Kardex PERSONAL abierto; null si no tiene (no se puede descontar préstamos). */
-  kardex: { id: string; numero: number; saldoActual: number } | null;
+  kardex: { id: string; codigo: string; numero: number; saldoActual: number } | null;
   prestamos: PrestamoParaBoleta[];
   totalDescuentoSugerido: number;
 }

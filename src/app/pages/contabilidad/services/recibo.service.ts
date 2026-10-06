@@ -11,6 +11,7 @@ import {
   Recibo,
   RecibosPaginados,
 } from '../models/recibo.models';
+import { FormatoReporte } from '../../../shared/utils/descarga-archivo.util';
 
 @Injectable({ providedIn: 'root' })
 export class ReciboService {
@@ -43,14 +44,15 @@ export class ReciboService {
 
   /** PDF del recibo generado (disponible desde que existe, incluso en BORRADOR). */
   obtenerPdf(id: string): Observable<Blob> {
-    return this.http.get(`${this.baseUrl}2/${id}/pdf`, {
+    return this.http.get(`${this.baseUrl}/${id}/pdf`, {
       responseType: 'blob',
     });
   }
 
   /** PDF del recibo procesado, con el detalle del reparto (kardex + caja). */
   obtenerPdfDetallado(id: string): Observable<Blob> {
-    return this.http.get(`${this.baseUrl}2/${id}/pdf-procesado`, {
+    return this.http.get(`${this.baseUrl}/${id}/pdf`, {
+      params: new HttpParams().set('procesado', true),
       responseType: 'blob',
     });
   }
@@ -68,8 +70,11 @@ export class ReciboService {
 
   /** Excel "Libro de recibos": todos los recibos que cumplen los filtros,
    *  sin paginar (procesados, borradores y anulados). */
-  descargarLibroExcel(filtro: FiltroLibroRecibos): Observable<Blob> {
-    let params = new HttpParams();
+  descargarLibroExcel(
+    filtro: FiltroLibroRecibos,
+    formato: FormatoReporte = 'EXCEL',
+  ): Observable<Blob> {
+    let params = new HttpParams().set('formato', formato);
     if (filtro.tipo) params = params.set('tipo', filtro.tipo);
     if (filtro.estado) params = params.set('estado', filtro.estado);
     if (filtro.idPersona) params = params.set('idPersona', filtro.idPersona);

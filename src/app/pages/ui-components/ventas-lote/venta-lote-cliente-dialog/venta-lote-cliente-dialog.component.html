@@ -1,0 +1,214 @@
+<h2 mat-dialog-title>
+  @if (detalle(); as d) {
+  Cuenta de {{ d.cliente.nombre }}
+  } @else {
+  Cuenta del cliente
+  }
+</h2>
+
+<mat-dialog-content>
+  @if (cargando() && !detalle()) {
+  <div class="cc-loading">
+    <mat-spinner diameter="28"></mat-spinner>
+    <span>Cargando cuenta...</span>
+  </div>
+  } @else if (detalle(); as d) {
+  <div class="cc-cabecera">
+    <span class="cc-chip">{{ esInterno(d) ? 'Comercio interno' : 'Exportación' }}</span>
+    <span class="cc-apagado">
+      {{ esInterno(d)
+      ? 'Los anticipos pagan los lotes liquidados, del más antiguo al más nuevo. Un lote sin liquidar no recibe nada.'
+      : 'Cada lote se cobra con sus propios recibos; un anticipo sin lote cubre los lotes liquidados con saldo.' }}
+    </span>
+  </div>
+
+  <div class="cc-tiles">
+    <div class="cc-tile">
+      <small>Anticipos recibidos</small>
+      <strong>Bs {{ d.cuenta.anticiposBolivianos | number:'1.2-2' }}</strong>
+      @if (d.cuenta.otrosCargosBolivianos > 0) {
+      <small>otros cargos Bs {{ d.cuenta.otrosCargosBolivianos | number:'1.2-2' }}</small>
+      }
+    </div>
+    <div class="cc-tile">
+      <small>Lotes liquidados ({{ d.cuenta.lotesLiquidados }})</small>
+      <strong>Bs {{ d.cuenta.liquidadoBolivianos | number:'1.2-2' }}</strong>
+      <small>{{ d.cuenta.lotesPagados }} de {{ d.cuenta.lotesLiquidados }} pagados</small>
+    </div>
+    <div class="cc-tile">
+      <small>Anticipo disponible</small>
+      <strong>Bs {{ d.cuenta.anticipoDisponibleBolivianos | number:'1.2-2' }}</strong>
+      <small>aún sin lote liquidado que pagar</small>
+    </div>
+    <div class="cc-tile">
+      @if (d.cuenta.saldoBolivianos > 0) {
+      <small>Saldo a favor del cliente</small>
+      <strong class="cc-favor">Bs {{ d.cuenta.saldoBolivianos | number:'1.2-2' }}</strong>
+      <small>falta cubrirlo con lotes</small>
+      } @else if (d.cuenta.saldoBolivianos < 0) {
+      <small>El cliente nos debe</small>
+      <strong class="cc-debe">Bs {{ abs(d.cuenta.saldoBolivianos) | number:'1.2-2' }}</strong>
+      <small>lotes liquidados sin pagar</small>
+      } @else {
+      <small>Saldo</small>
+      <strong>Bs 0.00</strong>
+      <small>cuenta al día</small>
+      }
+    </div>
+    <div class="cc-tile">
+      <small>Lotes sin liquidar ({{ d.cuenta.lotesAbiertos }})</small>
+      @if (d.cuenta.lotesAbiertos) {
+      <strong>Bs {{ d.cuenta.estimadoAbiertosBolivianos | number:'1.2-2' }}</strong>
+      <small>
+        estimado propio
+        @if (d.cuenta.lotesAbiertosSinEstimar) { · {{ d.cuenta.lotesAbiertosSinEstimar }} sin estimar }
+      </small>
+      } @else {
+      <strong class="cc-apagado">—</strong>
+      }
+    </div>
+    @if (d.cuenta.lotesAbiertos) {
+    <div class="cc-tile">
+      <small>Saldo proyectado</small>
+      <strong [class.cc-favor]="d.cuenta.saldoProyectadoBolivianos > 0"
+        [class.cc-debe]="d.cuenta.saldoProyectadoBolivianos < 0">
+        Bs {{ abs(d.cuenta.saldoProyectadoBolivianos) | number:'1.2-2' }}
+      </strong>
+      <small>
+        {{ d.cuenta.saldoProyectadoBolivianos > 0
+        ? 'quedaría por cubrir con más lotes'
+        : (d.cuenta.saldoProyectadoBolivianos < 0 ? 'nos quedaría debiendo' : 'quedaría al día') }}
+      </small>
+    </div>
+    }
+  </div>
+
+  @if (!d.cuenta.kardexAbierto) {
+  <p class="cc-aviso">
+    <mat-icon inline>warning</mat-icon>
+    El cliente no tiene un kardex abierto: ábrelo en Actores y Clientes › Ventas para registrar anticipos y lotes.
+  </p>
+  }
+
+  <div class="cc-acciones">
+    <button mat-flat-button color="primary" [disabled]="!d.cuenta.kardexAbierto" (click)="registrarAnticipo(d)">
+      <mat-icon>call_received</mat-icon> Registrar anticipo
+    </button>
+    <button mat-stroked-button [disabled]="!d.cuenta.kardexAbierto" (click)="venderLote(d)">
+      <mat-icon>local_shipping</mat-icon> Venderle un lote
+    </button>
+  </div>
+
+  <h3 class="cc-sub">Lotes</h3>
+  @if (!d.ventas.length) {
+  <p class="cc-apagado">Todavía no se le entregó ningún lote.</p>
+  } @else {
+  <div class="cc-scroll">
+    <table class="cc-tabla">
+      <thead>
+        <tr>
+          <th>Lote</th>
+          <th>Fecha venta</th>
+          <th class="cc-num">Estimado (Bs)</th>
+          <th>Liquidado el</th>
+          <th class="cc-num">Liquidación (Bs)</th>
+          <th class="cc-num">Pagado (Bs)</th>
+          <th class="cc-num">Falta (Bs)</th>
+          <th>Estado</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (v of d.ventas; track v.id) {
+        <tr>
+          <td>
+            <strong>{{ v.codigoLote || '—' }}</strong>
+            <small class="cc-apagado"> · {{ v.promedioMineral?.codigo }}</small>
+          </td>
+          <td>{{ fechaFmt(v.fechaVenta) }}</td>
+          <td class="cc-num">{{ estimadoBs(v) != null ? (estimadoBs(v) | number:'1.2-2') : '—' }}</td>
+          <td>{{ fechaFmt(v.fechaLiquidacion) }}</td>
+          <td class="cc-num">
+            {{ v.montoVentaBolivianos != null ? (v.montoVentaBolivianos | number:'1.2-2') : '—' }}
+          </td>
+          <td class="cc-num">{{ v.estado === 'LIQUIDADA' ? (v.cobradoBolivianos | number:'1.2-2') : '—' }}</td>
+          <td class="cc-num" [class.cc-debe]="(v.porCobrarBolivianos ?? 0) > 0">
+            {{ v.porCobrarBolivianos != null ? (v.porCobrarBolivianos | number:'1.2-2') : '—' }}
+          </td>
+          <td>
+            <span class="cc-estado" [class.cc-estado--pagada]="v.pagada" [class.cc-estado--falta]="v.estado === 'LIQUIDADA' && !v.pagada">
+              {{ etiquetaEstado(v) }}
+            </span>
+          </td>
+          <td>
+            <button mat-icon-button matTooltip="Ver seguimiento del lote" (click)="verLote(v)">
+              <mat-icon>visibility</mat-icon>
+            </button>
+            @if (v.estado === 'ABIERTA') {
+            <button mat-icon-button matTooltip="Registrar liquidación" (click)="liquidar(v)">
+              <mat-icon>gavel</mat-icon>
+            </button>
+            }
+          </td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  }
+
+  <h3 class="cc-sub">Movimientos de la cuenta</h3>
+  @if (!d.movimientos.length) {
+  <p class="cc-apagado">Sin movimientos todavía.</p>
+  } @else {
+  <div class="cc-scroll">
+    <table class="cc-tabla">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Tipo</th>
+          <th>Detalle</th>
+          <th>Lote</th>
+          <th>Comprobante</th>
+          <th class="cc-num">Anticipo (Bs)</th>
+          <th class="cc-num">Lote / cargo (Bs)</th>
+          <th class="cc-num">Saldo (Bs)</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (m of d.movimientos; track m.id) {
+        <tr>
+          <td>{{ fechaFmt(m.fecha) }}</td>
+          <td>{{ etiquetaTipo(m) }}</td>
+          <td>
+            {{ m.detalle }}
+            @if (m.montoUsd !== 0) { <small class="cc-apagado"> · $us {{ abs(m.montoUsd) | number:'1.2-2' }}</small> }
+          </td>
+          <td>{{ m.lote || '—' }}</td>
+          <td>{{ m.comprobante || '—' }}</td>
+          <td class="cc-num">{{ m.montoBolivianos > 0 ? (m.montoBolivianos | number:'1.2-2') : '' }}</td>
+          <td class="cc-num">{{ m.montoBolivianos < 0 ? (abs(m.montoBolivianos) | number:'1.2-2') : '' }}</td>
+          <td class="cc-num" [class.cc-favor]="m.saldoBolivianos > 0" [class.cc-debe]="m.saldoBolivianos < 0">
+            {{ abs(m.saldoBolivianos) | number:'1.2-2' }}
+            <small>{{ m.saldoBolivianos > 0 ? 'a favor' : (m.saldoBolivianos < 0 ? 'nos debe' : '') }}</small>
+          </td>
+          <td>
+            @if (m.idRecibo) {
+            <button mat-icon-button matTooltip="Ver PDF del recibo" (click)="verPdf(m)">
+              <mat-icon>picture_as_pdf</mat-icon>
+            </button>
+            }
+          </td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  }
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-stroked-button (click)="cerrar()">Cerrar</button>
+</mat-dialog-actions>

@@ -7,6 +7,9 @@ import { AppSettings, defaults } from '../config';
 export class CoreService {
     private optionsSignal = signal<AppSettings>(defaults);
 
+    // Sidebar colapsado a solo iconos (escritorio/tablet). Lo mantiene FullComponent.
+    readonly sidebarMini = signal(false);
+
     getOptions() {
         return this.optionsSignal();
     }

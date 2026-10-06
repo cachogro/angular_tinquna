@@ -23,9 +23,10 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { combineLatest, forkJoin, map, Observable, startWith } from 'rxjs';
+import { catchError, combineLatest, forkJoin, map, Observable, of, startWith } from 'rxjs';
 import { PersonaCI } from '../../../configurations/models/persona.models';
 import {
+  DestinoGasto,
   FormaPago,
   MonedaCuenta,
 } from '../../../configurations/parametricas/models/parametricas.models';
@@ -39,6 +40,9 @@ import {
 import { PersonaMovimientoRef } from '../../models/libreta-banco.models';
 import { MovimientoCajaService } from '../../services/movimiento-caja.service';
 import { FechaInputDirective } from '../../../../shared/directives/fecha-input.directive';
+import { MontoInputDirective } from '../../../../shared/directives/monto-input.directive';
+import { MayusculasDirective } from '../../../../shared/directives/mayusculas.directive';
+import { DestinoGastoFieldComponent } from '../../components/destino-gasto-field/destino-gasto-field.component';
 
 export interface MovimientoCajaFormDialogData {
   idCaja: number;
@@ -55,6 +59,9 @@ type Beneficiario = PersonaCI | PersonaMovimientoRef | string | null;
   standalone: true,
   imports: [
     FechaInputDirective,
+    MontoInputDirective,
+    MayusculasDirective,
+    DestinoGastoFieldComponent,
     CommonModule,
     ReactiveFormsModule,
     MatDialogModule,
@@ -85,6 +92,7 @@ export class MovimientoCajaFormDialogComponent implements OnInit {
 
   readonly formasPago = signal<FormaPago[]>([]);
   readonly personas = signal<PersonaCI[]>([]);
+  readonly destinosGasto = signal<DestinoGasto[]>([]);
 
   get esEdicion(): boolean {
     return !!this.data.movimiento;
@@ -95,7 +103,7 @@ export class MovimientoCajaFormDialogComponent implements OnInit {
     tipo: new FormControl<TipoMovimientoCaja | null>(null, [
       Validators.required,
     ]),
-    monto: new FormControl<number | null>(null, [
+    monto: new FormControl<number | string | null>(null, [
       Validators.required,
       montoDosDecimales,
       Validators.min(0.01),
@@ -104,7 +112,8 @@ export class MovimientoCajaFormDialogComponent implements OnInit {
       Validators.required,
       Validators.maxLength(255),
     ]),
-    destinoGasto: new FormControl('', [Validators.maxLength(255)]),
+    // Destino del gasto (EGRESO) u origen del ingreso (INGRESO), del catálogo.
+    idDestinoGasto: new FormControl<number | null>(null),
     nroComprobante: new FormControl('', [Validators.maxLength(30)]),
     idFormaPago: new FormControl<number | null>(null),
     beneficiario: new FormControl<Beneficiario>(null, [
@@ -137,10 +146,13 @@ export class MovimientoCajaFormDialogComponent implements OnInit {
       const up = v.toUpperCase();
       if (up !== v) this.f.concepto.setValue(up, { emitEvent: false });
     });
-    this.f.destinoGasto.valueChanges.subscribe((v) => {
-      if (typeof v !== 'string') return;
-      const up = v.toUpperCase();
-      if (up !== v) this.f.destinoGasto.setValue(up, { emitEvent: false });
+    // Al cambiar INGRESO/EGRESO cambia la lista: el destino que ya no
+    // corresponde se limpia.
+    this.f.tipo.valueChanges.subscribe(() => {
+      const id = this.f.idDestinoGasto.value;
+      if (id != null && !this.destinosGastoFiltrados.some((d) => d.id === id)) {
+        this.f.idDestinoGasto.setValue(null);
+      }
     });
     this.f.beneficiario.valueChanges.subscribe((v) => {
       if (typeof v !== 'string') return;
@@ -155,9 +167,14 @@ export class MovimientoCajaFormDialogComponent implements OnInit {
         limit: 1000,
         activo: true,
       }),
+      // Es opcional: si falla, el formulario igual carga sin destinos.
+      destinosGasto: this.parametricasService
+        .obtenerDestinosGasto()
+        .pipe(catchError(() => of([] as DestinoGasto[]))),
     }).subscribe({
-      next: ({ formasPago, personas }) => {
+      next: ({ formasPago, personas, destinosGasto }) => {
         this.formasPago.set(formasPago.filter((f) => f.activo !== false));
+        this.destinosGasto.set(destinosGasto.filter((d) => d.activo !== false));
         this.personas.set(personas.data ?? []);
         this.cargandoCatalogos.set(false);
         this.precargarSiEdicion();
@@ -181,10 +198,11 @@ export class MovimientoCajaFormDialogComponent implements OnInit {
         tipo: ingreso > 0 ? 'INGRESO' : 'EGRESO',
         monto: ingreso > 0 ? ingreso : Number(m.egreso),
         concepto: m.concepto,
-        destinoGasto:
-          typeof m.destinoGasto === 'string'
-            ? m.destinoGasto
-            : (m.destinoGasto?.nombre ?? ''),
+        idDestinoGasto:
+          m.idDestinoGasto ??
+          (m.destinoGasto && typeof m.destinoGasto === 'object'
+            ? m.destinoGasto.id
+            : null),
         nroComprobante: m.nroComprobante ?? '',
         idFormaPago: m.idFormaPago ?? null,
         beneficiario: m.persona ?? m.entregaFondosA ?? '',
@@ -192,6 +210,15 @@ export class MovimientoCajaFormDialogComponent implements OnInit {
     } else if (this.data.fechaSugerida) {
       this.form.controls.fecha.setValue(this.parseFecha(this.data.fechaSugerida));
     }
+  }
+
+  /** EGRESO pide un destino de egreso; INGRESO, uno de ingreso — mismo
+   *  criterio que recibos y traspasos. Sin tipo elegido se listan todos. */
+  get destinosGastoFiltrados(): DestinoGasto[] {
+    const tipo = this.f.tipo.value;
+    if (!tipo) return this.destinosGasto();
+    const quiero = tipo === 'EGRESO';
+    return this.destinosGasto().filter((d) => d.esEgreso === quiero);
   }
 
   // ---------- Autocomplete beneficiario ----------
@@ -256,8 +283,7 @@ export class MovimientoCajaFormDialogComponent implements OnInit {
 
     const nroComprobante = (v.nroComprobante ?? '').trim();
     if (nroComprobante) request.nroComprobante = nroComprobante;
-    const destinoGasto = (v.destinoGasto ?? '').trim();
-    if (destinoGasto) request.destinoGasto = destinoGasto;
+    if (v.idDestinoGasto != null) request.idDestinoGasto = v.idDestinoGasto;
     if (v.idFormaPago) request.idFormaPago = v.idFormaPago;
 
     const b = v.beneficiario;

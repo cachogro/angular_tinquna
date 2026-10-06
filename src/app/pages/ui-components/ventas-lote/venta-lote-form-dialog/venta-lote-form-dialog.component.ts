@@ -2,7 +2,7 @@
 // Nueva venta: un lote (promedio) entero a un cliente comprador. Nace ABIERTA,
 // sin monto; los anticipos se registran después como recibos de INGRESO.
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import {
   FormControl,
   FormGroup,
@@ -11,7 +11,11 @@ import {
 } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import {
+  MAT_DIALOG_DATA,
+  MatDialogModule,
+  MatDialogRef,
+} from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -21,7 +25,10 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { forkJoin } from 'rxjs';
 import { FechaInputDirective } from 'src/app/shared/directives/fecha-input.directive';
 import { tipoCambioCuatroDecimales } from 'src/app/shared/utils/numero.util';
-import { Cliente } from 'src/app/pages/configurations/parametricas/models/parametricas.models';
+import {
+  Cliente,
+  esClienteExportacion,
+} from 'src/app/pages/configurations/parametricas/models/parametricas.models';
 import { ParametricasService } from 'src/app/pages/configurations/services/parametricas.service';
 import { KardexService } from 'src/app/pages/contabilidad/services/kardex.service';
 import { formatFechaIso } from 'src/app/pages/contabilidad/components/personal-interno.util';
@@ -31,6 +38,10 @@ import {
   MonedaVentaLote,
 } from '../../models/venta-lote.models';
 import { VentaLoteService } from '../../services/venta-lote.service';
+
+export interface VentaLoteFormDialogData {
+  idCliente?: string;
+}
 
 @Component({
   selector: 'app-venta-lote-form-dialog',
@@ -53,6 +64,10 @@ import { VentaLoteService } from '../../services/venta-lote.service';
 })
 export class VentaLoteFormDialogComponent implements OnInit {
   private readonly dialogRef = inject(MatDialogRef<VentaLoteFormDialogComponent>);
+  /** Opcional: cliente fijo cuando se abre desde su cuenta corriente. */
+  private readonly data = inject<VentaLoteFormDialogData | null>(MAT_DIALOG_DATA, {
+    optional: true,
+  });
   private readonly ventaService = inject(VentaLoteService);
   private readonly parametricasService = inject(ParametricasService);
   private readonly kardexService = inject(KardexService);
@@ -63,6 +78,13 @@ export class VentaLoteFormDialogComponent implements OnInit {
   readonly promedios = signal<PromedioMineral[]>([]);
   /** Solo clientes con kardex CLIENTE abierto (ahí van sus anticipos). */
   readonly clientes = signal<Cliente[]>([]);
+  /** Separados para el select por la modalidad de venta del cliente. */
+  readonly clientesInternos = computed(() =>
+    this.clientes().filter((c) => !esClienteExportacion(c)),
+  );
+  readonly clientesExportacion = computed(() =>
+    this.clientes().filter((c) => esClienteExportacion(c)),
+  );
   readonly hoy = new Date();
 
   readonly form = new FormGroup({
@@ -84,6 +106,7 @@ export class VentaLoteFormDialogComponent implements OnInit {
 
   ngOnInit(): void {
     this.f.moneda.valueChanges.subscribe(() => this.sincronizarTipoCambio());
+    this.f.idCliente.valueChanges.subscribe(() => this.sugerirMoneda());
     forkJoin({
       promedios: this.ventaService.promediosDisponibles(),
       clientes: this.parametricasService.getAllClientes(),
@@ -106,6 +129,7 @@ export class VentaLoteFormDialogComponent implements OnInit {
           ),
         );
         this.cargando.set(false);
+        this.fijarClienteInicial();
       },
       error: () => {
         this.cargando.set(false);
@@ -114,6 +138,40 @@ export class VentaLoteFormDialogComponent implements OnInit {
         });
       },
     });
+  }
+
+  /** Abierto desde la cuenta de un cliente: lo deja elegido y fijo. */
+  private fijarClienteInicial(): void {
+    const idCliente = this.data?.idCliente;
+    if (!idCliente) return;
+    const cliente = this.clientes().find((c) => String(c.id) === String(idCliente));
+    if (!cliente) {
+      this.snackBar.open(
+        'El cliente no tiene un kardex abierto: ábrelo antes de venderle un lote.',
+        'Cerrar',
+        { duration: 6000 },
+      );
+      return;
+    }
+    this.f.idCliente.setValue(cliente.id);
+    this.f.idCliente.disable({ emitEvent: false });
+  }
+
+  /** Sugiere la moneda según la modalidad del cliente: exportación en $us,
+   *  comercio interno en Bs. Queda editable. */
+  private sugerirMoneda(): void {
+    const cliente = this.clienteSeleccionado();
+    if (!cliente) return;
+    this.f.moneda.setValue(esClienteExportacion(cliente) ? 'USD' : 'BS');
+  }
+
+  clienteSeleccionado(): Cliente | undefined {
+    return this.clientes().find((c) => c.id === this.f.idCliente.value);
+  }
+
+  get esVentaExportacion(): boolean {
+    const cliente = this.clienteSeleccionado();
+    return !!cliente && esClienteExportacion(cliente);
   }
 
   private sincronizarTipoCambio(): void {

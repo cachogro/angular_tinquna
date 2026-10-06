@@ -38,6 +38,7 @@ import {
 import { ParametricasService } from '../../services/parametricas.service';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { FechaInputDirective } from '../../../../shared/directives/fecha-input.directive';
+import { formatearFechaBolivia } from 'src/app/shared/utils/fecha-bolivia.util';
 
 export interface EscalaPrecioDialogData {
   /** Preselecciona este mineral al abrir. Útil cuando el modal se abre
@@ -581,10 +582,10 @@ export class EscalaPrecioFormDialogComponent implements OnInit {
     return `${fecha}T23:59:59.999-04:00`;
   }
 
+  /** "dd/mm/aaaa" del día en Bolivia: el back manda `timestamptz` en UTC y
+   *  el fin de vigencia (23:59 -04:00) cae al día siguiente en UTC. */
   formatearFecha(fecha: string | null | undefined): string {
-    if (!fecha) return '';
-    const [year, month, day] = fecha.slice(0, 10).split('-');
-    return `${day}/${month}/${year}`;
+    return formatearFechaBolivia(fecha);
   }
 
   private redondear(valor: number): number {

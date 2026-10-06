@@ -14,6 +14,8 @@ import {
   provideRouter,
   withComponentInputBinding,
   withInMemoryScrolling,
+  withPreloading,
+  PreloadAllModules,
 } from '@angular/router';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideClientHydration } from '@angular/platform-browser';
@@ -41,6 +43,10 @@ export const appConfig: ApplicationConfig = {
         anchorScrolling: 'enabled',
       }),
       withComponentInputBinding(),
+      // Tras el primer render descarga en segundo plano el código de todas las
+      // bandejas: la primera visita a cada una ya no espera su chunk. Los
+      // guards de rol se siguen evaluando al navegar.
+      withPreloading(PreloadAllModules),
     ),
     provideHttpClient(
       withInterceptorsFromDi(),

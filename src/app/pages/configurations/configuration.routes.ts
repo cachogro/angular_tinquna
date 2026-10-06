@@ -25,15 +25,15 @@ export const ConfiguracionesRoutes: Routes = [
         // <-- NUEVO: 'users' pasa de ruta simple a grupo con hijos
         path: 'gestion-usuarios',
         canActivate: [roleGuard],
-        data: { roles: [RolCodigo.ADMINISTRADOR, RolCodigo.OPERADOR] },
+        data: { roles: [RolCodigo.ADMINISTRADOR] }, // solo admin (operador no gestiona usuarios)
         children: [
           {
             path: '',
-            component: GestionUsuariosComponent, // listado — admin y operador
+            component: GestionUsuariosComponent,
           },
           {
             path: 'nuevo',
-            component: PanelUserFormComponent, // crear — admin y operador
+            component: PanelUserFormComponent,
           },
           {
             path: 'editar/:id',

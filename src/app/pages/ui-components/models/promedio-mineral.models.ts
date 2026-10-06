@@ -50,6 +50,47 @@ export interface Paginado<T> {
   totalPages: number;
 }
 
+// ==========================================================
+// REPORTE EXCEL DE PROMEDIOS (GET promedio_mineral/reporte/excel)
+// ==========================================================
+
+/** diario = ese día; semanal = su semana de lunes a domingo; mensual = su mes. */
+export type PeriodoReportePromedio = 'diario' | 'semanal' | 'mensual';
+
+/** Estado de venta del lote (ver Ventas de Lote). */
+export type EstadoVentaReportePromedio =
+  | 'todos'
+  | 'sin_vender'
+  | 'vendidos'
+  | 'venta_abierta'
+  | 'liquidados'
+  | 'anulados';
+
+export interface FiltroReportePromedio {
+  /** Por defecto 'diario'. */
+  periodo?: PeriodoReportePromedio;
+  /** 'YYYY-MM-DD'; por defecto hoy. Fecha de referencia del período. */
+  fecha?: string;
+  /** Por defecto 'todos'. */
+  estado?: EstadoVentaReportePromedio;
+  /** Codificación del lote (MC, TM, C, RV...). */
+  idCodificacionLote?: string;
+  /** Lotes con valorizaciones de esa codificación (ICC, AC, BCL...). */
+  idCodificacion?: number;
+}
+
+export const ESTADOS_REPORTE_PROMEDIO: {
+  value: EstadoVentaReportePromedio;
+  label: string;
+}[] = [
+  { value: 'todos', label: 'Todos' },
+  { value: 'sin_vender', label: 'Faltantes por vender' },
+  { value: 'vendidos', label: 'Vendidos' },
+  { value: 'venta_abierta', label: 'Vendidos pendientes de liquidar' },
+  { value: 'liquidados', label: 'Vendidos liquidados' },
+  { value: 'anulados', label: 'Anulados' },
+];
+
 /** Fila de `GET /promedio_mineral/codificaciones_lote`. */
 export interface CodificacionLote {
   id: string;
@@ -115,7 +156,8 @@ export interface PromedioDetalle {
         nombres: string;
         apellidoPaterno: string;
         apellidoMaterno?: string | null;
-      };
+      } | null;
+      nombresApellidos?: string | null;
       codificacion?: { codigo: string };
     };
   };

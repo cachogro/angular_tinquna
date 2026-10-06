@@ -21,7 +21,13 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog/confirm-dialog.component';
 
 import { ParametricaDialogShellComponent } from '../shared/parametrica-dialog-shell.component';
-import { DestinoGasto } from '../models/parametricas.models';
+import {
+  CATEGORIAS_DESTINO_GASTO,
+  CategoriaDestinoGasto,
+  CategoriaDestinoGastoOpcion,
+  DestinoGasto,
+  nombreCategoriaDestinoGasto,
+} from '../models/parametricas.models';
 import { ParametricasService } from '../../services/parametricas.service';
 
 /** Mayúsculas, letras (con acentos/ñ), números y los caracteres
@@ -57,7 +63,7 @@ export class DestinoGastoFormDialogComponent implements OnInit {
   private readonly dialog = inject(MatDialog);
 
   guardando = false;
-  columnas = ['id', 'nombre', 'tipo', 'estado', 'acciones'];
+  columnas = ['id', 'nombre', 'tipo', 'categoria', 'estado', 'acciones'];
 
   destinoEditando: DestinoGasto | null = null;
 
@@ -75,10 +81,38 @@ export class DestinoGastoFormDialogComponent implements OnInit {
       ],
     ],
     esEgreso: [true, Validators.required],
+    // Cómo cuenta en la ganancia estimada del dashboard.
+    categoria: ['GASTO_OPERATIVO' as CategoriaDestinoGasto, Validators.required],
   });
+
+  /** Categorías que aplican al tipo elegido (egreso o ingreso). */
+  get categoriasDisponibles(): CategoriaDestinoGastoOpcion[] {
+    const esEgreso = this.form.get('esEgreso')?.value !== false;
+    return CATEGORIAS_DESTINO_GASTO.filter((c) =>
+      esEgreso ? c.paraEgreso : c.paraIngreso,
+    );
+  }
+
+  get efectoCategoria(): string {
+    const categoria = this.form.get('categoria')?.value;
+    return CATEGORIAS_DESTINO_GASTO.find((c) => c.valor === categoria)?.efecto ?? '';
+  }
+
+  nombreCategoria(categoria: string): string {
+    return nombreCategoriaDestinoGasto(categoria);
+  }
 
   ngOnInit(): void {
     this.parametricasService.cargarDestinosGastoAdmin();
+
+    // Al cambiar entre egreso e ingreso, si la categoría elegida ya no
+    // aplica se pasa a la habitual de ese tipo.
+    this.form.get('esEgreso')?.valueChanges.subscribe((esEgreso: boolean) => {
+      const categoria = this.form.get('categoria');
+      if (!this.categoriasDisponibles.some((c) => c.valor === categoria?.value)) {
+        categoria?.setValue(esEgreso ? 'GASTO_OPERATIVO' : 'OTRO_INGRESO');
+      }
+    });
 
     // Mayúsculas + solo caracteres permitidos, en vivo.
     this.form.get('nombre')?.valueChanges.subscribe((valor: string) => {
@@ -121,7 +155,7 @@ export class DestinoGastoFormDialogComponent implements OnInit {
 
   private persistir(nombre: string): void {
     this.guardando = true;
-    const { esEgreso } = this.form.getRawValue();
+    const { esEgreso, categoria } = this.form.getRawValue();
 
     // Un solo POST: con id actualiza (se envían todos los campos), sin id crea.
     this.parametricasService
@@ -129,6 +163,7 @@ export class DestinoGastoFormDialogComponent implements OnInit {
         id: this.destinoEditando?.id,
         nombre,
         esEgreso,
+        categoria,
       })
       .subscribe({
         next: () => {
@@ -158,11 +193,13 @@ export class DestinoGastoFormDialogComponent implements OnInit {
     this.form.patchValue({
       nombre: destino.nombre,
       esEgreso: destino.esEgreso,
+      categoria:
+        destino.categoria ?? (destino.esEgreso ? 'GASTO_OPERATIVO' : 'OTRO_INGRESO'),
     });
   }
 
   limpiar(): void {
-    this.form.reset({ nombre: '', esEgreso: true });
+    this.form.reset({ nombre: '', esEgreso: true, categoria: 'GASTO_OPERATIVO' });
     this.destinoEditando = null;
   }
 

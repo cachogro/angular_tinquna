@@ -3,7 +3,9 @@
 <mat-dialog-content>
   <p class="vl-intro">
     Monto <strong>neto</strong> de la liquidación de {{ venta.cliente?.nombre ?? 'el cliente' }}. Se carga en su kardex y
-    los anticipos ya cobrados se descuentan de ahí.
+    {{ cuentaCorriente
+    ? 'el lote se paga con los anticipos que el cliente tenga disponibles.'
+    : 'los anticipos ya cobrados se descuentan de ahí.' }}
   </p>
 
   <form [formGroup]="form" class="vl-form">
@@ -59,13 +61,41 @@
       <span>Bs {{ utilidad() | number:'1.2-2' }}</span>
     </div>
     }
+    @if (venta.montoEstimado != null) {
     <div class="vl-linea">
-      <span>Ya cobrado (anticipos)</span>
+      <span>Estimado propio (valorización)</span>
+      <span>{{ simbolo }} {{ venta.montoEstimado | number:'1.2-2' }}</span>
+    </div>
+    @if (diferenciaEstimado() !== null) {
+    <div class="vl-linea vl-linea--fuerte" [class.vl-negativo]="diferenciaEstimado()! < 0">
+      <span>{{ diferenciaEstimado()! < 0 ? 'Liquidan menos de lo estimado' : 'Liquidan más de lo estimado' }}</span>
+      <span>{{ simbolo }} {{ (diferenciaEstimado()! < 0 ? -diferenciaEstimado()! : diferenciaEstimado()) | number:'1.2-2' }}</span>
+    </div>
+    }
+    }
+    @if (!cuentaCorriente) {
+    <div class="vl-linea">
+      <span>Ya cobrado (anticipos del lote)</span>
       <span>Bs {{ venta.cobradoBolivianos | number:'1.2-2' }}</span>
     </div>
+    }
+    @if (cuentaCorriente || venta.anticipoDisponibleClienteBolivianos > 0) {
+    <div class="vl-linea">
+      <span>Anticipos disponibles del cliente</span>
+      <span>Bs {{ venta.anticipoDisponibleClienteBolivianos | number:'1.2-2' }}</span>
+    </div>
+    }
     @if (porCobrar() !== null) {
+    @if (anticiposAplicables() > 0) {
+    <div class="vl-linea">
+      <span>Se paga con esos anticipos</span>
+      <span>Bs {{ anticiposAplicables() | number:'1.2-2' }}</span>
+    </div>
+    }
     <div class="vl-linea vl-linea--fuerte" [class.vl-negativo]="porCobrar()! < 0">
-      <span>{{ porCobrar()! < 0 ? 'Saldo a favor del cliente' : 'Por cobrar' }}</span>
+      <span>
+        {{ porCobrar()! < 0 ? 'Saldo a favor del cliente' : (porCobrar() === 0 ? 'Queda pagado' : 'Queda por cobrar') }}
+      </span>
       <span>Bs {{ (porCobrar()! < 0 ? -porCobrar()! : porCobrar()) | number:'1.2-2' }}</span>
     </div>
     }

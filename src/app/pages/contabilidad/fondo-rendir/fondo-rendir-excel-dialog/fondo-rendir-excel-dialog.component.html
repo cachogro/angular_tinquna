@@ -89,4 +89,8 @@
     <span>Descargar Excel</span>
     }
   </button>
+  <button mat-flat-button color="primary" (click)="descargarExcel('PDF')"
+    [disabled]="descargandoExcel() || cargandoCatalogos()">
+    <span>Descargar PDF</span>
+  </button>
 </mat-dialog-actions>

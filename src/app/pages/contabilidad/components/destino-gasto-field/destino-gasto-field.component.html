@@ -1,0 +1,21 @@
+<mat-form-field appearance="outline" class="dg-field">
+  <mat-label>{{ label }}</mat-label>
+  <input matInput [formControl]="texto" [matAutocomplete]="autoDg" [errorStateMatcher]="errores"
+    #dgTrigger="matAutocompleteTrigger" (focus)="dgTrigger.openPanel()" (blur)="marcarTocado()"
+    autocomplete="off" placeholder="Escribe para buscar" />
+  <mat-autocomplete #autoDg="matAutocomplete" [displayWith]="display">
+    @for (d of filtradas(); track d.id) {
+    <mat-option [value]="d">{{ d.nombre }}</mat-option>
+    } @empty {
+    <mat-option disabled>Sin coincidencias</mat-option>
+    }
+  </mat-autocomplete>
+  @if (control.hasError('noSeleccionado')) {
+  <mat-error>Elige una opción de la lista (o déjalo vacío)</mat-error>
+  } @else if (control.hasError('required')) {
+  <mat-error>Obligatorio</mat-error>
+  }
+  @if (hint) {
+  <mat-hint>{{ hint }}</mat-hint>
+  }
+</mat-form-field>

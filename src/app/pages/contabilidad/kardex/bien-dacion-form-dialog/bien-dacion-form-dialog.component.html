@@ -11,10 +11,30 @@
       <strong>{{ b.descripcion }}</strong>
       <small>
         Recibido el {{ fechaFmt(b.fechaRecepcion) }}
-        @if (num(b.valorReferencial)) {
-        · Valor referencial Bs {{ num(b.valorReferencial) | number:'1.2-2' }}
+        @if (valorAcordado) {
+        · Valor acordado Bs {{ valorAcordado | number:'1.2-2' }}
+        }
+        @if (b.estado === 'TOMADO_EN_PAGO') {
+        · Tomado en pago el {{ fechaFmt(b.fechaTomaPago) }}
         }
       </small>
+    </div>
+  </div>
+  }
+
+  @if (data.modo === 'VENDER' && gastos > 0) {
+  <div class="bd-costo">
+    <div class="bd-costo__item">
+      <small>Amortizado a su kardex</small>
+      <strong>Bs {{ amortizado | number:'1.2-2' }}</strong>
+    </div>
+    <div class="bd-costo__item">
+      <small>Gastos invertidos</small>
+      <strong>Bs {{ gastos | number:'1.2-2' }}</strong>
+    </div>
+    <div class="bd-costo__item bd-costo__item--total">
+      <small>Costo total invertido</small>
+      <strong>Bs {{ costoTotal | number:'1.2-2' }}</strong>
     </div>
   </div>
   }
@@ -23,7 +43,12 @@
     <div class="bd-form__row2">
       <mat-form-field appearance="outline">
         <mat-label>
-          {{ data.modo === 'REGISTRAR' ? 'Fecha de recepción' : (data.modo === 'VENDER' ? 'Fecha de venta' : 'Fecha de devolución') }}
+          @switch (data.modo) {
+          @case ('REGISTRAR') { Fecha de recepción }
+          @case ('TOMAR_EN_PAGO') { Fecha en que se toma en pago }
+          @case ('VENDER') { Fecha de venta }
+          @default { Fecha de devolución }
+          }
         </mat-label>
         <input matInput class="input-fecha" [matDatepicker]="picker" [min]="minFecha" [max]="hoy" formControlName="fecha" />
         <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
@@ -33,10 +58,10 @@
         }
       </mat-form-field>
 
-      @if (data.modo !== 'DEVOLVER') {
+      @if (data.modo === 'REGISTRAR' || data.modo === 'VENDER') {
       <mat-form-field appearance="outline">
-        <mat-label>{{ data.modo === 'REGISTRAR' ? 'Valor referencial (Bs, opcional)' : 'Monto de venta (Bs)' }}</mat-label>
-        <input matInput type="number" step="0.01" min="0.01" class="bd-num" formControlName="monto" />
+        <mat-label>{{ data.modo === 'REGISTRAR' ? 'Valor acordado (Bs)' : 'Precio de venta (Bs)' }}</mat-label>
+        <input matInput appMonto formControlName="monto" />
         @if (f.monto.hasError('required') && f.monto.touched) {
         <mat-error>Obligatorio</mat-error>
         }
@@ -47,17 +72,49 @@
         <mat-error>Debe ser mayor a 0</mat-error>
         }
         @if (data.modo === 'REGISTRAR') {
-        <mat-hint>Avalúo aproximado</mat-hint>
+        <mat-hint>Lo que se le reconoce por el bien</mat-hint>
+        } @else if (gastos > 0) {
+        <mat-hint>Costo total invertido: Bs {{ costoTotal | number:'1.2-2' }}</mat-hint>
         }
       </mat-form-field>
       }
+
+      @if (data.modo === 'TOMAR_EN_PAGO') {
+      <ng-container *ngTemplateOutlet="campoAmortizar"></ng-container>
+      }
     </div>
+
+    @if (ventaDirecta) {
+    <div class="bd-form__row2">
+      <ng-container *ngTemplateOutlet="campoAmortizar"></ng-container>
+      <div class="bd-form__nota">
+        Lo que sobre del precio es ganancia de la empresa y no va a su kardex.
+      </div>
+    </div>
+    }
+
+    <ng-template #campoAmortizar>
+      <mat-form-field appearance="outline">
+        <mat-label>Amortiza su deuda (Bs)</mat-label>
+        <input matInput appMonto formControlName="montoAmortizar" />
+        @if (f.montoAmortizar.hasError('required') && f.montoAmortizar.touched) {
+        <mat-error>Obligatorio</mat-error>
+        }
+        @if (f.montoAmortizar.hasError('pattern') && f.montoAmortizar.touched) {
+        <mat-error>Máximo 2 decimales</mat-error>
+        }
+        @if (f.montoAmortizar.hasError('min') && f.montoAmortizar.touched) {
+        <mat-error>Debe ser mayor a 0</mat-error>
+        }
+        <mat-hint>Se abona al kardex de {{ data.nombreDestinatario }}</mat-hint>
+      </mat-form-field>
+    </ng-template>
 
     @if (data.modo === 'REGISTRAR') {
     <mat-form-field appearance="outline" class="bd-form__full">
       <mat-label>Descripción del bien</mat-label>
-      <input matInput formControlName="descripcion" maxlength="255"
-        placeholder="Ej: AUTO TOYOTA HILUX, PLACA 1234-ABC, AÑO 2015" />
+      <input matInput appMayusculas formControlName="descripcion" maxlength="255"
+        placeholder="Ej: MOTO HONDA XR 150, PLACA 1234-ABC, AÑO 2019" />
       @if (f.descripcion.hasError('required') && f.descripcion.touched) {
       <mat-error>Obligatorio</mat-error>
       }
@@ -68,28 +125,68 @@
       <mat-label>
         {{ data.modo === 'DEVOLVER' ? 'Motivo de la devolución' : 'Observaciones (opcional)' }}
       </mat-label>
-      <textarea matInput rows="3" formControlName="observaciones" maxlength="500"
+      <textarea matInput appMayusculas rows="2" formControlName="observaciones" maxlength="500"
         [placeholder]="data.modo === 'DEVOLVER' ? 'Ej: EL ACTOR SALDÓ LA DEUDA EN EFECTIVO Y RECUPERÓ EL VEHÍCULO' : ''"></textarea>
       @if (f.observaciones.hasError('required') && f.observaciones.touched) {
       <mat-error>Obligatorio: indica el motivo</mat-error>
       }
-      @if (data.modo === 'VENDER') {
+      @if (data.modo === 'VENDER' || data.modo === 'TOMAR_EN_PAGO') {
       <mat-hint>Si la dejas vacía se conserva la observación anterior</mat-hint>
       }
     </mat-form-field>
   </form>
 
-  @if (data.modo === 'VENDER') {
+  @if (data.modo === 'TOMAR_EN_PAGO') {
   <div class="bd-aviso">
     <mat-icon>info</mat-icon>
     <span>
-      El monto de la venta <strong>amortiza la deuda de {{ data.nombreDestinatario }}</strong> en su kardex y entra
-      como <strong>ingreso a la caja de flujo</strong> (o a la libreta bancaria si se cobró por QR, transferencia,
-      cheque o depósito). Se genera el recibo de ingreso correspondiente.
+      La empresa se queda con el bien: el monto se <strong>abona al kardex de {{ data.nombreDestinatario }}</strong>
+      y amortiza su deuda, <strong>sin mover caja</strong>. Desde aquí el bien ya no se puede devolver; podrás
+      cargarle gastos (arreglos, trámites) y venderlo.
     </span>
   </div>
+  }
+
+  @if (data.modo === 'DEVOLVER') {
+  <div class="bd-aviso bd-aviso--neutro">
+    <mat-icon>info</mat-icon>
+    <span>Devolver el bien no genera ningún movimiento en el kardex ni en caja.</span>
+  </div>
+  }
+
+  @if (data.modo === 'VENDER' && precioVenta > 0) {
+  <div class="bd-resumen">
+    <div class="bd-resumen__linea">
+      <span>Precio de venta (entra a caja o libreta)</span>
+      <strong>Bs {{ precioVenta | number:'1.2-2' }}</strong>
+    </div>
+    <div class="bd-resumen__linea">
+      <span>{{ ventaDirecta ? 'Amortiza la deuda en su kardex' : 'Ya amortizado en su kardex al tomarlo en pago' }}</span>
+      <span>− Bs {{ amortizado | number:'1.2-2' }}</span>
+    </div>
+    @if (gastos > 0) {
+    <div class="bd-resumen__linea">
+      <span>Gastos invertidos en el bien</span>
+      <span>− Bs {{ gastos | number:'1.2-2' }}</span>
+    </div>
+    <div class="bd-resumen__linea bd-resumen__linea--subtotal">
+      <span>Costo total invertido</span>
+      <span>Bs {{ costoTotal | number:'1.2-2' }}</span>
+    </div>
+    }
+    <div class="bd-resumen__linea bd-resumen__linea--total" [class.bd-resumen--ganancia]="resultado > 0"
+      [class.bd-resumen--perdida]="resultado < 0">
+      <span>{{ resultado > 0 ? 'Ganancia de la empresa' : (resultado < 0 ? 'Pérdida de la empresa' : 'Sin ganancia ni pérdida') }}</span>
+      <strong>Bs {{ (resultado < 0 ? -resultado : resultado) | number:'1.2-2' }}</strong>
+    </div>
+  </div>
+  }
+
+  @if (data.modo === 'VENDER') {
   <h3 class="bd-sub">Datos del cobro</h3>
   <app-datos-pago-fields [form]="pago" [esEgreso]="false" />
+  <p class="bd-nota">No se genera recibo: el ingreso se registra directamente en la caja de flujo o en la libreta
+    bancaria, según la forma de pago.</p>
   }
 </mat-dialog-content>
 
@@ -101,7 +198,14 @@
     <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
     <span>Guardando...</span>
     } @else {
-    <span>{{ data.modo === 'REGISTRAR' ? 'Registrar' : (data.modo === 'VENDER' ? 'Vender y registrar ingreso' : 'Marcar devuelto') }}</span>
+    <span>
+      @switch (data.modo) {
+      @case ('REGISTRAR') { Registrar }
+      @case ('TOMAR_EN_PAGO') { Tomar en pago }
+      @case ('VENDER') { Vender y registrar ingreso }
+      @default { Marcar devuelto }
+      }
+    </span>
     }
   </button>
 </mat-dialog-actions>

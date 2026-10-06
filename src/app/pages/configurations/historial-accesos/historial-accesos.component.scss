@@ -17,7 +17,7 @@
 }
 
 .bitacora-toolbar__clear {
-  color: rgba(0, 0, 0, 0.5);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.5);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -35,7 +35,7 @@
   justify-content: center;
   gap: 12px;
   padding: 56px 24px;
-  color: rgba(0, 0, 0, 0.45);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.45);
 }
 
 .bitacora-table {
@@ -70,22 +70,22 @@
 
 .evento-badge--exito {
   background: rgba(40, 199, 111, 0.15);
-  color: #1e874b;
+  color: var(--tk-verde, #1e874b);
 }
 
 .evento-badge--advertencia {
   background: rgba(255, 159, 67, 0.18);
-  color: #b8621b;
+  color: var(--tk-naranja, #b8621b);
 }
 
 .evento-badge--peligro {
   background: rgba(234, 84, 85, 0.15);
-  color: #c53030;
+  color: var(--tk-rojo, #c53030);
 }
 
 .evento-badge--neutro {
-  background: rgba(0, 0, 0, 0.08);
-  color: rgba(0, 0, 0, 0.6);
+  background: rgb(var(--tk-ink, 0 0 0) / 0.08);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.6);
 }
 
 .icono-exito {
@@ -104,7 +104,7 @@
   white-space: nowrap;
   vertical-align: bottom;
   font-size: 12px;
-  color: rgba(0, 0, 0, 0.55);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.55);
 }
 
 .row-fallido {
@@ -112,8 +112,8 @@
 }
 
 .mat-mdc-header-row {
-  background: #0d6efd !important;
-  color: #ffffff !important;
+  background: var(--mat-sys-primary) !important;
+  color: var(--mat-sys-on-primary) !important;
   font-weight: 600;
   letter-spacing: 0.3px;
   position: sticky;

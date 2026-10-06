@@ -28,7 +28,7 @@
 .vf-resumen small {
   display: block;
   font-size: 11px;
-  color: rgba(0, 0, 0, 0.55);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.55);
 }
 .vf-resumen strong {
   font-size: 13px;

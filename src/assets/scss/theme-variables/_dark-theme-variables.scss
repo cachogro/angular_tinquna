@@ -1,26 +1,80 @@
+// Modo oscuro — paleta "slate" (azul pizarra) con capas de profundidad:
+// fondo de página < tarjetas/tablas/diálogos < contenedores internos.
 .dark-theme {
   color-scheme: dark;
-  --mat-sys-background: #141a21;
-  --mat-sys-surface-bright: #1e1e1e;
-  --mat-sys-surface: #1e293b;
-  --mat-sys-surface-container: #2d2d2d;
-  --mat-sys-surface-container-low: #242424;
-  --mat-sys-surface-container-lowest: #1a1a1a;
-  --mat-sys-on-background: #ffffff;
-  --mat-sys-outline: #444444;
-  --mat-sys-outline-variant: #555555;
-  --mat-form-field-outlined-hover-outline-color: #27F5B0;
-  --mat-checkbox-unselected-hover-state-layer-color: #46f2b9;
-  --mat-menu-item-hover-state-layer-color: #333333;
-  --mat-button-toggle-state-layer-color: #333333;
-  --mat-option-focus-state-layer-color: #333333;
-  --mat-option-hover-state-layer-color: #333333;
-  --mat-slide-toggle-unselected-track-color: #555555;
-  --mat-stepper-header-focus-state-layer-color: #333333;
-  --mat-stepper-header-hover-state-layer-color: #333333;
-  --mat-dialog-supporting-text-color: var(--mat-sys-on-background);
-  --mat-expansion-header-hover-state-layer-color: #333333;
-  --mat-sys-on-surface: #ffffff;
-  --mat-sys-surface: #1e293b; 
-  
+
+  // ---- Superficies ----
+  --mat-sys-background: #0b1120;
+  --mat-sys-surface: #151e2e;
+  --mat-sys-surface-bright: #243047;
+  --mat-sys-surface-dim: #0f1726;
+  --mat-sys-surface-container-lowest: #0f1726;
+  --mat-sys-surface-container-low: #1a2436;
+  --mat-sys-surface-container: #1c2638;
+  --mat-sys-surface-container-high: #243047;
+  --mat-sys-surface-container-highest: #2b3850;
+  --mat-sys-surface-variant: #243047;
+  --mat-sys-inverse-surface: #e2e8f0;
+  --mat-sys-inverse-on-surface: #151e2e;
+
+  // ---- Texto ----
+  --mat-sys-on-background: #e2e8f0;
+  --mat-sys-on-surface: #e2e8f0;
+  --mat-sys-on-surface-variant: #94a3b8;
+
+  // ---- Bordes ----
+  --mat-sys-outline: #3b4a63;
+  --mat-sys-outline-variant: #2a3649;
+
+  // ---- Estados (hover/focus) ----
+  --mat-form-field-outlined-hover-outline-color: var(--mat-sys-primary);
+  --mat-checkbox-unselected-hover-state-layer-color: #94a3b8;
+  --mat-menu-item-hover-state-layer-color: #243047;
+  --mat-button-toggle-state-layer-color: #243047;
+  --mat-option-focus-state-layer-color: #243047;
+  --mat-option-hover-state-layer-color: #243047;
+  --mat-slide-toggle-unselected-track-color: #3b4a63;
+  --mat-stepper-header-focus-state-layer-color: #243047;
+  --mat-stepper-header-hover-state-layer-color: #243047;
+  --mat-expansion-header-hover-state-layer-color: #243047;
+  --mat-dialog-supporting-text-color: var(--mat-sys-on-surface);
+
+  // ---- Componentes ----
+  // (la plantilla los resuelve en <html>; se redefinen aquí para que tomen la paleta)
+  --mat-sidenav-content-background-color: #0b1120;
+  --mat-sidenav-container-background-color: #0f1726;
+  --mat-sidenav-container-text-color: #e2e8f0;
+  --mat-toolbar-container-background-color: #0f1726;
+  --mat-toolbar-container-text-color: #e2e8f0;
+  --mat-card-elevated-container-color: #151e2e;
+  --mat-card-outlined-container-color: #151e2e;
+  --mat-table-background-color: #151e2e;
+  --mat-paginator-container-background-color: #151e2e;
+  --mat-expansion-container-background-color: #151e2e;
+  --mat-card-subtitle-text-color: #94a3b8;
+  --mat-dialog-container-color: #151e2e;
+  --mat-select-panel-background-color: #1c2638;
+  --mat-autocomplete-background-color: #1c2638;
+  --mat-menu-container-color: #1c2638;
+  --mat-datepicker-calendar-container-background-color: #1c2638;
+  --mat-table-row-item-outline-color: #2a3649;
+  --mat-divider-color: #2a3649;
+  --mat-sys-level1: 0 1px 2px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.35);
+  --mat-sys-level2: 0 12px 32px rgba(0, 0, 0, 0.55);
+
+  // ---- Tokens de los componentes (--tk-*) ----
+  // Solo existen en oscuro; en claro cada uso cae a su color original.
+  --tk-ink: 226 232 240; // base de textos/fondos que eran rgba(0,0,0,x)
+  --tk-verde: #4ade80;
+  --tk-rojo: #f87171;
+  --tk-naranja: #fb923c;
+  --tk-azul: #60a5fa;
+  --tk-ambar: #fbbf24;
+  --tk-teal: #22d3ee;
+  --tk-violeta: #a78bfa;
+  --tk-texto-fuerte: #cbd5e1;
+  --tk-texto-tenue: #94a3b8;
+  --tk-borde: #2a3649;
+  --tk-fondo-suave: #1c2638;
+  --tk-superficie: #151e2e;
 }

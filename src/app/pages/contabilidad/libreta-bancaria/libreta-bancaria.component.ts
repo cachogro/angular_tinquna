@@ -26,6 +26,8 @@ import {
 import { LibretaBancoService } from '../services/libreta-banco.service';
 import {
   descargarBlob,
+  extensionReporte,
+  FormatoReporte,
   mensajeErrorBlob,
 } from '../../../shared/utils/descarga-archivo.util';
 import {
@@ -368,6 +370,7 @@ export class LibretaBancariaComponent implements OnInit {
     if (id == null) return;
     const data: MovimientoFormDialogData = {
       idCuentaBancaria: id,
+      moneda: this.cuentaSel()?.moneda,
       fechaSugerida: this.fechaSugerida,
     };
     this.dialog
@@ -389,14 +392,14 @@ export class LibretaBancariaComponent implements OnInit {
 
   /** Excel de la libreta con el filtro actual: el mes elegido (o la gestión,
    *  o toda la historia de la cuenta si no hay filtro). */
-  descargarExcel(): void {
+  descargarExcel(formato: FormatoReporte = 'EXCEL'): void {
     const id = this.cuentaSelId();
     if (id == null || this.descargandoExcel()) return;
     const gestion = this.gestionSel();
     const mes = gestion != null ? this.mesSel() : null;
 
     this.descargandoExcel.set(true);
-    this.libretaService.descargarExcel(id, gestion, mes).subscribe({
+    this.libretaService.descargarExcel(id, gestion, mes, formato).subscribe({
       next: (blob) => {
         this.descargandoExcel.set(false);
         const sufijo = [
@@ -407,14 +410,14 @@ export class LibretaBancariaComponent implements OnInit {
           .join('-');
         descargarBlob(
           blob,
-          `libreta-banco-${id}${sufijo ? `-${sufijo}` : ''}.xlsx`,
+          `libreta-banco-${id}${sufijo ? `-${sufijo}` : ''}.${extensionReporte(formato)}`,
         );
       },
       error: async (err) => {
         this.descargandoExcel.set(false);
         this.snackBar.open(
           (await mensajeErrorBlob(err)) ??
-            'No se pudo generar el Excel de la libreta bancaria',
+            'No se pudo generar el reporte de la libreta bancaria',
           'Cerrar',
           { duration: 5000 },
         );
@@ -439,6 +442,7 @@ export class LibretaBancariaComponent implements OnInit {
     if (id == null) return;
     const data: MovimientoFormDialogData = {
       idCuentaBancaria: id,
+      moneda: this.cuentaSel()?.moneda,
       movimiento: m,
     };
     this.dialog

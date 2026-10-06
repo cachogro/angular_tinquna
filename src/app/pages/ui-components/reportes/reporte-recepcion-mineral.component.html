@@ -185,7 +185,7 @@
             <th mat-header-cell *matHeaderCellDef>Proveedor</th>
             <td mat-cell *matCellDef="let r">
               <div>{{ nombreProveedor(r) }}</div>
-              <div class="proveedor-doc">{{ r.persona?.numeroDocumento ?? '—' }}</div>
+              <div class="proveedor-doc">{{ detalleProveedor(r) }}</div>
             </td>
           </ng-container>
 

@@ -1,5 +1,5 @@
 .bd-content {
-  min-width: 860px;
+  min-width: 980px;
 }
 
 .bd-head {
@@ -26,7 +26,7 @@
 }
 
 .bd-aviso mat-icon {
-  color: #e65100;
+  color: var(--tk-naranja, #e65100);
   flex-shrink: 0;
 }
 
@@ -36,11 +36,11 @@
   gap: 12px;
   padding: 32px;
   justify-content: center;
-  color: rgba(0, 0, 0, 0.5);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.5);
 }
 
 .bd-empty {
-  color: rgba(0, 0, 0, 0.6);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.6);
   font-size: 13px;
   margin: 8px 0 12px;
 }
@@ -52,7 +52,7 @@
 
 .bd-tabla {
   width: 100%;
-  min-width: 720px;
+  min-width: 900px;
 }
 
 .bd-tabla .mat-mdc-header-cell {
@@ -106,18 +106,32 @@
   font-weight: 700;
   letter-spacing: .3px;
   white-space: nowrap;
-  background: color-mix(in srgb, #ef6c00 16%, transparent);
-  color: #e65100;
+  background: color-mix(in srgb, var(--tk-naranja, #ef6c00) 16%, transparent);
+  color: var(--tk-naranja, #e65100);
 }
 
 .bd-badge--vendido {
-  background: color-mix(in srgb, #2e7d32 15%, transparent);
-  color: #2e7d32;
+  background: color-mix(in srgb, var(--tk-verde, #2e7d32) 15%, transparent);
+  color: var(--tk-verde, #2e7d32);
+}
+
+.bd-badge--tomado {
+  background: color-mix(in srgb, var(--tk-azul, #1565c0) 15%, transparent);
+  color: var(--tk-azul, #1565c0);
+}
+
+.bd-resultado {
+  color: var(--tk-verde, #2e7d32);
+  font-weight: 600;
+}
+
+.bd-resultado--perdida {
+  color: var(--tk-rojo, #c62828);
 }
 
 .bd-badge--devuelto {
-  background: color-mix(in srgb, #9e9e9e 22%, transparent);
-  color: #616161;
+  background: color-mix(in srgb, var(--tk-texto-tenue, #9e9e9e) 22%, transparent);
+  color: var(--tk-texto-fuerte, #616161);
 }
 
 @media (max-width: 900px) {

@@ -12,6 +12,7 @@ import {
   PeriodoCaja,
   PeriodoCajaAccionRequest,
 } from '../models/movimiento-caja.models';
+import { FormatoReporte } from '../../../shared/utils/descarga-archivo.util';
 
 @Injectable({ providedIn: 'root' })
 export class MovimientoCajaService {
@@ -55,62 +56,72 @@ export class MovimientoCajaService {
   }
 
   cerrarPeriodo(body: PeriodoCajaAccionRequest): Observable<PeriodoCaja> {
-    return this.http.post<PeriodoCaja>(`${this.baseUrl}/periodo/cerrar`, body);
+    return this.accionPeriodo('cerrar', 'MES', body);
   }
 
   reabrirPeriodo(body: PeriodoCajaAccionRequest): Observable<PeriodoCaja> {
-    return this.http.post<PeriodoCaja>(`${this.baseUrl}/periodo/reabrir`, body);
+    return this.accionPeriodo('reabrir', 'MES', body);
   }
 
   cerrarGestion(
     body: Omit<PeriodoCajaAccionRequest, 'mes'>,
   ): Observable<PeriodoCaja> {
-    return this.http.post<PeriodoCaja>(
-      `${this.baseUrl}/periodo/cerrar-gestion`,
-      body,
-    );
+    return this.accionPeriodo('cerrar', 'GESTION', body);
   }
 
   reabrirGestion(
     body: Omit<PeriodoCajaAccionRequest, 'mes'>,
   ): Observable<PeriodoCaja> {
-    return this.http.post<PeriodoCaja>(
-      `${this.baseUrl}/periodo/reabrir-gestion`,
-      body,
-    );
+    return this.accionPeriodo('reabrir', 'GESTION', body);
   }
 
-  /** Excel de la caja de flujo de un mes puntual. `gestion` y `mes` son
-   *  obligatorios para este endpoint. */
+  /** Una sola ruta para los cuatro cierres: la acción va en la URL y el
+   *  alcance (mes o gestión) en el cuerpo. */
+  private accionPeriodo(
+    accion: 'cerrar' | 'reabrir',
+    alcance: 'MES' | 'GESTION',
+    body: PeriodoCajaAccionRequest,
+  ): Observable<PeriodoCaja> {
+    return this.http.post<PeriodoCaja>(`${this.baseUrl}/periodo/${accion}`, {
+      ...body,
+      alcance,
+    });
+  }
+
+  /** Excel (o PDF) de la caja de flujo de un mes puntual. `gestion` y `mes`
+   *  son obligatorios para este endpoint. */
   descargarExcel(filtro: {
     idCaja: number;
     moneda: MonedaCuenta;
     gestion: number;
     mes: number;
-  }): Observable<Blob> {
+  }, formato: FormatoReporte = 'EXCEL'): Observable<Blob> {
     const params = new HttpParams()
       .set('idCaja', filtro.idCaja)
       .set('moneda', filtro.moneda)
       .set('gestion', filtro.gestion)
-      .set('mes', filtro.mes);
+      .set('mes', filtro.mes)
+      .set('formato', formato);
     return this.http.get(`${this.baseUrl}/excel`, {
       params,
       responseType: 'blob',
     });
   }
 
-  /** Excel de la caja de flujo completa del mes: caja en Bs, caja en $us y
-   *  todas las cuentas bancarias en una sola hoja. */
+  /** Excel (o PDF) de la caja de flujo completa del mes: caja en Bs, caja en
+   *  $us y todas las cuentas bancarias en una sola hoja. */
   descargarExcelCompleto(filtro: {
     idCaja: number;
     gestion: number;
     mes: number;
-  }): Observable<Blob> {
+  }, formato: FormatoReporte = 'EXCEL'): Observable<Blob> {
     const params = new HttpParams()
+      .set('completo', true)
       .set('idCaja', filtro.idCaja)
       .set('gestion', filtro.gestion)
-      .set('mes', filtro.mes);
-    return this.http.get(`${this.baseUrl}/excel-completo`, {
+      .set('mes', filtro.mes)
+      .set('formato', formato);
+    return this.http.get(`${this.baseUrl}/excel`, {
       params,
       responseType: 'blob',
     });

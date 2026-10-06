@@ -26,6 +26,8 @@ import {
 import { KardexService } from '../services/kardex.service';
 import {
   descargarBlob,
+  extensionReporte,
+  FormatoReporte,
   mensajeErrorBlob,
 } from '../../../shared/utils/descarga-archivo.util';
 import {
@@ -66,6 +68,7 @@ export class KardexListComponent implements OnInit {
   private readonly authService = inject(AuthService);
 
   readonly columnas = [
+    'codigo',
     'destinatario',
     'numero',
     'tipo',
@@ -106,9 +109,16 @@ export class KardexListComponent implements OnInit {
     new Date().getFullYear(),
   );
   readonly searchControl = new FormControl('');
-  // Por id, el más nuevo (id más alto) primero.
+  // Por defecto por id, el más nuevo (id más alto) primero.
   readonly orderDirectionControl = new FormControl<'ASC' | 'DESC'>('DESC');
-  readonly orderBy: OrdenKardex = 'id';
+  readonly opcionesOrden: { value: OrdenKardex; label: string }[] = [
+    { value: 'id', label: 'Más reciente' },
+    { value: 'codigo', label: 'Código' },
+    { value: 'fechaApertura', label: 'Fecha de apertura' },
+  ];
+  readonly orderByControl = new FormControl<OrdenKardex>('id', {
+    nonNullable: true,
+  });
 
   ngOnInit(): void {
     this.searchControl.valueChanges
@@ -123,6 +133,7 @@ export class KardexListComponent implements OnInit {
     this.orderDirectionControl.valueChanges.subscribe(() =>
       this.reiniciarYcargar(),
     );
+    this.orderByControl.valueChanges.subscribe(() => this.reiniciarYcargar());
 
     this.cargar();
   }
@@ -142,7 +153,7 @@ export class KardexListComponent implements OnInit {
         estado: this.estadoControl.value ?? undefined,
         gestion: this.gestionControl.value ?? undefined,
         busqueda: this.searchControl.value?.trim() || undefined,
-        orderBy: this.orderBy,
+        orderBy: this.orderByControl.value,
         orderDirection: this.orderDirectionControl.value ?? undefined,
       })
       .subscribe({
@@ -176,21 +187,29 @@ export class KardexListComponent implements OnInit {
     );
   }
 
+  /** Clic en la cabecera "Código": ordena por código, o invierte el sentido
+   *  si ya estaba ordenado así. */
+  ordenarPorCodigo(): void {
+    if (this.orderByControl.value === 'codigo') return this.toggleOrden();
+    this.orderDirectionControl.setValue('ASC', { emitEvent: false });
+    this.orderByControl.setValue('codigo');
+  }
+
   /** Excel del resumen de deudas de la pestaña activa: cada pestaña baja el
    *  de su tipo y "Todos" el de todos los kardex. El back marca "INACTIVO
    *  DESDE" con la misma regla de días del listado (KARDEX_DIAS_INACTIVIDAD). */
-  descargarResumenDeudas(): void {
+  descargarResumenDeudas(formato: FormatoReporte = 'EXCEL'): void {
     if (this.descargandoDeudas()) return;
     const tipo = this.pestanas[this.pestanaIndex].tipo;
     this.descargandoDeudas.set(true);
     this.kardexService
-      .descargarResumenDeudas(tipo ? { tipo } : {})
+      .descargarResumenDeudas(tipo ? { tipo } : {}, formato)
       .subscribe({
         next: (blob) => {
           this.descargandoDeudas.set(false);
           descargarBlob(
             blob,
-            `resumen-deudas${tipo ? '-' + tipo.toLowerCase() : ''}.xlsx`,
+            `resumen-deudas${tipo ? '-' + tipo.toLowerCase() : ''}.${extensionReporte(formato)}`,
           );
         },
         error: async (err) => {
@@ -230,6 +249,7 @@ export class KardexListComponent implements OnInit {
     this.gestionControl.setValue(null, { emitEvent: false });
     this.searchControl.setValue('', { emitEvent: false });
     this.orderDirectionControl.setValue('DESC', { emitEvent: false });
+    this.orderByControl.setValue('id', { emitEvent: false });
     this.reiniciarYcargar();
   }
 
@@ -306,7 +326,7 @@ export class KardexListComponent implements OnInit {
         data: {
           title: 'Reactivar kardex',
           message:
-            `"${this.nombreDestinatario(k)}" (kardex N° ${k.numero}) lleva ${a.diasSinActividad} días sin movimientos ` +
+            `"${this.nombreDestinatario(k)}" (kardex ${k.codigo}) lleva ${a.diasSinActividad} días sin movimientos ` +
             `y tiene un saldo de Bs ${this.num(k.saldoActual).toFixed(2)}. ` +
             `¿Deseas reactivarlo? Podrá registrar transacciones otra vez por ${a.diasInactividad} días.`,
           confirmLabel: 'Sí, reactivar',

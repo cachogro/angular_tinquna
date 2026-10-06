@@ -4,7 +4,7 @@
   gap: 12px;
   padding: 32px;
   justify-content: center;
-  color: rgba(0, 0, 0, 0.5);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.5);
 }
 
 .mc-form {
@@ -35,7 +35,7 @@
 }
 
 .mc-doc {
-  color: rgba(0, 0, 0, 0.5);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.5);
 }
 
 .btn-spinner {

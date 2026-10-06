@@ -1,0 +1,66 @@
+<h2 mat-dialog-title>Cotizaciones de {{ data.mineral }}</h2>
+
+<mat-dialog-content>
+  <p class="elegir-cotizacion__nota">
+    Elige con qué cotización se valoriza este mineral. Por defecto se usa la vigente hoy.
+    @if (data.fechaRecepcion) {
+    El mineral se recepcionó el <strong>{{ fecha(data.fechaRecepcion) }}</strong>.
+    }
+  </p>
+
+  @if (cargando()) {
+  <div class="elegir-cotizacion__cargando">
+    <mat-spinner diameter="28"></mat-spinner>
+    <span>Cargando cotizaciones...</span>
+  </div>
+  } @else if (error()) {
+  <p class="elegir-cotizacion__vacio">No se pudieron cargar las cotizaciones del mineral.</p>
+  } @else if (cotizaciones().length === 0) {
+  <p class="elegir-cotizacion__vacio">Este mineral todavía no tiene cotizaciones registradas.</p>
+  } @else {
+  <div class="elegir-cotizacion__tabla-wrap">
+    <table class="elegir-cotizacion__tabla">
+      <thead>
+        <tr>
+          <th class="elegir-cotizacion__num">Cotización (USD)</th>
+          <th>Vigencia desde</th>
+          <th>Vigencia hasta</th>
+          <th>Estado</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (c of cotizaciones(); track c.id) {
+        <tr [class.elegir-cotizacion__fila--en-uso]="enUso(c)" [class.elegir-cotizacion__fila--inactiva]="esInactiva(c)">
+          <td class="elegir-cotizacion__num"><strong>{{ c.cotizacionMineralDolares }}</strong></td>
+          <td>{{ fecha(c.fechaVigenciaInicial) }}</td>
+          <td>{{ fecha(c.fechaVigenciaFinal) }}</td>
+          <td>
+            <span class="elegir-cotizacion__estado" [class.elegir-cotizacion__estado--vigente]="esVigente(c)"
+              [class.elegir-cotizacion__estado--baja]="esInactiva(c)">{{ estado(c) }}</span>
+            @if (regiaAlRecepcionar(c)) {
+            <span class="elegir-cotizacion__estado elegir-cotizacion__estado--recepcion"
+              matTooltip="Era la cotización vigente el día de la recepción del mineral">Al recepcionar</span>
+            }
+          </td>
+          <td class="elegir-cotizacion__accion">
+            @if (enUso(c)) {
+            <span class="elegir-cotizacion__en-uso"><mat-icon inline>check_circle</mat-icon> En uso</span>
+            } @else if (!esInactiva(c)) {
+            <button mat-stroked-button color="primary" type="button" (click)="elegir(c)">Usar esta</button>
+            }
+          </td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  @if (hayMas()) {
+  <p class="elegir-cotizacion__nota">Se muestran las {{ cotizaciones().length }} cotizaciones más recientes.</p>
+  }
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-flat-button color="primary" (click)="cerrar()">Cerrar</button>
+</mat-dialog-actions>

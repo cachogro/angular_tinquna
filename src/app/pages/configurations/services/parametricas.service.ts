@@ -35,7 +35,9 @@ import {
   GuardarDestinoGastoRequest,
   GuardarEntidadAporteRequest,
   GuardarEntidadFinancieraRequest,
+  GuardarFormaPagoRequest,
   GuardarLaboratorioRequest,
+  GuardarLugarAcopioRequest,
   GuardarMineralRequest,
   GuardarTipoCalculoValorizacionRequest,
   KardexSubcuenta,
@@ -44,7 +46,6 @@ import {
   Municipio,
   TipoActorProductivoMinero,
   TipoCalculoValorizacionAgrupado,
-  TipoMovimientoKardex,
 } from '../parametricas/models/parametricas.models';
 
 @Injectable({ providedIn: 'root' })
@@ -67,11 +68,12 @@ export class ParametricasService {
       .pipe(tap(() => this.cargarCodificaciones()));
   }
 
+  /** Mismo POST que crear: el back actualiza porque el body lleva `id`. */
   actualizarCodificacion(
     data: ActualizarCodificacionRequest,
   ): Observable<Codificacion> {
     return this.http
-      .put<Codificacion>(`${this.baseUrl}/codificacion`, data)
+      .post<Codificacion>(`${this.baseUrl}/codificacion`, data)
       .pipe(tap(() => this.cargarCodificaciones()));
   }
 
@@ -192,15 +194,15 @@ export class ParametricasService {
       .pipe(tap(() => this.cargarEscalaPrecioVigente(data.idMineral)));
   }
 
-  /** El back busca cada tramo por su `id` dentro de `filas`, por eso no
-   *  necesita idMineral en el body; se lo pasamos aparte para recargar la
-   *  tabla correcta después. */
+  /** Mismo POST que crear: el back actualiza porque las `filas` llevan `id`.
+   *  Busca cada tramo por ese `id`, por eso no necesita idMineral en el body;
+   *  se lo pasamos aparte para recargar la tabla correcta después. */
   actualizarEscalaPrecio(
     data: ActualizarEscalaPrecioRequest,
     idMineral: number,
   ): Observable<EscalaPrecio[]> {
     return this.http
-      .patch<EscalaPrecio[]>(this.escalaPrecioUrl, data)
+      .post<EscalaPrecio[]>(this.escalaPrecioUrl, data)
       .pipe(tap(() => this.cargarEscalaPrecioVigente(idMineral)));
   }
 
@@ -636,14 +638,14 @@ export class ParametricasService {
       .pipe(tap(() => this.cargarTipoCalculoValorizacion()));
   }
 
-  /** A diferencia del resto de catálogos, este recurso separa POST (crear)
-   *  de PATCH (actualizar); y el PATCH pide el body completo, no parcial:
-   *  hay que reenviar descripcion e idTipoCalculo igual que en la creación. */
+  /** Mismo POST que crear: el back actualiza porque el body lleva `id`. Pide
+   *  el body completo, no parcial: hay que reenviar descripcion e
+   *  idTipoCalculo igual que en la creación. */
   actualizarTipoCalculoValorizacion(
     data: GuardarTipoCalculoValorizacionRequest,
   ): Observable<TipoCalculoValorizacionAgrupado['gastos'][number]> {
     return this.http
-      .patch<
+      .post<
         TipoCalculoValorizacionAgrupado['gastos'][number]
       >(this.tipoCalculoValorizacionUrl, data)
       .pipe(tap(() => this.cargarTipoCalculoValorizacion()));
@@ -685,13 +687,14 @@ export class ParametricasService {
   }
 
   // ==========================================================
-  // CATÁLOGOS DEL KARDEX DE ANTICIPOS (forma de pago, tipo de movimiento,
-  // subcuenta) — usados por el formulario de movimiento de kardex.
+  // CATÁLOGOS DEL KARDEX DE ANTICIPOS (forma de pago, subcuenta) — usados
+  // por el formulario de movimiento de kardex.
   // ==========================================================
 
   private formasPago$?: Observable<FormaPago[]>;
 
-  /** Catálogo cacheado — no se vuelve a pedir tras la primera carga */
+  /** Catálogo cacheado de formas de pago activas. La caché se descarta
+   *  cuando se guarda o cambia de estado una desde el panel de paramétricas. */
   obtenerFormasPago(): Observable<FormaPago[]> {
     if (!this.formasPago$) {
       this.formasPago$ = this.http
@@ -701,21 +704,96 @@ export class ParametricasService {
     return this.formasPago$;
   }
 
+  // ==========================================================
+  // FORMAS DE PAGO (panel de paramétricas)
+  // ==========================================================
+
+  private readonly formaPagoUrl = `${this.baseUrl}/forma-pago`;
+
+  // Activas e inactivas: es el listado de la tabla del panel.
+  readonly formasPagoAdmin = signal<FormaPago[]>([]);
+  readonly cargandoFormasPagoAdmin = signal<boolean>(false);
+
+  /** Un solo POST para crear y actualizar: sin `id` crea, con `id` actualiza */
+  guardarFormaPago(data: GuardarFormaPagoRequest): Observable<FormaPago> {
+    return this.http
+      .post<FormaPago>(this.formaPagoUrl, data)
+      .pipe(tap(() => this.refrescarFormasPago()));
+  }
+
+  /** Carga las formas de pago y actualiza el signal para que la tabla se refresque */
+  cargarFormasPagoAdmin(): void {
+    this.cargandoFormasPagoAdmin.set(true);
+    this.http.get<FormaPago[]>(`${this.formaPagoUrl}/todos`).subscribe({
+      next: (data) => {
+        this.formasPagoAdmin.set(data);
+        this.cargandoFormasPagoAdmin.set(false);
+      },
+      error: () => {
+        this.cargandoFormasPagoAdmin.set(false);
+      },
+    });
+  }
+
+  cambiarEstadoFormaPago(id: number, activo: boolean): Observable<FormaPago> {
+    return this.http
+      .patch<FormaPago>(`${this.formaPagoUrl}/cambiar_estado/${id}`, {
+        activo,
+      })
+      .pipe(tap(() => this.refrescarFormasPago()));
+  }
+
+  /** Recarga la tabla del panel y descarta la caché de los selectores. */
+  private refrescarFormasPago(): void {
+    this.formasPago$ = undefined;
+    this.cargarFormasPagoAdmin();
+  }
+
   /** Lugares de acopio activos (ordenados por descripción desde el backend) */
   obtenerLugaresAcopio(): Observable<LugarAcopio[]> {
     return this.http.get<LugarAcopio[]>(`${this.baseUrl}/lugar-acopio`);
   }
 
-  private tiposMovimientoKardex$?: Observable<TipoMovimientoKardex[]>;
+  // ==========================================================
+  // LUGARES DE ACOPIO (panel de paramétricas)
+  // ==========================================================
 
-  /** Catálogo cacheado — no se vuelve a pedir tras la primera carga */
-  obtenerTiposMovimientoKardex(): Observable<TipoMovimientoKardex[]> {
-    if (!this.tiposMovimientoKardex$) {
-      this.tiposMovimientoKardex$ = this.http
-        .get<TipoMovimientoKardex[]>(`${this.baseUrl}/tipo-movimiento-kardex`)
-        .pipe(shareReplay(1));
-    }
-    return this.tiposMovimientoKardex$;
+  private readonly lugarAcopioUrl = `${this.baseUrl}/lugar-acopio`;
+
+  // Activos e inactivos: es el listado de la tabla del panel.
+  readonly lugaresAcopio = signal<LugarAcopio[]>([]);
+  readonly cargandoLugaresAcopio = signal<boolean>(false);
+
+  /** Un solo POST para crear y actualizar: sin `id` crea, con `id` actualiza */
+  guardarLugarAcopio(data: GuardarLugarAcopioRequest): Observable<LugarAcopio> {
+    return this.http
+      .post<LugarAcopio>(this.lugarAcopioUrl, data)
+      .pipe(tap(() => this.cargarLugaresAcopio()));
+  }
+
+  /** Carga los lugares de acopio y actualiza el signal para que la tabla se refresque */
+  cargarLugaresAcopio(): void {
+    this.cargandoLugaresAcopio.set(true);
+    this.http.get<LugarAcopio[]>(`${this.lugarAcopioUrl}/todos`).subscribe({
+      next: (data) => {
+        this.lugaresAcopio.set(data);
+        this.cargandoLugaresAcopio.set(false);
+      },
+      error: () => {
+        this.cargandoLugaresAcopio.set(false);
+      },
+    });
+  }
+
+  cambiarEstadoLugarAcopio(
+    id: number,
+    activo: boolean,
+  ): Observable<LugarAcopio> {
+    return this.http
+      .patch<LugarAcopio>(`${this.lugarAcopioUrl}/cambiar_estado/${id}`, {
+        activo,
+      })
+      .pipe(tap(() => this.cargarLugaresAcopio()));
   }
 
   private destinosGasto$?: Observable<DestinoGasto[]>;

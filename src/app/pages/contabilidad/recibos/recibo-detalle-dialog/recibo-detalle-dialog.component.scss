@@ -1,11 +1,11 @@
 .rd-icono--ingreso {
-  color: #2e7d32;
+  color: var(--tk-verde, #2e7d32);
   vertical-align: middle;
   margin-right: 4px;
 }
 
 .rd-icono--egreso {
-  color: #c62828;
+  color: var(--tk-rojo, #c62828);
   vertical-align: middle;
   margin-right: 4px;
 }
@@ -20,7 +20,7 @@
   gap: 12px;
   padding: 32px;
   justify-content: center;
-  color: rgba(0, 0, 0, 0.5);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.5);
 }
 
 .rd-tiles {
@@ -36,11 +36,11 @@
   gap: 2px;
   padding: 8px 10px;
   border-radius: 8px;
-  background: rgba(0, 0, 0, 0.04);
+  background: rgb(var(--tk-ink, 0 0 0) / 0.04);
 }
 
 .rd-tile small {
-  color: rgba(0, 0, 0, 0.55);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.55);
   font-size: 11px;
 }
 
@@ -64,6 +64,22 @@
   width: 100%;
 }
 
+.rd-tabla .mat-mdc-header-row {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  height: 28px;
+}
+
+.rd-tabla .mat-mdc-header-cell {
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  font-weight: 600;
+  font-size: 10.5px;
+  letter-spacing: .2px;
+  padding: 2px 8px !important;
+}
+
 .rd-num {
   text-align: right;
 }
@@ -79,7 +95,7 @@
 
 .rd-chip--efectivo {
   background: color-mix(in srgb, #ff9800 20%, transparent);
-  color: #e65100;
+  color: var(--tk-naranja, #e65100);
 }
 
 .rd-empresa-lista {
@@ -95,12 +111,12 @@
   gap: 10px;
   padding: 8px 10px;
   border-radius: 8px;
-  background: rgba(0, 0, 0, 0.04);
+  background: rgb(var(--tk-ink, 0 0 0) / 0.04);
   font-size: 12.5px;
 }
 
 .rd-empresa small {
-  color: rgba(0, 0, 0, 0.55);
+  color: rgb(var(--tk-ink, 0 0 0) / 0.55);
   font-size: 11px;
 }
 

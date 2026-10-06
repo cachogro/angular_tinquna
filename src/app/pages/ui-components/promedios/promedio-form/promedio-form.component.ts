@@ -17,7 +17,10 @@ import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router } from '@angular/router';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
-import { CodificacionCatalogo } from '../../models/registro-mineral.models';
+import {
+  CodificacionCatalogo,
+  nombreProveedorRecepcion,
+} from '../../models/registro-mineral.models';
 import {
   CodificacionLote,
   EstadoDisponibles,
@@ -27,6 +30,8 @@ import {
 import { PromedioMineralService } from '../../services/promedio-mineral.service';
 import { RegistroMineralService } from '../../services/registro-mineral.service';
 import { FechaInputDirective } from '../../../../shared/directives/fecha-input.directive';
+import { fechaBoliviaAInputDate } from '../../../../shared/utils/fecha-bolivia.util';
+import { formatFechaIso } from '../../../contabilidad/components/personal-interno.util';
 
 interface LeyPreview {
   idMineral: string;
@@ -235,11 +240,10 @@ export class PromedioFormComponent implements OnInit {
     {
       this.descripcionControl.setValue(p.descripcion ?? '');
       this.observacionesControl.setValue(p.observaciones ?? '');
-      this.fechaControl.setValue(this.parseFecha(p.fecha));
+      this.fechaControl.setValue(fechaBoliviaAInputDate(p.fecha));
       const map = new Map<string, ValorizacionDisponible>();
       for (const d of p.detalles ?? []) {
         const rec = d.valorizacion?.recepcionMineral;
-        const per = rec?.persona;
         map.set(d.idValorizacion, {
           idValorizacion: d.idValorizacion,
           codigoOperacion: rec?.codigoOperacion ?? `#${d.idValorizacion}`,
@@ -248,11 +252,7 @@ export class PromedioFormComponent implements OnInit {
             rec?.codificacion?.codigo ??
             '',
           codificacionRecepcion: rec?.codificacion?.codigo ?? null,
-          proveedor: per
-            ? `${per.nombres} ${per.apellidoPaterno} ${per.apellidoMaterno ?? ''}`
-                .trim()
-                .replace(/\s+/g, ' ')
-            : '—',
+          proveedor: nombreProveedorRecepcion(rec),
           numeroSacos: d.numeroSacos,
           pesoKg: Number(d.pesoKilogramos),
           valorNetoVentaBolivianos: Number(d.valorNetoVentaBolivianos ?? 0),
@@ -367,7 +367,9 @@ export class PromedioFormComponent implements OnInit {
     const body = {
       idCodificacionLote: this.codificacionLoteControl.value ?? undefined,
       descripcion: this.descripcionControl.value.trim() || undefined,
-      fecha: this.formatFecha(this.fechaControl.value),
+      fecha: this.fechaControl.value
+        ? formatFechaIso(this.fechaControl.value)
+        : undefined,
       observaciones: this.observacionesControl.value.trim() || undefined,
       idsValorizacion: [...this.seleccion().keys()],
     };
@@ -412,17 +414,5 @@ export class PromedioFormComponent implements OnInit {
 
   numFmt(n: number | null | undefined): string {
     return n == null ? '—' : String(n);
-  }
-
-  private parseFecha(iso: string): Date {
-    const [a, m, d] = iso.slice(0, 10).split('-').map(Number);
-    return new Date(a, m - 1, d);
-  }
-
-  private formatFecha(fecha: Date | null): string | undefined {
-    if (!fecha) return undefined;
-    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
-    const dia = String(fecha.getDate()).padStart(2, '0');
-    return `${fecha.getFullYear()}-${mes}-${dia}`;
   }
 }

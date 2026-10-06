@@ -233,13 +233,21 @@ export class PersonalInternoComponent implements OnInit {
     this.pageIndex.set(0);
   }
 
-  /** Numeración correlativa dentro de esta bandeja (no el id real). */
-  numeroFila(i: number): number {
-    return this.pageIndex() * this.pageSize() + i + 1;
-  }
+  /** Numeración correlativa por antigüedad (no el id real): el primer
+   *  registrado es el 1 y el último alta lleva el número más alto, aunque la
+   *  lista se muestre del más nuevo al más antiguo. Se calcula sobre todo el
+   *  personal (no sobre lo filtrado) para que cada persona conserve su número
+   *  al buscar o filtrar. */
+  readonly numeroPorId = computed(() => {
+    const personas = this.personasEmpresa(); // viene id DESC
+    return new Map(personas.map((p, i) => [p.id, personas.length - i]));
+  });
 
   nombreCompleto(persona: PersonaCI): string {
-    return `${persona.nombres} ${persona.apellidoPaterno} ${persona.apellidoMaterno}`.trim();
+    // El apellido materno es opcional: sin él no debe aparecer "null".
+    return [persona.nombres, persona.apellidoPaterno, persona.apellidoMaterno]
+      .filter(Boolean)
+      .join(' ');
   }
 
   abrirDialogo(persona: PersonaCI | null): void {

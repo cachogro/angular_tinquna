@@ -37,7 +37,7 @@
 
       <mat-form-field appearance="outline">
         <mat-label>Monto ({{ simbolo }})</mat-label>
-        <input matInput type="number" step="0.01" min="0.01" class="input-monto" formControlName="monto" />
+        <input matInput appMonto formControlName="monto" />
         @if (f.monto.hasError('required') && f.monto.touched) {
         <mat-error>Obligatorio</mat-error>
         }
@@ -83,7 +83,7 @@
 
     <mat-form-field appearance="outline" class="mk-form__full">
       <mat-label>Detalle</mat-label>
-      <input matInput formControlName="detalle" maxlength="255"
+      <input matInput appMayusculas formControlName="detalle" maxlength="255"
         placeholder="Ej: ANTICIPO A CTA COMPRESORA" />
       @if (f.detalle.hasError('required') && f.detalle.touched) {
       <mat-error>Obligatorio</mat-error>
@@ -93,7 +93,7 @@
     <div class="mk-form__row3">
       <mat-form-field appearance="outline">
         <mat-label>N° de comprobante{{ requiereCuentaBancaria ? '' : ' (opcional)' }}</mat-label>
-        <input matInput formControlName="nroComprobante" maxlength="30" class="nro-cpte"
+        <input matInput appMayusculas formControlName="nroComprobante" maxlength="30" class="nro-cpte"
           placeholder="N° transferencia / QR" />
         @if (f.nroComprobante.hasError('required') && f.nroComprobante.touched) {
         <mat-error>Obligatorio con forma de pago bancaria</mat-error>
@@ -102,7 +102,7 @@
 
       <mat-form-field appearance="outline">
         <mat-label>Factura / recibo (opcional)</mat-label>
-        <input matInput formControlName="facturaRecibo" maxlength="50"
+        <input matInput appMayusculas formControlName="facturaRecibo" maxlength="50"
           placeholder="Ej: REC:C-406, DET. ADJ." />
       </mat-form-field>
 

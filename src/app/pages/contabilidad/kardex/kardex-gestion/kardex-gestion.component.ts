@@ -41,7 +41,13 @@ import {
   MovimientoKardexFormDialogData,
 } from '../movimiento-kardex-form-dialog/movimiento-kardex-form-dialog.component';
 import { FechaInputDirective } from '../../../../shared/directives/fecha-input.directive';
-import { mensajeErrorBlob } from '../../../../shared/utils/descarga-archivo.util';
+import { MayusculasDirective } from '../../../../shared/directives/mayusculas.directive';
+import {
+  descargarBlob,
+  extensionReporte,
+  FormatoReporte,
+  mensajeErrorBlob,
+} from '../../../../shared/utils/descarga-archivo.util';
 
 export interface KardexGestionData {
   tipo: TipoKardex;
@@ -74,6 +80,7 @@ export function irAGestionKardex(router: Router, d: KardexGestionData): void {
   standalone: true,
   imports: [
     FechaInputDirective,
+    MayusculasDirective,
     CommonModule,
     ReactiveFormsModule,
     MatCardModule,
@@ -153,6 +160,7 @@ export class KardexGestionComponent implements OnInit {
   readonly hoy = new Date();
 
   readonly columnas = [
+    'codigo',
     'numero',
     'gestion',
     'descripcion',
@@ -365,7 +373,7 @@ export class KardexGestionComponent implements OnInit {
     this.dialog
       .open(BienesDacionDialogComponent, {
         data,
-        width: '980px',
+        width: '1120px',
         maxWidth: '95vw',
         autoFocus: false,
       })
@@ -420,7 +428,7 @@ export class KardexGestionComponent implements OnInit {
       .open(ConfirmDialogComponent, {
         data: {
           title: 'Cerrar kardex',
-          message: `¿Confirmas cerrar el N°${k.numero}? El saldo actual (Bs ${this.num(k.saldoActual).toFixed(2)}) queda como saldo de cierre y se abre el N°${k.numero + 1} arrastrándolo.`,
+          message: `¿Confirmas cerrar el kardex ${k.codigo} (N°${k.numero})? El saldo actual (Bs ${this.num(k.saldoActual).toFixed(2)}) queda como saldo de cierre y se abre el N°${k.numero + 1} arrastrándolo.`,
           confirmLabel: 'Cerrar',
           cancelLabel: 'Cancelar',
           tone: 'default',
@@ -436,7 +444,7 @@ export class KardexGestionComponent implements OnInit {
             this.guardando.set(false);
             this.movPageIndex = 0; // cambia el kardex abierto
             this.snackBar.open(
-              `Cerrado N°${res.cerrado?.numero ?? k.numero}. Abierto N°${res.nuevo?.numero ?? k.numero + 1}`,
+              `Cerrado ${res.cerrado?.codigo ?? k.codigo}. Abierto ${res.nuevo?.codigo ?? `N°${k.numero + 1}`}`,
               'Cerrar',
               { duration: 4000 },
             );
@@ -459,7 +467,7 @@ export class KardexGestionComponent implements OnInit {
       .open(ConfirmDialogComponent, {
         data: {
           title: 'Reabrir kardex',
-          message: `¿Confirmas reabrir el N°${k.numero}? Si el N°${k.numero + 1} no tiene movimientos, se elimina.`,
+          message: `¿Confirmas reabrir el kardex ${k.codigo} (N°${k.numero})? Si el N°${k.numero + 1} no tiene movimientos, se elimina.`,
           confirmLabel: 'Reabrir',
           cancelLabel: 'Cancelar',
           tone: 'danger',
@@ -498,8 +506,8 @@ export class KardexGestionComponent implements OnInit {
         data: {
           title: activar ? 'Activar kardex' : 'Dar de baja el kardex',
           message: activar
-            ? `¿Confirmas activar el N°${k.numero}?`
-            : `¿Confirmas dar de baja el N°${k.numero}? Solo aplica porque todavía no tiene historial.`,
+            ? `¿Confirmas activar el kardex ${k.codigo}?`
+            : `¿Confirmas dar de baja el kardex ${k.codigo}? Solo aplica porque todavía no tiene historial.`,
           confirmLabel: activar ? 'Activar' : 'Dar de baja',
           cancelLabel: 'Cancelar',
           tone: activar ? 'default' : 'danger',
@@ -612,27 +620,22 @@ export class KardexGestionComponent implements OnInit {
       });
   }
 
-  descargarExcel(k: Kardex): void {
+  descargarExcel(k: Kardex, formato: FormatoReporte = 'EXCEL'): void {
     if (this.descargandoExcel()) return;
     this.descargandoExcel.set(true);
-    this.kardexService.descargarExcel(k.id).subscribe({
+    this.kardexService.descargarExcel(k.id, formato).subscribe({
       next: (blob) => {
         this.descargandoExcel.set(false);
-        const url = window.URL.createObjectURL(blob);
-        const nombre = this.data.nombreDestinatario
-          .toUpperCase()
-          .replace(/[^A-Z0-9]+/g, '_')
-          .replace(/^_+|_+$/g, '');
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `KARDEX_N${k.numero}_${nombre}.xlsx`;
-        a.click();
-        window.URL.revokeObjectURL(url);
+        // Mismo nombre con el que lo sirve el back: kardex-KA-001.xlsx / .pdf
+        descargarBlob(
+          blob,
+          `kardex-${k.codigo ?? 'N' + k.numero}.${extensionReporte(formato)}`,
+        );
       },
       error: async (err) => {
         this.descargandoExcel.set(false);
         this.snackBar.open(
-          (await mensajeErrorBlob(err)) ?? 'No se pudo generar el Excel del kardex',
+          (await mensajeErrorBlob(err)) ?? 'No se pudo generar el reporte del kardex',
           'Cerrar',
           { duration: 5000 },
         );

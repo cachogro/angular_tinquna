@@ -24,7 +24,14 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { combineLatest, forkJoin, map, Observable, startWith } from 'rxjs';
+import {
+  combineLatest,
+  forkJoin,
+  map,
+  Observable,
+  startWith,
+  Subscription,
+} from 'rxjs';
 import {
   ActorProductivoMinero,
   PersonaCI,
@@ -40,6 +47,9 @@ import { PersonaService } from '../../../configurations/services/persona.service
 import { EntregarFondoRendirRequest } from '../../models/fondo-rendir.models';
 import { FondoRendirService } from '../../services/fondo-rendir.service';
 import { FechaInputDirective } from '../../../../shared/directives/fecha-input.directive';
+import { MontoInputDirective } from '../../../../shared/directives/monto-input.directive';
+import { MayusculasDirective } from '../../../../shared/directives/mayusculas.directive';
+import { DestinoGastoFieldComponent } from '../../components/destino-gasto-field/destino-gasto-field.component';
 
 type DestinatarioTipo = 'PERSONA' | 'ACTOR';
 
@@ -61,6 +71,9 @@ interface CuentaOpcion {
   standalone: true,
   imports: [
     FechaInputDirective,
+    MontoInputDirective,
+    MayusculasDirective,
+    DestinoGastoFieldComponent,
     CommonModule,
     ReactiveFormsModule,
     MatDialogModule,
@@ -187,7 +200,19 @@ export class FondoRendirFormDialogComponent implements OnInit {
     this.f.destinatarioTipo.valueChanges.subscribe(() => {
       this.f.personaDestinatario.setValue(null, { emitEvent: false });
       this.f.idActorDestinatario.setValue(null, { emitEvent: false });
+      this.saldoFavor.set(0);
     });
+
+    // Al elegir el destinatario se consulta si tiene saldo a favor de fondos
+    // anteriores: el back lo aplica solo al entregar, acá solo se avisa.
+    this.f.personaDestinatario.valueChanges.subscribe((p) =>
+      this.consultarSaldoFavor(
+        p && typeof p === 'object' ? { idPersona: String(p.id) } : null,
+      ),
+    );
+    this.f.idActorDestinatario.valueChanges.subscribe((id) =>
+      this.consultarSaldoFavor(id ? { idActorProductivoMinero: id } : null),
+    );
 
     this.f.idFormaPago.valueChanges.subscribe(() =>
       this.sincronizarCamposBanco(),
@@ -251,6 +276,32 @@ export class FondoRendirFormDialogComponent implements OnInit {
 
   // ---------- Destinatario ----------
 
+  /** Lo que la empresa le debe reponer al destinatario elegido por fondos
+   *  anteriores rendidos en exceso: entra a este fondo como ya justificado. */
+  readonly saldoFavor = signal(0);
+  private consultaSaldoFavor?: Subscription;
+
+  private consultarSaldoFavor(
+    destinatario: { idPersona?: string; idActorProductivoMinero?: string } | null,
+  ): void {
+    this.consultaSaldoFavor?.unsubscribe();
+    this.saldoFavor.set(0);
+    if (!destinatario) return;
+    this.consultaSaldoFavor = this.fondoRendirService
+      .saldoFavor(destinatario)
+      .subscribe({
+        next: (r) => this.saldoFavor.set(Number(r.saldoFavor) || 0),
+        // Es solo un aviso: si falla, el back igual lo aplica al entregar.
+        error: () => this.saldoFavor.set(0),
+      });
+  }
+
+  /** Lo que le quedará por justificar del monto que se está entregando. */
+  get pendienteTrasSaldoFavor(): number {
+    const monto = Number(this.f.monto.value) || 0;
+    return Math.round((monto - this.saldoFavor()) * 100) / 100;
+  }
+
   nombreCompleto(p: PersonaCI): string {
     return `${p.nombres} ${p.apellidoPaterno} ${p.apellidoMaterno ?? ''}`
       .trim()
@@ -282,36 +333,6 @@ export class FondoRendirFormDialogComponent implements OnInit {
       .slice(0, 50);
   }
 
-  // ---------- Entrada restringida ----------
-
-  private readonly TECLAS_CONTROL = [
-    'Backspace',
-    'Delete',
-    'Tab',
-    'Escape',
-    'Enter',
-    'ArrowLeft',
-    'ArrowRight',
-    'ArrowUp',
-    'ArrowDown',
-    'Home',
-    'End',
-  ];
-
-  /** Monto: solo dígitos y un único punto decimal. */
-  restringirEntradaNumerica(event: KeyboardEvent): void {
-    const target = event.target;
-    if (!(target instanceof HTMLInputElement)) return;
-    if (event.ctrlKey || event.metaKey) return;
-    if (this.TECLAS_CONTROL.includes(event.key)) return;
-    if (event.key === '.') {
-      if (target.value.includes('.')) event.preventDefault();
-      return;
-    }
-    if (!/^\d$/.test(event.key)) event.preventDefault();
-  }
-
-  /** N° de comprobante: solo dígitos y . - _ / */
   etiquetaCuenta(c: CuentaOpcion): string {
     return `${c.nombreEntidad} · ${c.numeroCuenta} (${etiquetaMonedaCuenta(c.moneda)})`;
   }

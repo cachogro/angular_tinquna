@@ -27,6 +27,8 @@ import { Traspaso, TipoTraspaso } from '../models/traspaso.models';
 import { TraspasoService } from '../services/traspaso.service';
 import {
   descargarBlob,
+  extensionReporte,
+  FormatoReporte,
   mensajeErrorBlob,
 } from '../../../shared/utils/descarga-archivo.util';
 import {
@@ -240,7 +242,7 @@ export class TraspasoListComponent implements OnInit {
   /** Excel "Libro de traspasos" con los filtros de la bandeja. El endpoint no
    *  recibe idCaja ni gestion: la gestión se manda como rango de fechas del
    *  año completo y el filtro de caja no se aplica al Excel. */
-  descargarLibro(): void {
+  descargarLibro(formato: FormatoReporte = 'EXCEL'): void {
     if (this.descargandoLibro()) return;
     const gestion = this.gestionFiltro();
     const fechaDesde = gestion ? `${gestion}-01-01` : undefined;
@@ -255,15 +257,15 @@ export class TraspasoListComponent implements OnInit {
         busqueda: this.busqueda().trim() || undefined,
         fechaDesde,
         fechaHasta,
-      })
+      }, formato)
       .subscribe({
         next: (blob) => {
           this.descargandoLibro.set(false);
           descargarBlob(
             blob,
             gestion
-              ? `libro-traspasos-${fechaDesde}_al_${fechaHasta}.xlsx`
-              : 'libro-traspasos.xlsx',
+              ? `libro-traspasos-${fechaDesde}_al_${fechaHasta}.${extensionReporte(formato)}`
+              : `libro-traspasos.${extensionReporte(formato)}`,
           );
           if (conFiltroCaja) {
             this.snackBar.open(
