@@ -20,6 +20,8 @@ export interface BoletaPago {
   fechaDesde: string;
   fechaHasta: string;
   fechaPago: string;
+  /** Fecha y hora reales en que se emitió la boleta (ISO, la pone el servidor). */
+  fechaHoraGeneracion?: string | null;
   diasTrabajados?: number | null;
   concepto: string;
   salarioBase: string;

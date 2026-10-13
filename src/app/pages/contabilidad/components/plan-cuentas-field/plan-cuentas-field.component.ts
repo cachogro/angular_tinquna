@@ -1,5 +1,5 @@
-// src/app/pages/contabilidad/components/destino-gasto-field/destino-gasto-field.component.ts
-// Campo "Destino del gasto" reutilizable, con el mismo formato que el de
+// src/app/pages/contabilidad/components/plan-cuentas-field/plan-cuentas-field.component.ts
+// Campo "Plan de cuentas" reutilizable, con el mismo formato que el de
 // procesar recibo: se escribe y va mostrando los destinos que se parecen.
 // El formulario dueño solo guarda el id (`control`); el texto que se teclea
 // vive acá adentro.
@@ -21,13 +21,13 @@ import { ErrorStateMatcher } from '@angular/material/core';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { Subscription } from 'rxjs';
-import { DestinoGasto } from '../../../configurations/parametricas/models/parametricas.models';
+import { PlanCuentas } from '../../../configurations/parametricas/models/parametricas.models';
 
 /** Objeto elegido del autocomplete, o el texto que se está escribiendo. */
-type DestinoGastoTexto = DestinoGasto | string | null;
+type PlanCuentasTexto = PlanCuentas | string | null;
 
 @Component({
-  selector: 'app-destino-gasto-field',
+  selector: 'app-plan-cuentas-field',
   standalone: true,
   imports: [
     ReactiveFormsModule,
@@ -35,27 +35,27 @@ type DestinoGastoTexto = DestinoGasto | string | null;
     MatInputModule,
     MatAutocompleteModule,
   ],
-  templateUrl: './destino-gasto-field.component.html',
-  styleUrl: './destino-gasto-field.component.scss',
+  templateUrl: './plan-cuentas-field.component.html',
+  styleUrl: './plan-cuentas-field.component.scss',
 })
-export class DestinoGastoFieldComponent implements OnInit, OnDestroy {
+export class PlanCuentasFieldComponent implements OnInit, OnDestroy {
   /** Control del formulario dueño: guarda el id del destino (o null). */
   @Input({ required: true }) control!: FormControl<number | null>;
-  @Input() label = 'Destino del gasto (opcional)';
+  @Input() label = 'Plan de cuentas (opcional)';
   @Input() hint = '';
 
   /** Destinos elegibles, ya filtrados por el formulario dueño. */
-  @Input() set opciones(lista: DestinoGasto[] | null | undefined) {
+  @Input() set opciones(lista: PlanCuentas[] | null | undefined) {
     this.lista.set(lista ?? []);
     if (this.control) this.sincronizarDesdeControl();
   }
 
-  private readonly lista = signal<DestinoGasto[]>([]);
-  private readonly escrito = signal<DestinoGastoTexto>(null);
+  private readonly lista = signal<PlanCuentas[]>([]);
+  private readonly escrito = signal<PlanCuentasTexto>(null);
   private sub?: Subscription;
 
   /** Lo que se ve en el input: el destino elegido o el texto tecleado. */
-  readonly texto = new FormControl<DestinoGastoTexto>(null);
+  readonly texto = new FormControl<PlanCuentasTexto>(null);
 
   readonly filtradas = computed(() => {
     const v = this.escrito();
@@ -77,7 +77,7 @@ export class DestinoGastoFieldComponent implements OnInit, OnDestroy {
       this.control.invalid && (this.control.touched || this.texto.touched),
   };
 
-  display = (v: DestinoGastoTexto): string => {
+  display = (v: PlanCuentasTexto): string => {
     if (!v) return '';
     return typeof v === 'string' ? v : v.nombre;
   };
@@ -141,7 +141,7 @@ export class DestinoGastoFieldComponent implements OnInit, OnDestroy {
     if (destino) this.mostrar(destino);
   }
 
-  private mostrar(v: DestinoGastoTexto): void {
+  private mostrar(v: PlanCuentasTexto): void {
     this.texto.setValue(v, { emitEvent: false });
     this.escrito.set(v);
   }

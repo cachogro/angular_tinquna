@@ -43,6 +43,7 @@ import { BoletaPagoService } from '../../services/boleta-pago.service';
 import {
   DatosPagoFieldsComponent,
   crearFormDatosPago,
+  errorDatosPago,
   leerDatosPago,
 } from '../../components/datos-pago-fields/datos-pago-fields.component';
 import {
@@ -269,8 +270,10 @@ export class BoletaFormDialogComponent implements OnInit {
     const neto = this.resumen().montoPagado;
     // Si todo el sueldo va a la deuda no hay recibo: la forma de pago sobra.
     const fp = this.pago.controls.idFormaPago;
-    if (neto <= 0) fp.clearValidators();
-    else fp.setValidators([Validators.required]);
+    if (neto <= 0) {
+      fp.clearValidators();
+      this.pago.controls.pagosAdicionales.clear();
+    } else fp.setValidators([Validators.required]);
     fp.updateValueAndValidity({ emitEvent: false });
 
     if (this.form.invalid || this.pago.invalid) {
@@ -278,7 +281,7 @@ export class BoletaFormDialogComponent implements OnInit {
       this.pago.markAllAsTouched();
       return;
     }
-    const error = this.errorResumen();
+    const error = this.errorResumen() ?? errorDatosPago(this.pago, neto);
     if (error) {
       this.snackBar.open(error, 'Cerrar', { duration: 5000 });
       return;
@@ -293,7 +296,7 @@ export class BoletaFormDialogComponent implements OnInit {
     const prestamos = this.prep()?.prestamos ?? [];
 
     const request: EmitirBoletaRequest = {
-      ...leerDatosPago(this.pago),
+      ...leerDatosPago(this.pago, neto),
       idPersona: v.idPersona!,
       fechaDesde: formatFechaIso(v.fechaDesde!),
       fechaHasta: formatFechaIso(v.fechaHasta!),

@@ -277,3 +277,20 @@
 .recepcion-table ::ng-deep .mat-mdc-icon-button .mat-mdc-progress-spinner {
   margin: 0 auto;
 }
+/* ===== Pantallas chicas: los filtros bajan de línea en vez de salirse ===== */
+@media (max-width: 767px) {
+  .recepcion-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .recepcion-toolbar .recepcion-toolbar__search {
+    flex: 1 1 100%;
+    order: -1;
+  }
+
+  .recepcion-toolbar .recepcion-toolbar__codigo,
+  .recepcion-toolbar .recepcion-toolbar__estado,
+  .recepcion-toolbar .recepcion-toolbar__orden {
+    flex: 1 1 calc(50% - 8px);
+  }
+}

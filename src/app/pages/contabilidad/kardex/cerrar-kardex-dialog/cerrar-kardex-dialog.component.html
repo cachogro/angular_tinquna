@@ -1,0 +1,31 @@
+<div class="ck-dialog">
+  <div class="ck-dialog__icon">
+    <mat-icon>lock</mat-icon>
+  </div>
+  <h2 mat-dialog-title>Cerrar kardex</h2>
+  <mat-dialog-content>
+    <p class="ck-dialog__mensaje">
+      ¿Confirmas cerrar el kardex {{ data.kardex.codigo }} (N°{{ data.kardex.numero }})? El saldo actual
+      (Bs {{ data.saldoTexto }}) queda como saldo de cierre y se abre el N°{{ data.kardex.numero + 1 }} arrastrándolo.
+    </p>
+
+    <mat-form-field appearance="outline" class="ck-dialog__fecha">
+      <mat-label>Fecha de cierre</mat-label>
+      <input matInput [matDatepicker]="picker" [min]="minFecha" [max]="hoy" [formControl]="fecha" />
+      <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+      <mat-datepicker #picker></mat-datepicker>
+      @if (fecha.hasError('matDatepickerMax') && fecha.touched) {
+      <mat-error>No puede ser futura</mat-error>
+      } @else if (fecha.hasError('matDatepickerMin') && fecha.touched) {
+      <mat-error>No puede ser anterior a la apertura</mat-error>
+      } @else if (fecha.invalid && fecha.touched) {
+      <mat-error>Obligatorio</mat-error>
+      }
+      <mat-hint>Es la apertura del N°{{ data.kardex.numero + 1 }} y define su gestión</mat-hint>
+    </mat-form-field>
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-stroked-button mat-dialog-close>Cancelar</button>
+    <button mat-flat-button color="primary" (click)="confirmar()">Cerrar</button>
+  </mat-dialog-actions>
+</div>

@@ -20,6 +20,22 @@
   min-width: 620px;
 }
 
+.mk-aviso {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--mat-sys-primary) 8%, transparent);
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.mk-aviso mat-icon {
+  color: var(--mat-sys-primary);
+  flex-shrink: 0;
+}
+
 .mk-form mat-form-field {
   width: 100%;
 }

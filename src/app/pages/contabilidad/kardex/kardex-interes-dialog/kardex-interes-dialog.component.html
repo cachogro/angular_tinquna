@@ -1,0 +1,300 @@
+<h2 mat-dialog-title>
+  Intereses por mora
+  <span class="ki-titulo__destinatario"> — {{ data.nombreDestinatario }} · {{ data.codigoKardex }}</span>
+</h2>
+
+<mat-dialog-content class="ki-content">
+  @if (cargando()) {
+  <div class="ki-loading">
+    <mat-spinner diameter="28"></mat-spinner>
+    <span>Calculando intereses...</span>
+  </div>
+  } @else if (detalle(); as d) {
+
+  <!-- ===== Resumen ===== -->
+  <div class="ki-tiles">
+    <div class="ki-tile">
+      <small>Deuda en el kardex</small>
+      <strong>Bs {{ saldoKardex() | number:'1.2-2' }}</strong>
+      @if (d.resumen && d.resumen.cargado > 0) {
+      <small>incluye Bs {{ d.resumen.cargado | number:'1.2-2' }} de intereses ya cargados</small>
+      }
+    </div>
+    <div class="ki-tile ki-tile--interes">
+      <small>Intereses pendientes (fuera del kardex)</small>
+      <strong>Bs {{ (d.resumen?.pendiente ?? 0) | number:'1.2-2' }}</strong>
+      @if (d.resumen; as r) {
+      <small>
+        {{ r.cuotasPendientes }} {{ r.cuotasPendientes === 1 ? 'mes' : 'meses' }}
+        @if (r.estado === 'VIGENTE') {
+        · {{ tasa(r.tasaMensual) }} % mensual · próxima cuota {{ fechaFmt(r.proximoCorte) }}
+        }
+      </small>
+      }
+    </div>
+    <div class="ki-tile ki-tile--total">
+      <small>Total a cobrar con intereses</small>
+      <strong>Bs {{ (d.resumen?.totalConIntereses ?? saldoKardex()) | number:'1.2-2' }}</strong>
+      @if (d.resumen && d.resumen.condonado > 0) {
+      <small>condonado: Bs {{ d.resumen.condonado | number:'1.2-2' }}</small>
+      }
+    </div>
+  </div>
+
+  <!-- ===== Sin plan vigente: aplicar ===== -->
+  @if (!d.vigente && modo() !== 'APLICAR') {
+  <div class="ki-aviso">
+    <mat-icon>info</mat-icon>
+    <span>
+      @if (!kardexAbierto()) {
+      El kardex está cerrado: el interés se aplica sobre el kardex abierto.
+      } @else if (saldoKardex() <= 0) {
+      Este kardex no tiene deuda: no hay sobre qué aplicar interés.
+      } @else if (d.planes.length) {
+      No hay un interés vigente. Puedes aplicar uno nuevo.
+      } @else {
+      A este kardex no se le está cobrando interés. Si la deuda es grande y no está cumpliendo con los pagos, puedes
+      aplicarle un interés mensual: se calcula cada mes sobre lo que debe y se lleva aparte, sin tocar su saldo.
+      }
+    </span>
+    <button mat-flat-button color="primary" class="ki-aviso__btn" [disabled]="!puedeAplicar() || guardando()"
+      (click)="abrirForm('APLICAR')">
+      <mat-icon>percent</mat-icon> Aplicar interés
+    </button>
+  </div>
+  }
+
+  <!-- ===== Panel de formulario ===== -->
+  @if (modo(); as m) {
+  <form [formGroup]="form" class="ki-form" (ngSubmit)="guardarForm()">
+    <h3>{{ tituloForm() }}</h3>
+
+    @if (m === 'TASA') {
+    <p class="ki-form__nota">
+      La tasa nueva se aplica a todos los meses pendientes (se recalculan) y a los siguientes. Lo ya cargado al kardex
+      o condonado no cambia.
+    </p>
+    } @else if (m === 'CONDONAR') {
+    <p class="ki-form__nota">
+      Se perdonan los Bs {{ total(planEnEdicion()!, 'PENDIENTE') | number:'1.2-2' }} pendientes
+      ({{ pendientes(planEnEdicion()!).length }} {{ pendientes(planEnEdicion()!).length === 1 ? 'mes' : 'meses' }}):
+      no se cobran ni pasan al kardex.
+    </p>
+    } @else if (m === 'CARGAR') {
+    <p class="ki-form__nota">
+      Los Bs {{ total(planEnEdicion()!, 'PENDIENTE') | number:'1.2-2' }} pendientes pasan al kardex como una línea
+      DEBE (no sale dinero de caja ni de banco). El saldo queda en
+      Bs {{ (saldoKardex() + total(planEnEdicion()!, 'PENDIENTE')) | number:'1.2-2' }} y se cobra con un recibo como
+      el resto de la deuda.
+    </p>
+    } @else {
+    <p class="ki-form__nota">
+      Cada mes, contado desde la fecha de inicio, se genera una cuota = saldo del kardex ese día × tasa. Con una fecha
+      pasada se generan de una vez los meses ya cumplidos.
+    </p>
+    }
+
+    <div class="ki-form__row">
+      @if (m === 'APLICAR' || m === 'TASA') {
+      <mat-form-field appearance="outline">
+        <mat-label>{{ m === 'TASA' ? 'Nueva tasa mensual (%)' : 'Tasa mensual (%)' }}</mat-label>
+        <input matInput appMonto formControlName="tasaMensual" (input)="onTasaInput()" />
+        @if (f.tasaMensual.hasError('required') && f.tasaMensual.touched) {
+        <mat-error>Obligatorio</mat-error>
+        } @else if (f.tasaMensual.hasError('pattern')) {
+        <mat-error>Máximo 4 decimales</mat-error>
+        } @else if (f.tasaMensual.hasError('min')) {
+        <mat-error>Debe ser mayor a 0</mat-error>
+        } @else if (f.tasaMensual.hasError('max')) {
+        <mat-error>No puede superar 100 %</mat-error>
+        }
+        @if (m === 'TASA' && planEnEdicion(); as p) {
+        <mat-hint>
+          Actual: {{ tasa(p.tasaMensual) }} %
+          @if (previewTasa() !== null) {
+          · pendiente Bs {{ total(p, 'PENDIENTE') | number:'1.2-2' }} → Bs {{ previewTasa() | number:'1.2-2' }}
+          }
+        </mat-hint>
+        } @else if (m === 'APLICAR' && num(f.tasaMensual.value) > 0) {
+        <mat-hint>
+          Sobre la deuda de hoy: Bs {{ (saldoKardex() * num(f.tasaMensual.value) / 100) | number:'1.2-2' }} al mes
+        </mat-hint>
+        }
+      </mat-form-field>
+      }
+
+      @if (m === 'APLICAR' || m === 'CARGAR') {
+      <mat-form-field appearance="outline">
+        <mat-label>{{ m === 'APLICAR' ? 'Corre desde' : 'Fecha en el kardex' }}</mat-label>
+        <input matInput class="input-fecha" [matDatepicker]="picker" [max]="hoy" formControlName="fecha" />
+        <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+        <mat-datepicker #picker></mat-datepicker>
+        @if (f.fecha.hasError('required') && f.fecha.touched) {
+        <mat-error>Obligatorio</mat-error>
+        }
+        @if (m === 'APLICAR') {
+        <mat-hint>La primera cuota vence un mes después</mat-hint>
+        }
+      </mat-form-field>
+      }
+    </div>
+
+    <mat-form-field appearance="outline" class="ki-form__full">
+      <mat-label>
+        {{ m === 'TASA' || m === 'CONDONAR' ? 'Motivo del acuerdo / quién lo autorizó' : 'Observación (opcional)' }}
+      </mat-label>
+      <input matInput appMayusculas formControlName="observacion" maxlength="500" />
+      @if (f.observacion.hasError('required') && f.observacion.touched) {
+      <mat-error>Obligatorio: queda en la bitácora</mat-error>
+      }
+    </mat-form-field>
+
+    @if ((m === 'CONDONAR' || m === 'CARGAR') && planEnEdicion()?.estado === 'VIGENTE') {
+    <mat-checkbox formControlName="finalizar">
+      Además dejar de generar intereses desde hoy
+    </mat-checkbox>
+    }
+
+    <div class="ki-form__acciones">
+      <button mat-stroked-button type="button" (click)="cancelarForm()" [disabled]="guardando()">Cancelar</button>
+      <button mat-flat-button color="primary" type="submit" [disabled]="guardando()">
+        @if (guardando()) {
+        <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
+        } @else {
+        {{ m === 'APLICAR' ? 'Aplicar interés' : m === 'TASA' ? 'Recalcular con la nueva tasa' : m === 'CONDONAR' ?
+        'Condonar' : 'Cargar al kardex' }}
+        }
+      </button>
+    </div>
+  </form>
+  }
+
+  <!-- ===== Planes (el vigente primero) con sus cuotas mes a mes ===== -->
+  @for (p of d.planes; track p.id) {
+  <section class="ki-plan" [class.ki-plan--finalizado]="p.estado === 'FINALIZADO'">
+    <div class="ki-plan__head">
+      <div class="ki-plan__titulo">
+        <span class="ki-badge" [class.ki-badge--finalizado]="p.estado === 'FINALIZADO'">{{ p.estado }}</span>
+        <strong>{{ tasa(p.tasaMensual) }} % mensual</strong>
+        <span>
+          desde {{ fechaFmt(p.fechaInicio) }}
+          @if (p.fechaFin) {
+          hasta {{ fechaFmt(p.fechaFin) }}
+          }
+        </span>
+      </div>
+      <!-- Mientras haya cuotas pendientes se pueden negociar, aunque el plan
+           ya no genere más. -->
+      @if (!modo() && (p.estado === 'VIGENTE' || pendientes(p).length)) {
+      <div class="ki-plan__acciones">
+        <button mat-stroked-button [disabled]="guardando()" (click)="abrirForm('TASA', p)"
+          matTooltip="Acuerdo: bajar (o subir) la tasa y recalcular todos los meses pendientes">
+          <mat-icon>tune</mat-icon> Cambiar tasa
+        </button>
+        <button mat-stroked-button [disabled]="guardando() || !pendientes(p).length" (click)="abrirForm('CONDONAR', p)"
+          matTooltip="Perdonar los intereses pendientes: no se cobran">
+          <mat-icon>volunteer_activism</mat-icon> Condonar
+        </button>
+        <span [matTooltip]="kardexAbierto() ? 'Pasar lo pendiente al kardex para cobrarlo' : 'El kardex está cerrado'">
+          <button mat-flat-button color="primary"
+            [disabled]="guardando() || !kardexAbierto() || total(p, 'PENDIENTE') <= 0" (click)="abrirForm('CARGAR', p)">
+            <mat-icon>playlist_add</mat-icon> Cargar al kardex
+          </button>
+        </span>
+        @if (p.estado === 'VIGENTE') {
+        <button mat-icon-button color="warn" [disabled]="guardando()" (click)="finalizar(p)"
+          matTooltip="Finalizar: deja de generar intereses">
+          <mat-icon>stop_circle</mat-icon>
+        </button>
+        }
+      </div>
+      }
+    </div>
+    @if (p.observaciones) {
+    <p class="ki-plan__obs">{{ p.observaciones }}</p>
+    }
+
+    @if (p.cuotas.length === 0) {
+    <p class="ki-empty">
+      Todavía no se cumplió el primer mes: la primera cuota se genera sola cuando llegue su fecha.
+    </p>
+    } @else {
+    <div class="ki-tabla-scroll">
+      <table class="ki-tabla">
+        <thead>
+          <tr>
+            <th>Mes</th>
+            <th>Periodo</th>
+            <th class="ki-num">Deuda al corte (Bs)</th>
+            <th class="ki-num">Tasa</th>
+            <th class="ki-num">Interés (Bs)</th>
+            <th>Estado</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of p.cuotas; track c.id) {
+          <tr [class.ki-fila--condonada]="c.estado === 'CONDONADO'">
+            <td>{{ c.numero }}</td>
+            <td>{{ fechaFmt(c.fechaDesde) }} – {{ fechaFmt(c.fechaCorte) }}</td>
+            <td class="ki-num">{{ num(c.saldoBase) | number:'1.2-2' }}</td>
+            <td class="ki-num">{{ tasa(c.tasa) }} %</td>
+            <td class="ki-num"><strong>{{ num(c.monto) | number:'1.2-2' }}</strong></td>
+            <td>
+              <span class="ki-estado" [class.ki-estado--cargado]="c.estado === 'CARGADO'"
+                [class.ki-estado--condonado]="c.estado === 'CONDONADO'">{{ c.estado }}</span>
+            </td>
+            <td class="ki-accion">
+              @if (encabezaCargo(p, c)) {
+              <button mat-icon-button color="warn" [disabled]="guardando() || !kardexAbierto()"
+                (click)="revertirCargo(c)"
+                matTooltip="Revertir el cargo: quita la línea del kardex y sus cuotas vuelven a pendientes">
+                <mat-icon>undo</mat-icon>
+              </button>
+              }
+            </td>
+          </tr>
+          }
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="4">
+              Pendiente Bs {{ total(p, 'PENDIENTE') | number:'1.2-2' }} · Cargado Bs
+              {{ total(p, 'CARGADO') | number:'1.2-2' }} · Condonado Bs {{ total(p, 'CONDONADO') | number:'1.2-2' }}
+            </td>
+            <td class="ki-num">
+              {{ (total(p, 'PENDIENTE') + total(p, 'CARGADO') + total(p, 'CONDONADO')) | number:'1.2-2' }}
+            </td>
+            <td colspan="2"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    }
+
+    <!-- Bitácora: qué se decidió, quién y cuándo. -->
+    <ul class="ki-eventos">
+      @for (e of p.eventos; track e.id) {
+      <li>
+        <span class="ki-eventos__fecha">{{ fechaFmt(e.fecha) }}</span>
+        <span>
+          <strong>{{ eventoLabel(e) }}</strong>
+          @if (eventoDetalle(e)) {
+          · {{ eventoDetalle(e) }}
+          }
+          @if (e.observacion) {
+          <em> — {{ e.observacion }}</em>
+          }
+        </span>
+        <span class="ki-eventos__usuario">{{ e.usuarioRegistro }}</span>
+      </li>
+      }
+    </ul>
+  </section>
+  }
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-flat-button color="primary" (click)="cerrarDialogo()">Cerrar</button>
+</mat-dialog-actions>

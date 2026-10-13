@@ -37,6 +37,8 @@ import {
 import { AuthService } from 'src/app/core/auth/services/auth.service';
 import { RolCodigo } from 'src/app/core/auth/models/auth.models';
 import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog/confirm-dialog.component';
+import { tienePermiso } from 'src/app/core/auth/permiso-signal';
+import { PERMISO } from 'src/app/core/auth/models/permisos';
 
 @Component({
   selector: 'app-kardex-list',
@@ -61,6 +63,12 @@ import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog
   styleUrl: './kardex-list.component.scss',
 })
 export class KardexListComponent implements OnInit {
+  /** El Excel de los reportes es un permiso aparte (Roles y Permisos); el
+   *  PDF lo descarga cualquiera que entre a la pantalla. */
+  readonly puedeDescargarExcel = tienePermiso(
+    PERMISO.DESCARGAR_EXCEL_CONTABILIDAD,
+  );
+
   private readonly kardexService = inject(KardexService);
   private readonly dialog = inject(MatDialog);
   private readonly router = inject(Router);

@@ -1,0 +1,86 @@
+<div class="pm">
+  @for (fila of filas; track fila; let i = $index) {
+  <div class="pm-fila" [formGroup]="fila">
+    <mat-form-field appearance="outline" class="pm-fila__forma">
+      <mat-label>Otra forma de pago</mat-label>
+      <mat-select formControlName="idFormaPago">
+        @for (fp of formasPago(); track fp.id) {
+        <mat-option [value]="fp.id">{{ fp.nombre }}</mat-option>
+        }
+      </mat-select>
+      @if (fila.controls.idFormaPago.hasError('required') && fila.controls.idFormaPago.touched) {
+      <mat-error>Obligatorio</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="pm-fila__monto">
+      <mat-label>Monto ({{ simbolo }})</mat-label>
+      <input matInput appMonto formControlName="monto" />
+      @if (fila.controls.monto.hasError('required') && fila.controls.monto.touched) {
+      <mat-error>Obligatorio</mat-error>
+      } @else if (fila.controls.monto.hasError('pattern') && fila.controls.monto.touched) {
+      <mat-error>Máx. 2 decimales</mat-error>
+      } @else if (fila.controls.monto.hasError('min') && fila.controls.monto.touched) {
+      <mat-error>Mayor a 0</mat-error>
+      }
+    </mat-form-field>
+
+    <button mat-icon-button type="button" color="warn" class="pm-fila__quitar" matTooltip="Quitar medio de pago"
+      (click)="quitar(i)">
+      <mat-icon>delete_outline</mat-icon>
+    </button>
+
+    @if (fila.controls.usaBanco.value) {
+    <div class="pm-fila__banco">
+      <mat-form-field appearance="outline">
+        <mat-label>Cuenta bancaria</mat-label>
+        <mat-select formControlName="idCuentaBancaria">
+          @for (c of cuentasDe(fila); track c.idCuenta) {
+          <mat-option [value]="c.idCuenta">{{ c.etiqueta }}</mat-option>
+          } @empty {
+          <mat-option disabled>
+            {{ pagoConCheque(fila) ? 'Ninguna cuenta en ' + simbolo + ' tiene chequera habilitada' : 'Sin cuentas en ' + simbolo }}
+          </mat-option>
+          }
+        </mat-select>
+        @if (fila.controls.idCuentaBancaria.hasError('required') && fila.controls.idCuentaBancaria.touched) {
+        <mat-error>Obligatoria para pagos bancarios</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>N° de comprobante</mat-label>
+        <input matInput appMayusculas class="nro-cpte" formControlName="nroComprobante" maxlength="30" />
+        @if (fila.controls.nroComprobante.hasError('required') && fila.controls.nroComprobante.touched) {
+        <mat-error>Obligatorio para pagos bancarios</mat-error>
+        }
+      </mat-form-field>
+    </div>
+    <app-cheque-hint class="pm-fila__cheque" [idCuentaBancaria]="fila.controls.idCuentaBancaria.value"
+      [activo]="pagoConCheque(fila)" [control]="fila.controls.nroComprobante" />
+    }
+  </div>
+  }
+
+  @if (filas.length) {
+  <div class="pm-resumen" [class.pm-resumen--error]="excede">
+    <span>Con la forma de pago principal</span>
+    <strong>{{ simbolo }} {{ restoPrincipal | number:'1.2-2' }}</strong>
+  </div>
+  @if (excede) {
+  <p class="pm-alerta">
+    Los otros medios de pago deben sumar menos que el total ({{ simbolo }} {{ total | number:'1.2-2' }}).
+  </p>
+  }
+  }
+
+  <div class="pm-acciones">
+    <button mat-stroked-button type="button" (click)="agregar()" [disabled]="total <= 0">
+      <mat-icon>call_split</mat-icon>
+      {{ filas.length ? 'Agregar otro medio de pago' : 'Pago mixto: agregar otro medio de pago' }}
+    </button>
+    @if (!filas.length) {
+    <small class="pm-ayuda">Para pagar una parte en efectivo y otra por QR, transferencia, etc.</small>
+    }
+  </div>
+</div>

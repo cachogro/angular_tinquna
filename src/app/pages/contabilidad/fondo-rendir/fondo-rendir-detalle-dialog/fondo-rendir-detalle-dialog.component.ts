@@ -34,6 +34,8 @@ import {
 } from '../fondo-rendir-reposicion-dialog/fondo-rendir-reposicion-dialog.component';
 import { ReciboService } from '../../services/recibo.service';
 import { mensajeErrorBlob } from '../../../../shared/utils/descarga-archivo.util';
+import { tienePermiso } from 'src/app/core/auth/permiso-signal';
+import { PERMISO } from 'src/app/core/auth/models/permisos';
 
 export interface FondoRendirDetalleDialogData {
   id: string | number;
@@ -55,6 +57,12 @@ export interface FondoRendirDetalleDialogData {
   styleUrl: './fondo-rendir-detalle-dialog.component.scss',
 })
 export class FondoRendirDetalleDialogComponent implements OnInit {
+  /** El Excel de los reportes es un permiso aparte (Roles y Permisos); el
+   *  PDF lo descarga cualquiera que entre a la pantalla. */
+  readonly puedeDescargarExcel = tienePermiso(
+    PERMISO.DESCARGAR_EXCEL_CONTABILIDAD,
+  );
+
   private readonly dialogRef = inject(
     MatDialogRef<FondoRendirDetalleDialogComponent>,
   );
@@ -68,7 +76,7 @@ export class FondoRendirDetalleDialogComponent implements OnInit {
     'fecha',
     'concepto',
     'nroComprobante',
-    'destinoGasto',
+    'planCuentas',
     'monto',
     'acciones',
   ];

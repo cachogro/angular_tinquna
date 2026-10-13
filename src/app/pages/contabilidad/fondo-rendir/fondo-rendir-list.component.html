@@ -10,7 +10,7 @@
 
     <div class="fl-acciones">
       <button mat-stroked-button color="primary" (click)="exportarExcel()">
-        <mat-icon>download</mat-icon> Exportar Excel
+        <mat-icon>download</mat-icon> {{ puedeDescargarExcel() ? 'Exportar Excel / PDF' : 'Exportar PDF' }}
       </button>
       <button mat-flat-button color="primary" (click)="entregarFondo()">
         <mat-icon>payments</mat-icon> Entregar fondo
@@ -51,6 +51,12 @@
       } @else {
       <div class="fl-tabla-scroll">
         <table mat-table [dataSource]="registros()" class="fl-tabla mat-elevation-z1">
+
+          <!-- N° de seguimiento: el id del fondo. -->
+          <ng-container matColumnDef="numero">
+            <th mat-header-cell *matHeaderCellDef>N°</th>
+            <td mat-cell *matCellDef="let f"><strong>{{ f.id }}</strong></td>
+          </ng-container>
 
           <ng-container matColumnDef="destinatario">
             <th mat-header-cell *matHeaderCellDef>Destinatario</th>

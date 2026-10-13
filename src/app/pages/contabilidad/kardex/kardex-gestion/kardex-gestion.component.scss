@@ -111,6 +111,15 @@
   color: var(--tk-naranja, #e65100);
 }
 
+.kx-tile--interes {
+  background: color-mix(in srgb, var(--tk-naranja, #ef6c00) 12%, transparent);
+  cursor: pointer;
+}
+
+.kx-tile--interes strong {
+  color: var(--tk-naranja, #e65100);
+}
+
 .kx-aviso__btn {
   margin-left: auto;
   flex-shrink: 0;
@@ -240,6 +249,14 @@
 
 .kx-row-inactiva {
   opacity: .55;
+}
+
+.kx-lock {
+  color: rgb(var(--tk-ink, 0 0 0) / 0.35);
+  font-size: 15px;
+  width: 15px;
+  height: 15px;
+  vertical-align: middle;
 }
 
 .kx-num {

@@ -66,3 +66,19 @@ mat-sidenav-content {
   text-align: left;
   max-width: 260px;
 }
+
+/* Al abrir un diálogo, el CDK fija <html> (position: fixed; top: -scroll) para
+   bloquear el scroll de la página. Con la altura al 100% de arriba, <html>
+   medía solo el alto de la ventana: si la página estaba desplazada, la parte
+   inferior del fondo quedaba vacía detrás del diálogo. */
+html.cdk-global-scrollblock {
+  height: auto;
+  min-height: 100%;
+}
+
+/* La etiqueta flotante del primer campo sobresale por arriba del contenido
+   del diálogo y quedaba recortada bajo el título. El "html" de más es para
+   ganarle a la regla de Material, que se carga después y deja ese margen en 0. */
+html .mat-mdc-dialog-container .mat-mdc-dialog-title + .mat-mdc-dialog-content {
+  padding-top: 10px;
+}

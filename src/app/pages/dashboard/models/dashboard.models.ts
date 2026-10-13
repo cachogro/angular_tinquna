@@ -1,3 +1,4 @@
+import { CuentaChequesDashboard } from '../../contabilidad/models/cheque.models';
 // Respuesta de GET /dashboard/resumen (un solo llamado con todo el inicio).
 
 export interface RangoDashboard {
@@ -158,6 +159,8 @@ export interface ResumenDashboard {
   deudores: { total: number; inactivos: number; totalBs: number; lista: Deudor[] };
   cobranzas: Cobranzas;
   cotizaciones: CotizacionVigente[];
+  /** Una fila por cuenta bancaria que maneja chequera. */
+  cheques?: CuentaChequesDashboard[];
   alertas: AlertaDashboard[];
 }
 
@@ -186,9 +189,9 @@ export interface FlujoDinero {
 }
 
 export interface FlujoPorDestino {
-  idDestinoGasto: number | null;
+  idPlanCuentas: number | null;
   nombre: string;
-  /** Categoría del destino, o 'SIN_DESTINO'. */
+  /** Categoría del plan de cuentas, o 'SIN_PLAN_CUENTAS'. */
   categoria: string;
   ingresoBs: number;
   egresoBs: number;
@@ -212,8 +215,8 @@ export interface GananciaEstimada {
   gastosOperativosBs: number;
   sueldosBs: number;
   gananciaEstimadaBs: number;
-  /** Movimientos sin destino de gasto: no se pudieron clasificar. */
-  sinDestino: { ingresoBs: number; egresoBs: number };
+  /** Movimientos sin plan de cuentas: no se pudieron clasificar. */
+  sinPlanCuentas: { ingresoBs: number; egresoBs: number };
 }
 
 export interface ResumenFlujoDinero {

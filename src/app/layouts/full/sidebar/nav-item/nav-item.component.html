@@ -46,7 +46,7 @@
   }
   
   <!-- children -->
-  @if(expanded) { @for(child of item.children | filterByRole; track child) {
+  @if(expanded) { @for(child of item.children | filterByPermiso; track child) {
   <app-nav-item [item]="child" (click)="onSubItemSelected(child)" [depth]="depth + 1">
   </app-nav-item>
   } }

@@ -29,6 +29,8 @@ export interface Usuario {
   usuario: string;
   persona: Persona;
   roles: Rol[];
+  /** Códigos de permiso de pantalla (ver core/auth/models/permisos.ts). */
+  permisos?: string[];
 }
 
 export interface LoginRequest {

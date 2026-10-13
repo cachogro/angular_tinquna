@@ -160,8 +160,9 @@
 
   @if (prep()) {
   <h3>Datos de pago del neto</h3>
-  <!-- 45 = "SUELDOS Y SALARIOS PERSONAL" (parametrica.destino_gasto). -->
-  <app-datos-pago-fields [form]="pago" [esEgreso]="true" [idDestinoPorDefecto]="45" />
+  <!-- 45 = "SUELDOS Y SALARIOS PERSONAL" (parametrica.plan_cuentas). -->
+  <app-datos-pago-fields [form]="pago" [esEgreso]="true" [idDestinoPorDefecto]="45"
+    [montoTotal]="resumen().montoPagado" />
   }
 </mat-dialog-content>
 

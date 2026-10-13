@@ -21,7 +21,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { DestinoGasto } from '../../../configurations/parametricas/models/parametricas.models';
+import { PlanCuentas } from '../../../configurations/parametricas/models/parametricas.models';
 import { ParametricasService } from '../../../configurations/services/parametricas.service';
 import {
   DetalleFondoRendir,
@@ -32,7 +32,7 @@ import { FondoRendirService } from '../../services/fondo-rendir.service';
 import { FechaInputDirective } from '../../../../shared/directives/fecha-input.directive';
 import { MontoInputDirective } from '../../../../shared/directives/monto-input.directive';
 import { MayusculasDirective } from '../../../../shared/directives/mayusculas.directive';
-import { DestinoGastoFieldComponent } from '../../components/destino-gasto-field/destino-gasto-field.component';
+import { PlanCuentasFieldComponent } from '../../components/plan-cuentas-field/plan-cuentas-field.component';
 
 export interface FondoRendirDetalleFormDialogData {
   fondo: FondoRendirCuentas;
@@ -46,7 +46,7 @@ export interface FondoRendirDetalleFormDialogData {
     FechaInputDirective,
     MontoInputDirective,
     MayusculasDirective,
-    DestinoGastoFieldComponent,
+    PlanCuentasFieldComponent,
     CommonModule,
     ReactiveFormsModule,
     MatDialogModule,
@@ -73,7 +73,7 @@ export class FondoRendirDetalleFormDialogComponent implements OnInit {
   readonly cargandoCatalogos = signal(true);
   readonly guardando = signal(false);
 
-  readonly destinosGasto = signal<DestinoGasto[]>([]);
+  readonly cuentasPlan = signal<PlanCuentas[]>([]);
 
   get esEdicion(): boolean {
     return !!this.data.detalle;
@@ -107,7 +107,7 @@ export class FondoRendirDetalleFormDialogComponent implements OnInit {
     ]),
     nroComprobante: new FormControl('', [Validators.maxLength(30)]),
     facturaRecibo: new FormControl('', [Validators.maxLength(30)]),
-    idDestinoGasto: new FormControl<number | null>(null),
+    idPlanCuentas: new FormControl<number | null>(null),
   });
 
   get f() {
@@ -121,9 +121,9 @@ export class FondoRendirDetalleFormDialogComponent implements OnInit {
       if (up !== v) this.f.concepto.setValue(up, { emitEvent: false });
     });
 
-    this.parametricasService.obtenerDestinosGasto().subscribe({
-      next: (destinosGasto) => {
-        this.destinosGasto.set(destinosGasto.filter((d) => d.activo !== false));
+    this.parametricasService.obtenerCuentasPlan().subscribe({
+      next: (cuentasPlan) => {
+        this.cuentasPlan.set(cuentasPlan.filter((d) => d.activo !== false));
         this.cargandoCatalogos.set(false);
         this.precargarSiEdicion();
       },
@@ -146,7 +146,7 @@ export class FondoRendirDetalleFormDialogComponent implements OnInit {
       monto: Number(d.monto),
       nroComprobante: d.nroComprobante ?? '',
       facturaRecibo: d.facturaRecibo ?? '',
-      idDestinoGasto: d.idDestinoGasto ?? null,
+      idPlanCuentas: d.idPlanCuentas ?? null,
     });
   }
 
@@ -173,7 +173,7 @@ export class FondoRendirDetalleFormDialogComponent implements OnInit {
     if (nroComprobante) request.nroComprobante = nroComprobante;
     const facturaRecibo = (v.facturaRecibo ?? '').trim();
     if (facturaRecibo) request.facturaRecibo = facturaRecibo;
-    if (v.idDestinoGasto != null) request.idDestinoGasto = v.idDestinoGasto;
+    if (v.idPlanCuentas != null) request.idPlanCuentas = v.idPlanCuentas;
 
     this.fondoRendirService.guardarDetalle(request).subscribe({
       next: (fondo) => {

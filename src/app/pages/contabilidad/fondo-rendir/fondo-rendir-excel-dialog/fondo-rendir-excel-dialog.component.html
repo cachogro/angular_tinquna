@@ -80,6 +80,7 @@
   <button mat-stroked-button (click)="cancelar()" [disabled]="descargandoExcel()">
     Cancelar
   </button>
+  @if (puedeDescargarExcel()) {
   <button mat-flat-button color="primary" (click)="descargarExcel()"
     [disabled]="descargandoExcel() || cargandoCatalogos()">
     @if (descargandoExcel()) {
@@ -89,6 +90,7 @@
     <span>Descargar Excel</span>
     }
   </button>
+  }
   <button mat-flat-button color="primary" (click)="descargarExcel('PDF')"
     [disabled]="descargandoExcel() || cargandoCatalogos()">
     <span>Descargar PDF</span>

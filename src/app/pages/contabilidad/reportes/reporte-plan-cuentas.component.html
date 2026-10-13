@@ -1,8 +1,8 @@
 <mat-card class="cardWithShadow theme-card">
   <mat-card-header>
     <div>
-      <mat-card-title class="m-b-0">Reporte por destino del gasto</mat-card-title>
-      <mat-card-subtitle class="m-b-0">Contabilidad · lo ganado y lo gastado agrupado por destino</mat-card-subtitle>
+      <mat-card-title class="m-b-0">Reporte por plan de cuentas</mat-card-title>
+      <mat-card-subtitle class="m-b-0">Contabilidad · lo ganado y lo gastado agrupado por plan de cuentas</mat-card-subtitle>
     </div>
   </mat-card-header>
 
@@ -67,18 +67,18 @@
       </div>
     </div>
 
-    <!-- ===== Resumen por destino ===== -->
-    @if (r.destinos.length === 0) {
+    <!-- ===== Resumen por plan de cuentas ===== -->
+    @if (r.planCuentas.length === 0) {
     <div class="rd-empty">
       <mat-icon>insights</mat-icon>
       <p>Sin movimientos para el filtro seleccionado.</p>
     </div>
     } @else {
     <div class="rd-tabla-scroll">
-      <table mat-table [dataSource]="r.destinos" class="rd-tabla mat-elevation-z1">
+      <table mat-table [dataSource]="r.planCuentas" class="rd-tabla mat-elevation-z1">
 
         <ng-container matColumnDef="destino">
-          <th mat-header-cell *matHeaderCellDef>Destino</th>
+          <th mat-header-cell *matHeaderCellDef>Plan de cuentas</th>
           <td mat-cell *matCellDef="let d">{{ d.nombre }}</td>
         </ng-container>
 
@@ -107,8 +107,8 @@
         <ng-container matColumnDef="acciones">
           <th mat-header-cell *matHeaderCellDef>Acciones</th>
           <td mat-cell *matCellDef="let d">
-            <!-- "SIN DESTINO" no tiene id: no hay detalle. -->
-            @if (d.idDestinoGasto !== null) {
+            <!-- "SIN PLAN DE CUENTAS" no tiene id: no hay detalle. -->
+            @if (d.idPlanCuentas !== null) {
             <button mat-stroked-button class="rd-btn-detalle" (click)="verDetalle(d)">
               Ver detalle
             </button>
@@ -118,13 +118,13 @@
 
         <tr mat-header-row *matHeaderRowDef="columnasResumen"></tr>
         <tr mat-row *matRowDef="let d; columns: columnasResumen"
-          [class.rd-row-sel]="d.idDestinoGasto !== null && d.idDestinoGasto === destinoDetalleId()"></tr>
+          [class.rd-row-sel]="d.idPlanCuentas !== null && d.idPlanCuentas === destinoDetalleId()"></tr>
       </table>
     </div>
     }
     }
 
-    <!-- ===== Detalle del destino elegido ===== -->
+    <!-- ===== Detalle de la cuenta elegida ===== -->
     @if (cargandoDetalle()) {
     <div class="rd-loading">
       <mat-spinner diameter="28"></mat-spinner>
@@ -134,7 +134,7 @@
     <div class="rd-detalle">
       <div class="rd-detalle__titulo">
         <h3 class="m-0">
-          {{ d.destino.nombre }}
+          {{ d.planCuentas.nombre }}
           <small>({{ d.totales.cantidadMovimientos }} movimientos)</small>
         </h3>
         <button mat-button (click)="cerrarDetalle()">

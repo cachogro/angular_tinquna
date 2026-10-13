@@ -61,6 +61,9 @@ export interface MovimientoBanco {
   usuarioRegistro?: string | null;
   /** Presente cuando el movimiento nace de un traspaso caja↔banco. */
   idTraspaso?: string | null;
+  /** Documento que lo generó (recibo, traspaso, pago de valorización, bien en
+   *  dación): se anula o corrige desde ahí. null = manual o de kardex directo. */
+  origen?: { tipo: string; id: string; etiqueta: string } | null;
   concepto: string;
   /** "DEBE" = egreso/salida. */
   debe: string;
@@ -81,8 +84,8 @@ export interface MovimientoBanco {
  *  el visor. La bandeja trae solo lo que muestra la tabla. */
 export interface MovimientoBancoDetalle extends MovimientoBanco {
   facturaRecibo?: string | null;
-  idDestinoGasto?: number | null;
-  destinoGasto?: { id: number; nombre: string } | null;
+  idPlanCuentas?: number | null;
+  planCuentas?: { id: number; nombre: string } | null;
   cuentaBancaria?: {
     id: number;
     numeroCuenta: string;

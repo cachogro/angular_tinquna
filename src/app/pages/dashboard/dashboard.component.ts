@@ -12,7 +12,7 @@ import { Router, RouterLink } from '@angular/router';
 import { RangoFechasComponent } from 'src/app/shared/components/rango-fechas/rango-fechas.component';
 import { irAGestionKardex } from '../contabilidad/kardex/kardex-gestion/kardex-gestion.component';
 import { formatFechaIso } from '../contabilidad/components/personal-interno.util';
-import { nombreCategoriaDestinoGasto } from '../configurations/parametricas/models/parametricas.models';
+import { nombreCategoriaPlanCuentas } from '../configurations/parametricas/models/parametricas.models';
 import {
   AlertaDashboard,
   Deudor,
@@ -37,7 +37,7 @@ const TIPO_KARDEX: Record<string, string> = {
   CLIENTE: 'Cliente',
 };
 
-// Categorías de destino de gasto que suman o restan en la ganancia estimada.
+// Categorías de plan de cuentas que suman o restan en la ganancia estimada.
 const CATEGORIAS_EN_GANANCIA = ['GASTO_OPERATIVO', 'SUELDOS', 'OTRO_INGRESO'];
 
 interface FilaFlujo {
@@ -123,10 +123,10 @@ export class DashboardComponent implements OnInit {
       .filter(
         (c) =>
           !CATEGORIAS_EN_GANANCIA.includes(c.categoria) &&
-          c.categoria !== 'SIN_DESTINO' &&
+          c.categoria !== 'SIN_PLAN_CUENTAS' &&
           (c.ingresoBs !== 0 || c.egresoBs !== 0),
       )
-      .map((c) => ({ ...c, nombre: nombreCategoriaDestinoGasto(c.categoria) })),
+      .map((c) => ({ ...c, nombre: nombreCategoriaPlanCuentas(c.categoria) })),
   );
 
   readonly tipoKardex = TIPO_KARDEX;
@@ -215,7 +215,7 @@ export class DashboardComponent implements OnInit {
   }
 
   nombreCategoria(categoria: string): string {
-    return nombreCategoriaDestinoGasto(categoria);
+    return nombreCategoriaPlanCuentas(categoria);
   }
 
   /** Monto con su símbolo (Bs o $us), para el cuadro de efectivo y bancos. */
@@ -264,6 +264,17 @@ export class DashboardComponent implements OnInit {
   }
 
   /** "1 lote" / "3 lotes"; el plural por defecto agrega "s". */
+  /** Porcentaje de cheques que le quedan a la cuenta (para la barra). */
+  pctCheques(c: { disponibles: number; total: number }): number {
+    return c.total ? (c.disponibles / c.total) * 100 : 0;
+  }
+
+  /** "dd/mm/aaaa" de una fecha "YYYY-MM-DD". */
+  fechaCorta(iso: string): string {
+    const [a, m, d] = iso.slice(0, 10).split('-');
+    return `${d}/${m}/${a}`;
+  }
+
   plural(n: number, singular: string, plural = `${singular}s`): string {
     return `${this.decimal.transform(n, '1.0-0')} ${n === 1 ? singular : plural}`;
   }

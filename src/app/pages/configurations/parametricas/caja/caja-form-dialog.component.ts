@@ -91,9 +91,9 @@ export class CajaFormDialogComponent implements OnInit {
         Validators.pattern(CHARSET_NOMBRE),
       ],
     ],
-    saldoInicialBs: [0, [montoDosDecimales, Validators.min(0)]],
+    saldoInicialBs: [0, [montoDosDecimales]],
     fechaSaldoInicialBs: [null as Date | null],
-    saldoInicialUsd: [0, [montoDosDecimales, Validators.min(0)]],
+    saldoInicialUsd: [0, [montoDosDecimales]],
     fechaSaldoInicialUsd: [null as Date | null],
   });
 

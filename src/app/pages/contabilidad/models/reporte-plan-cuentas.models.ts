@@ -1,9 +1,9 @@
-// src/app/pages/contabilidad/models/reporte-destino-gasto.models.ts
+// src/app/pages/contabilidad/models/reporte-plan-cuentas.models.ts
 import { MonedaCuenta } from '../../configurations/parametricas/models/parametricas.models';
 
-/** Filtros de GET /contabilidad/reportes/destino-gasto[/:id]. Todos los
+/** Filtros de GET /contabilidad/reportes/plan-cuentas[/:id]. Todos los
  *  opcionales salen del query string si no tienen valor. */
-export interface FiltroReporteDestinoGasto {
+export interface FiltroReportePlanCuentas {
   moneda: MonedaCuenta;
   idCaja?: number;
   /** YYYY-MM-DD */
@@ -18,17 +18,17 @@ export interface TotalesReporte {
   neto: number;
 }
 
-export interface FilaDestinoGasto extends TotalesReporte {
-  /** null = "SIN DESTINO" (no tiene detalle por id). */
-  idDestinoGasto: number | null;
+export interface FilaPlanCuentas extends TotalesReporte {
+  /** null = "SIN PLAN DE CUENTAS" (no tiene detalle por id). */
+  idPlanCuentas: number | null;
   nombre: string;
   esEgreso: boolean | null;
   cantidadMovimientos: number;
 }
 
-export interface ResumenDestinosGasto {
+export interface ResumenCuentasPlan {
   totales: TotalesReporte;
-  destinos: FilaDestinoGasto[];
+  planCuentas: FilaPlanCuentas[];
 }
 
 export interface MovimientoReporteDestino {
@@ -44,8 +44,8 @@ export interface MovimientoReporteDestino {
   egreso: number;
 }
 
-export interface DetalleDestinoGasto {
-  destino: { id: number; nombre: string; esEgreso: boolean };
+export interface DetallePlanCuentas {
+  planCuentas: { id: number; nombre: string; esEgreso: boolean };
   totales: TotalesReporte & { cantidadMovimientos: number };
   movimientos: MovimientoReporteDestino[];
 }

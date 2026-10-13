@@ -15,6 +15,11 @@ import { Observable } from 'rxjs';
 import { DetalleRecibo, Recibo } from '../../models/recibo.models';
 import { ReciboService } from '../../services/recibo.service';
 import { mensajeErrorBlob } from '../../../../shared/utils/descarga-archivo.util';
+import {
+  MedioPago,
+  descripcionMedioPago,
+  mediosMixtos,
+} from '../../models/medio-pago.models';
 
 export interface ReciboDetalleDialogData {
   id: string;
@@ -46,7 +51,7 @@ export class ReciboDetalleDialogComponent implements OnInit {
   readonly descargandoPdf = signal(false);
   readonly recibo = signal<Recibo | null>(null);
 
-  readonly columnas = ['destino', 'destinatario', 'destinoGasto', 'monto'];
+  readonly columnas = ['destino', 'destinatario', 'planCuentas', 'monto'];
 
   ngOnInit(): void {
     this.reciboService.obtener(this.data.id).subscribe({
@@ -105,6 +110,13 @@ export class ReciboDetalleDialogComponent implements OnInit {
       r.estado
     ];
   }
+
+  /** Medios del recibo si fue un pago mixto (efectivo + QR, etc.). */
+  pagosMixtos(r: Recibo): MedioPago[] {
+    return mediosMixtos(r.pagos);
+  }
+
+  readonly descripcionMedio = descripcionMedioPago;
 
   /** "BCP 0011-2233" — sigla (o nombre) de la entidad + n° de cuenta. */
   nombreCuenta(r: Recibo): string {

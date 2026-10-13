@@ -1,0 +1,85 @@
+<mat-card class="cardWithShadow theme-card">
+  <mat-card-header>
+    <div>
+      <mat-card-title class="m-b-0">Roles y permisos</mat-card-title>
+      <mat-card-subtitle class="m-t-0">Qué pantallas ve y puede usar cada rol</mat-card-subtitle>
+    </div>
+  </mat-card-header>
+  <mat-card-content class="b-t-1">
+    <div class="permisos-page">
+      @if (loading()) {
+      <div class="permisos-estado">
+        <mat-spinner diameter="36"></mat-spinner>
+      </div>
+      } @else if (matriz(); as matriz) {
+      <div class="permisos-toolbar">
+        <span class="permisos-toolbar__aviso">
+          @if (hayCambios()) {
+          <mat-icon>edit_note</mat-icon>
+          Cambios sin guardar en:
+          @for (rol of rolesModificados(); track rol.id; let ultimo = $last) {
+          <strong>{{ rol.nombre }}</strong>{{ ultimo ? '' : ', ' }}
+          }
+          } @else {
+          <mat-icon>info</mat-icon>
+          Marca las pantallas de cada rol y guarda. El dashboard lo ven todos.
+          }
+        </span>
+
+        <button mat-button [disabled]="!hayCambios() || guardando()" (click)="descartar()">
+          Descartar
+        </button>
+        <button mat-flat-button color="primary" [disabled]="!hayCambios() || guardando()" (click)="guardar()">
+          <mat-icon>save</mat-icon>
+          {{ guardando() ? 'Guardando…' : 'Guardar cambios' }}
+        </button>
+      </div>
+
+      <div class="permisos-tabla-wrapper">
+        <table class="permisos-tabla">
+          <thead>
+            <tr>
+              <th class="permisos-tabla__pantalla">Pantalla</th>
+              @for (rol of matriz.roles; track rol.id) {
+              <th class="permisos-tabla__rol">{{ rol.nombre }}</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (modulo of matriz.modulos; track modulo.modulo) {
+            <tr class="permisos-tabla__modulo">
+              <td [attr.colspan]="matriz.roles.length + 1">{{ modulo.modulo }}</td>
+            </tr>
+            @for (permiso of modulo.permisos; track permiso.codigo) {
+            <tr>
+              <td class="permisos-tabla__pantalla">
+                <span class="permiso-nombre">{{ permiso.nombre }}</span>
+                @if (permiso.descripcion) {
+                <span class="permiso-descripcion">{{ permiso.descripcion }}</span>
+                }
+              </td>
+              @for (rol of matriz.roles; track rol.id) {
+              <td class="permisos-tabla__rol" [matTooltip]="ayuda(rol, permiso)">
+                <mat-checkbox color="primary" [checked]="marcado(rol, permiso)"
+                  [disabled]="rol.esAdministrador || !permitido(rol, permiso) || guardando()"
+                  [attr.aria-label]="permiso.nombre + ' para ' + rol.nombre"
+                  (change)="alternar(rol, permiso, $event.checked)">
+                </mat-checkbox>
+              </td>
+              }
+            </tr>
+            }
+            }
+          </tbody>
+        </table>
+      </div>
+      } @else {
+      <div class="permisos-estado">
+        <mat-icon>error_outline</mat-icon>
+        <span>No se pudo cargar la matriz de permisos.</span>
+        <button mat-button (click)="cargar()">Reintentar</button>
+      </div>
+      }
+    </div>
+  </mat-card-content>
+</mat-card>

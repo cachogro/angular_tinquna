@@ -16,7 +16,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { TablerIconsModule } from 'angular-tabler-icons';
 import { MaterialModule } from 'src/app/material.module';
 import { CommonModule } from '@angular/common';
-import { FilterByRolePipe } from 'src/app/shared/pipes/filter-by-role.pipe';
+import { FilterByPermisoPipe } from 'src/app/shared/pipes/filter-by-permiso.pipe';
 
 @Component({
   selector: 'app-nav-item',
@@ -25,7 +25,7 @@ import { FilterByRolePipe } from 'src/app/shared/pipes/filter-by-role.pipe';
     TablerIconsModule,
     MaterialModule,
     CommonModule,
-    FilterByRolePipe,
+    FilterByPermisoPipe,
   ],
   templateUrl: './nav-item.component.html',
   styleUrls: [],

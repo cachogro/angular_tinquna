@@ -47,6 +47,8 @@ export class AuthService {
     this.roles().includes(RolCodigo.ADMINISTRADOR),
   );
 
+  readonly permisos = computed<string[]>(() => this._user()?.permisos ?? []);
+
   constructor() {
     if (!this.isBrowser) return; // en servidor no hay window/eventos de storage
 
@@ -114,6 +116,34 @@ export class AuthService {
   hasRole(...codigos: string[]): boolean {
     const userRoles = this.roles();
     return codigos.some((c) => userRoles.includes(c));
+  }
+
+  /**
+   * true si el usuario tiene al menos uno de los permisos de pantalla
+   * (códigos de core/auth/models/permisos.ts). El administrador tiene
+   * siempre todos.
+   */
+  hasPermiso(...codigos: string[]): boolean {
+    if (this.isAdmin()) return true;
+    const propios = this.permisos();
+    return codigos.some((c) => propios.includes(c));
+  }
+
+  /**
+   * Vuelve a pedir al back el usuario con sus permisos y actualiza la sesión
+   * guardada. Así un cambio hecho en Roles y Permisos se refleja al volver a
+   * abrir la aplicación, sin obligar a cerrar sesión. Si falla (sin red) se
+   * sigue con lo guardado.
+   */
+  refrescarSesion(): void {
+    if (!this.isAuthenticated()) return;
+    this.http.get<Usuario>(`${this.apiUrl}/check-status`).subscribe({
+      next: (user) => {
+        this.tokenStorage.setUserRaw(JSON.stringify(user));
+        this._user.set(user);
+      },
+      error: () => undefined,
+    });
   }
 
   getAccessToken(): string | null {

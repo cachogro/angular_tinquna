@@ -37,7 +37,7 @@ import {
   PersonaCI,
 } from '../../../configurations/models/persona.models';
 import {
-  DestinoGasto,
+  PlanCuentas,
   FormaPago,
   MonedaCuentaBancaria,
   etiquetaMonedaCuenta,
@@ -49,7 +49,7 @@ import { FondoRendirService } from '../../services/fondo-rendir.service';
 import { FechaInputDirective } from '../../../../shared/directives/fecha-input.directive';
 import { MontoInputDirective } from '../../../../shared/directives/monto-input.directive';
 import { MayusculasDirective } from '../../../../shared/directives/mayusculas.directive';
-import { DestinoGastoFieldComponent } from '../../components/destino-gasto-field/destino-gasto-field.component';
+import { PlanCuentasFieldComponent } from '../../components/plan-cuentas-field/plan-cuentas-field.component';
 
 type DestinatarioTipo = 'PERSONA' | 'ACTOR';
 
@@ -64,6 +64,7 @@ interface CuentaOpcion {
   moneda: MonedaCuentaBancaria;
   nombreEntidad: string;
   activo: boolean;
+  manejaCheques: boolean;
 }
 
 @Component({
@@ -73,7 +74,7 @@ interface CuentaOpcion {
     FechaInputDirective,
     MontoInputDirective,
     MayusculasDirective,
-    DestinoGastoFieldComponent,
+    PlanCuentasFieldComponent,
     CommonModule,
     ReactiveFormsModule,
     MatDialogModule,
@@ -105,7 +106,7 @@ export class FondoRendirFormDialogComponent implements OnInit {
   readonly personas = signal<PersonaCI[]>([]);
   readonly actores = signal<ActorProductivoMinero[]>([]);
   readonly formasPago = signal<FormaPago[]>([]);
-  readonly destinosGasto = signal<DestinoGasto[]>([]);
+  readonly cuentasPlan = signal<PlanCuentas[]>([]);
   readonly cuentas = signal<CuentaOpcion[]>([]);
   readonly personasAutorizadas = signal<PersonaCI[]>([]);
 
@@ -131,7 +132,7 @@ export class FondoRendirFormDialogComponent implements OnInit {
     nroComprobante: new FormControl('', [
       Validators.maxLength(30),
     ]),
-    idDestinoGasto: new FormControl<number | null>(null),
+    idPlanCuentas: new FormControl<number | null>(null),
     idPersonaAutorizo: new FormControl<string | null>(null, [
       Validators.required,
     ]),
@@ -165,7 +166,25 @@ export class FondoRendirFormDialogComponent implements OnInit {
     );
   }
 
+  /** El fondo se entrega con cheque (siempre es plata que sale). */
+  get pagoConCheque(): boolean {
+    return (this.formaPagoSeleccionada()?.codigo ?? '').toUpperCase() === 'CHEQUE';
+  }
+
+  /** Pagando con cheque solo se ofrecen las cuentas que tienen chequera. */
+  get cuentasVisibles(): CuentaOpcion[] {
+    return this.pagoConCheque
+      ? this.cuentas().filter((c) => c.manejaCheques)
+      : this.cuentas();
+  }
+
   private sincronizarCamposBanco(): void {
+    // Al pasar a CHEQUE, si la cuenta elegida no tiene chequera se limpia.
+    const elegida = this.f.idCuentaBancaria.value;
+    if (elegida != null && !this.cuentasVisibles.some((c) => c.idCuenta === elegida)) {
+      this.f.idCuentaBancaria.setValue(null, { emitEvent: false });
+    }
+
     const { idCuentaBancaria, nroComprobante } = this.f;
     if (this.requiereCuentaBancaria) {
       idCuentaBancaria.setValidators([Validators.required]);
@@ -226,7 +245,7 @@ export class FondoRendirFormDialogComponent implements OnInit {
       }),
       actores: this.personaService.getAllActoresMineros(),
       formasPago: this.parametricasService.obtenerFormasPago(),
-      destinosGasto: this.parametricasService.obtenerDestinosGasto(),
+      cuentasPlan: this.parametricasService.obtenerCuentasPlan(),
       entidades: this.parametricasService.obtenerEntidadesFinancieras(),
       personasAutorizadas: this.personaService.listarPersonasAutorizadas(),
     }).subscribe({
@@ -234,7 +253,7 @@ export class FondoRendirFormDialogComponent implements OnInit {
         personas,
         actores,
         formasPago,
-        destinosGasto,
+        cuentasPlan,
         entidades,
         personasAutorizadas,
       }) => {
@@ -243,7 +262,7 @@ export class FondoRendirFormDialogComponent implements OnInit {
           actores.filter((a) => String(a.id) !== ID_ACTOR_EMPRESA),
         );
         this.formasPago.set(formasPago.filter((f) => f.activo !== false));
-        this.destinosGasto.set(destinosGasto.filter((d) => d.activo !== false));
+        this.cuentasPlan.set(cuentasPlan.filter((d) => d.activo !== false));
         const opciones: CuentaOpcion[] = [];
         for (const e of entidades) {
           for (const c of e.cuentas ?? []) {
@@ -253,6 +272,7 @@ export class FondoRendirFormDialogComponent implements OnInit {
               moneda: c.moneda,
               nombreEntidad: e.nombre,
               activo: c.activo !== false,
+              manejaCheques: !!c.manejaCheques,
             });
           }
         }
@@ -386,7 +406,7 @@ export class FondoRendirFormDialogComponent implements OnInit {
       request.idCuentaBancaria = v.idCuentaBancaria!;
       request.nroComprobante = (v.nroComprobante ?? '').trim();
     }
-    if (v.idDestinoGasto != null) request.idDestinoGasto = v.idDestinoGasto;
+    if (v.idPlanCuentas != null) request.idPlanCuentas = v.idPlanCuentas;
     if (v.fechaLimite) request.fechaLimite = this.formatFecha(v.fechaLimite);
 
     this.fondoRendirService.entregar(request).subscribe({

@@ -11,6 +11,7 @@ import {
 } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import {
   MatDialog,
   MatDialogModule,
@@ -35,6 +36,10 @@ import {
   etiquetaMonedaCuenta,
 } from '../models/parametricas.models';
 import { ParametricasService } from '../../services/parametricas.service';
+import {
+  ChequerasDialogComponent,
+  ChequerasDialogData,
+} from '../../../contabilidad/cheques/chequeras-dialog/chequeras-dialog.component';
 
 /** Mayúsculas, letras (con acentos/ñ), números, espacio y . - & */
 const CARACTERES_INVALIDOS_NOMBRE = /[^A-ZÁÉÍÓÚÑÜ0-9 .\-&]/g;
@@ -53,6 +58,9 @@ interface FilaCuentaRaw {
   // entidad (el saldo inicial se configura desde Contabilidad › Libreta).
   saldoInicial: number | null;
   fechaSaldoInicial: string | null;
+  manejaCheques: boolean;
+  // Lo que ya está guardado en el back: recién ahí se pueden cargar talonarios.
+  chequesGuardado: boolean;
 }
 
 @Component({
@@ -71,6 +79,7 @@ interface FilaCuentaRaw {
     MatIconModule,
     MatTooltipModule,
     MatCardModule,
+    MatCheckboxModule,
     ParametricaDialogShellComponent,
   ],
   templateUrl: './entidad-financiera-form-dialog.component.html',
@@ -147,6 +156,8 @@ export class EntidadFinancieraFormDialogComponent implements OnInit {
         cuenta?.saldoInicial != null ? Number(cuenta.saldoInicial) : null,
       ],
       fechaSaldoInicial: [cuenta?.fechaSaldoInicial ?? null],
+      manejaCheques: [cuenta?.manejaCheques ?? false],
+      chequesGuardado: [cuenta?.manejaCheques ?? false],
     });
     this.registrarSaneador(fila.get('numeroCuenta')!, (v) =>
       v.replace(CARACTERES_INVALIDOS_NUMERO_CUENTA, ''),
@@ -193,6 +204,30 @@ export class EntidadFinancieraFormDialogComponent implements OnInit {
             { duration: 4000 },
           ),
       });
+  }
+
+  /** La cuenta ya tiene guardado que maneja cheques: se pueden ver sus chequeras. */
+  puedeVerChequeras(indice: number): boolean {
+    const fila = this.cuentas.at(indice);
+    return !!fila.get('id')?.value && !!fila.get('chequesGuardado')?.value;
+  }
+
+  /** Talonarios y cheques de la cuenta (registrar talonario, cobrar, anular...). */
+  abrirChequeras(indice: number): void {
+    const fila = this.cuentas.at(indice).getRawValue() as FilaCuentaRaw;
+    if (!fila.id) return;
+    const banco = this.form.get('sigla')?.value || this.form.get('nombre')?.value || '';
+    const moneda = fila.moneda ? ` (${this.etiquetaMoneda(fila.moneda)})` : '';
+    this.dialog.open<ChequerasDialogComponent, ChequerasDialogData>(
+      ChequerasDialogComponent,
+      {
+        maxWidth: '96vw',
+        data: {
+          idCuentaBancaria: fila.id,
+          etiqueta: `${banco} · ${fila.numeroCuenta}${moneda}`,
+        },
+      },
+    );
   }
 
   /** Marca error en el FormArray si hay dos cuentas con el mismo número. */
@@ -277,6 +312,7 @@ export class EntidadFinancieraFormDialogComponent implements OnInit {
         ...(c.fechaSaldoInicial
           ? { fechaSaldoInicial: c.fechaSaldoInicial }
           : {}),
+        manejaCheques: !!c.manejaCheques,
       }));
 
     this.parametricasService

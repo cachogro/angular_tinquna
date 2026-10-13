@@ -4,7 +4,7 @@
 // libreta_banco, enlazados entre sí. El back devuelve los montos como
 // string ("1000.00").
 import {
-  DestinoGasto,
+  PlanCuentas,
   MonedaCuenta,
 } from '../../configurations/parametricas/models/parametricas.models';
 import { MovimientoCaja } from './movimiento-caja.models';
@@ -57,8 +57,8 @@ export interface Traspaso {
   /** DEPOSITO exige un destino con `esEgreso: true`; RETIRO con `esEgreso: false`.
    *  Se refleja en el movimiento de caja generado (la libreta bancaria no
    *  tiene esta columna, igual que en recibos). */
-  idDestinoGasto?: number | null;
-  destinoGasto?: DestinoGasto | null;
+  idPlanCuentas?: number | null;
+  planCuentas?: PlanCuentas | null;
   concepto: string;
   monto: string;
   /** Quién autorizó el traspaso; null en los registrados antes de la 069. */
@@ -82,7 +82,7 @@ export interface GuardarTraspasoRequest {
   nroComprobante?: string;
   /** Opcional. En edición, si se omite se limpia el que tenía antes —
    *  hay que reenviarlo si se quiere conservar. */
-  idDestinoGasto?: number;
+  idPlanCuentas?: number;
   concepto: string;
   /** > 0, hasta 2 decimales. */
   monto: number;

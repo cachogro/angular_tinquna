@@ -15,7 +15,7 @@
         <app-sidebar (toggleMobileNav)="sidenav.toggle()" [showToggle]="isOver"></app-sidebar>
         <ng-scrollbar class="position-relative sidebar-scroll">
           <mat-nav-list class="sidebar-list">
-            @for(item of navItems | filterByRole; track item) {
+            @for(item of navItems | filterByPermiso; track item) {
             <app-nav-item [item]="item" (notify)="cerrarSiSuperpuesto()">
             </app-nav-item>
             }

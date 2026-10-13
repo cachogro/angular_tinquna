@@ -11,6 +11,15 @@
 //        /:id/procesar con `detalles` + forma de pago / banco / tipo mov.
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { ChequeHintComponent } from '../../components/cheque-hint/cheque-hint.component';
+import {
+  PagosAdicionalesFieldsComponent,
+  crearFilaPagoAdicional,
+  crearFormPagosAdicionales,
+  errorPagosMixtos,
+  leerPagosMixtos,
+} from '../../components/pagos-adicionales-fields/pagos-adicionales-fields.component';
+import { MedioPagoRequest, mediosMixtos } from '../../models/medio-pago.models';
 import { toObservable } from '@angular/core/rxjs-interop';
 import {
   AbstractControl,
@@ -48,7 +57,7 @@ import {
 import {
   Cliente,
   CuentaFinanciera,
-  DestinoGasto,
+  PlanCuentas,
   EntidadFinanciera,
   FormaPago,
   MonedaCuenta,
@@ -120,9 +129,9 @@ type PersonaControlValue = PersonaCI | string | null;
 
 type ContraparteTipo = 'PERSONA' | 'ACTOR' | 'CLIENTE' | 'TEXTO';
 
-/** El autocomplete de destino de gasto guarda el objeto elegido, o el texto
+/** El autocomplete de plan de cuentas guarda el objeto elegido, o el texto
  *  suelto mientras se escribe (se ignora al guardar si no coincide). */
-type DestinoGastoControlValue = DestinoGasto | string | null;
+type PlanCuentasControlValue = PlanCuentas | string | null;
 
 /** Las filas del formulario son solo reparto a kardex; el efectivo es el
  *  resto calculado (monto total − suma de filas) y no se teclea. */
@@ -159,6 +168,8 @@ type DestinatarioControlValue = DestinatarioKardex | string | null;
     MatAutocompleteModule,
     MatDatepickerModule,
     MatProgressSpinnerModule,
+    ChequeHintComponent,
+    PagosAdicionalesFieldsComponent,
   ],
   templateUrl: './recibo-form-dialog.component.html',
   styleUrl: './recibo-form-dialog.component.scss',
@@ -176,7 +187,7 @@ export class ReciboFormDialogComponent implements OnInit {
   readonly guardando = signal(false);
 
   readonly formasPago = signal<FormaPago[]>([]);
-  readonly destinosGasto = signal<DestinoGasto[]>([]);
+  readonly cuentasPlan = signal<PlanCuentas[]>([]);
   readonly personas = signal<PersonaCI[]>([]);
   readonly actores = signal<ActorProductivoMinero[]>([]);
   readonly clientes = signal<Cliente[]>([]);
@@ -218,8 +229,8 @@ export class ReciboFormDialogComponent implements OnInit {
     return this.esIngreso ? 'Recibí de' : 'Entregué a';
   }
 
-  get labelDestinoGasto(): string {
-    return this.esIngreso ? 'Origen del ingreso' : 'Destino del gasto';
+  get labelPlanCuentas(): string {
+    return this.esIngreso ? 'Origen del ingreso' : 'Plan de cuentas';
   }
 
   get titulo(): string {
@@ -259,9 +270,12 @@ export class ReciboFormDialogComponent implements OnInit {
     // Solo aplican con forma de pago bancaria; validadores dinámicos.
     idCuentaBancaria: new FormControl<number | null>(null),
     nroComprobante: new FormControl<string | null>(null),
-    // Destino del gasto de la porción EFECTIVO (el de cada fila de reparto va
+    // Pago mixto: otros medios además de la forma de pago de arriba, que
+    // cubre el resto (monto total − suma de estas filas).
+    pagosAdicionales: crearFormPagosAdicionales(),
+    // Plan de cuentas de la porción EFECTIVO (el de cada fila de reparto va
     // dentro de su propio FormGroup). Obligatorio solo si hay efectivo > 0.
-    destinoGastoEfectivo: new FormControl<DestinoGastoControlValue>(null),
+    planCuentasEfectivo: new FormControl<PlanCuentasControlValue>(null),
     // Contraparte "Recibí de / Entregué a": una de las tres.
     contraparteTipo: new FormControl<ContraparteTipo>('PERSONA'),
     personaContraparte: new FormControl<PersonaControlValue>(null),
@@ -312,7 +326,10 @@ export class ReciboFormDialogComponent implements OnInit {
     });
 
     // Al cambiar la forma de pago, se prende/apaga cuenta bancaria + comprobante.
-    this.f.idFormaPago.valueChanges.subscribe(() => this.sincronizarCamposBanco());
+    this.f.idFormaPago.valueChanges.subscribe(() => {
+      this.sincronizarCamposBanco();
+      this.descartarCuentaSinChequera();
+    });
     // Al cambiar la moneda: T.C. obligatorio solo en USD y la cuenta elegida
     // se limpia (la lista de cuentas se filtra por moneda).
     this.f.moneda.valueChanges.subscribe(() => {
@@ -335,7 +352,7 @@ export class ReciboFormDialogComponent implements OnInit {
 
     forkJoin({
       formasPago: this.parametricasService.obtenerFormasPago(),
-      destinosGasto: this.parametricasService.obtenerDestinosGasto(),
+      cuentasPlan: this.parametricasService.obtenerCuentasPlan(),
       personas: this.personaService.listarPersonas({
         page: 1,
         limit: 1000,
@@ -374,7 +391,7 @@ export class ReciboFormDialogComponent implements OnInit {
     }).subscribe({
       next: ({
         formasPago,
-        destinosGasto,
+        cuentasPlan,
         personas,
         actores,
         clientes,
@@ -386,8 +403,8 @@ export class ReciboFormDialogComponent implements OnInit {
         kardexCliente,
       }) => {
         this.formasPago.set(formasPago.filter((f) => f.activo !== false));
-        this.destinosGasto.set(
-          destinosGasto.filter((d) => d.activo !== false),
+        this.cuentasPlan.set(
+          cuentasPlan.filter((d) => d.activo !== false),
         );
 
         const idsPersonaConKardex = new Set(
@@ -552,6 +569,11 @@ export class ReciboFormDialogComponent implements OnInit {
       idCuentaBancaria: r.idCuentaBancaria ?? null,
       nroComprobante: r.nroComprobante ?? null,
     });
+    // Borrador que ya era un pago mixto: el primer medio es el de la
+    // cabecera; el resto se precarga como otros medios.
+    for (const medio of mediosMixtos(r.pagos).slice(1)) {
+      this.f.pagosAdicionales.push(crearFilaPagoAdicional(medio));
+    }
     for (const nombre of [
       'fecha',
       'montoTotal',
@@ -605,29 +627,29 @@ export class ReciboFormDialogComponent implements OnInit {
     return Number.isFinite(n) ? n : 0;
   }
 
-  /** Destinos de gasto de la porción de EFECTIVO: `esEgreso` según el tipo de
+  /** Plan de cuentas de la porción de EFECTIVO: `esEgreso` según el tipo de
    *  recibo (un egreso saca plata de caja; un ingreso la mete). */
-  get destinosGastoFiltrados(): DestinoGasto[] {
+  get cuentasPlanFiltrados(): PlanCuentas[] {
     const quiero = this.data.tipo === 'EGRESO';
-    return this.destinosGasto().filter((d) => d.esEgreso === quiero);
+    return this.cuentasPlan().filter((d) => d.esEgreso === quiero);
   }
 
-  /** Destinos de gasto de las filas de reparto a kardex: siempre "de ingreso"
+  /** Plan de cuentas de las filas de reparto a kardex: siempre "de ingreso"
    *  (`esEgreso === false`), porque esas porciones generan un INGRESO en caja
    *  (valor recuperado), sin importar el tipo del recibo. */
-  private get destinosGastoIngreso(): DestinoGasto[] {
-    return this.destinosGasto().filter((d) => !d.esEgreso);
+  private get cuentasPlanIngreso(): PlanCuentas[] {
+    return this.cuentasPlan().filter((d) => !d.esEgreso);
   }
 
-  displayDestinoGasto = (v: DestinoGastoControlValue): string => {
+  displayPlanCuentas = (v: PlanCuentasControlValue): string => {
     if (!v) return '';
     return typeof v === 'string' ? v : v.nombre;
   };
 
-  private filtrarDestinosGasto(
-    lista: DestinoGasto[],
-    valor: DestinoGastoControlValue,
-  ): DestinoGasto[] {
+  private filtrarCuentasPlan(
+    lista: PlanCuentas[],
+    valor: PlanCuentasControlValue,
+  ): PlanCuentas[] {
     const texto = (
       typeof valor === 'string' ? valor : valor ? valor.nombre : ''
     )
@@ -638,19 +660,19 @@ export class ReciboFormDialogComponent implements OnInit {
       : lista;
   }
 
-  /** Opciones del destino de gasto de una fila de reparto (solo ingresos). */
-  destinoGastoFilaOpciones(fila: AbstractControl): DestinoGasto[] {
-    return this.filtrarDestinosGasto(
-      this.destinosGastoIngreso,
-      (fila as FormGroup).controls['destinoGasto'].value as DestinoGastoControlValue,
+  /** Opciones del plan de cuentas de una fila de reparto (solo ingresos). */
+  planCuentasFilaOpciones(fila: AbstractControl): PlanCuentas[] {
+    return this.filtrarCuentasPlan(
+      this.cuentasPlanIngreso,
+      (fila as FormGroup).controls['planCuentas'].value as PlanCuentasControlValue,
     );
   }
 
-  /** Opciones del destino de gasto de la porción de efectivo. */
-  destinoGastoEfectivoOpciones(): DestinoGasto[] {
-    return this.filtrarDestinosGasto(
-      this.destinosGastoFiltrados,
-      this.f.destinoGastoEfectivo.value,
+  /** Opciones del plan de cuentas de la porción de efectivo. */
+  planCuentasEfectivoOpciones(): PlanCuentas[] {
+    return this.filtrarCuentasPlan(
+      this.cuentasPlanFiltrados,
+      this.f.planCuentasEfectivo.value,
     );
   }
 
@@ -719,6 +741,14 @@ export class ReciboFormDialogComponent implements OnInit {
     );
   }
 
+  /** Recibo de EGRESO pagado con cheque: consume un cheque del talonario. */
+  get pagoConCheque(): boolean {
+    return (
+      this.data.tipo === 'EGRESO' &&
+      (this.formaPagoSeleccionada()?.codigo ?? '').toUpperCase() === 'CHEQUE'
+    );
+  }
+
   /** Los campos de banco se piden apenas se elige una forma de pago bancaria,
    *  en cualquier modo — el back ya exige idCuentaBancaria/nroComprobante
    *  desde el BORRADOR (GENERAR), no solo al procesar. */
@@ -750,9 +780,28 @@ export class ReciboFormDialogComponent implements OnInit {
    *  cuenta de otra moneda). */
   cuentasDe(e: EntidadFinanciera): CuentaFinanciera[] {
     const moneda = this.moneda;
+    // Pagando con cheque solo se ofrecen las cuentas que tienen chequera.
+    const soloChequera = this.pagoConCheque;
     return (e.cuentas ?? []).filter(
-      (c) => c.activo !== false && c.moneda === moneda,
+      (c) =>
+        c.activo !== false &&
+        c.moneda === moneda &&
+        (!soloChequera || !!c.manejaCheques),
     );
+  }
+
+  /** Al pasar a CHEQUE, si la cuenta elegida no tiene chequera se limpia
+   *  junto con el N° de comprobante. */
+  private descartarCuentaSinChequera(): void {
+    const id = this.f.idCuentaBancaria.value;
+    if (id == null) return;
+    const sigue = this.entidadesFinancieras().some((e) =>
+      this.cuentasDe(e).some((c) => c.id === id),
+    );
+    if (!sigue) {
+      this.f.idCuentaBancaria.setValue(null);
+      this.f.nroComprobante.setValue(null);
+    }
   }
 
   /** Bancos con al menos una cuenta en la moneda del recibo. */
@@ -826,7 +875,7 @@ export class ReciboFormDialogComponent implements OnInit {
       destinatario: new FormControl<DestinatarioControlValue>(null, [
         Validators.required,
       ]),
-      destinoGasto: new FormControl<DestinoGastoControlValue>(null, [
+      planCuentas: new FormControl<PlanCuentasControlValue>(null, [
         Validators.required,
       ]),
       monto: new FormControl<number | string | null>(null, [
@@ -966,11 +1015,11 @@ export class ReciboFormDialogComponent implements OnInit {
   }
 
   private validarDetalles(): string | null {
-    const dg = this.labelDestinoGasto.toLowerCase();
+    const dg = this.labelPlanCuentas.toLowerCase();
     for (const fila of this.filas) {
       const v = fila.getRawValue() as {
         destinatario: DestinatarioControlValue;
-        destinoGasto: DestinoGastoControlValue;
+        planCuentas: PlanCuentasControlValue;
         monto: number | null;
       };
       if (!v.monto || v.monto <= 0) {
@@ -979,7 +1028,7 @@ export class ReciboFormDialogComponent implements OnInit {
       if (!(v.destinatario && typeof v.destinatario === 'object')) {
         return 'Elige el destinatario (persona o actor con kardex) en cada fila';
       }
-      if (!(v.destinoGasto && typeof v.destinoGasto === 'object')) {
+      if (!(v.planCuentas && typeof v.planCuentas === 'object')) {
         return `Elige ${dg} en cada fila de reparto`;
       }
     }
@@ -987,7 +1036,7 @@ export class ReciboFormDialogComponent implements OnInit {
       return 'El reparto a kardex supera el monto total';
     }
     if (this.montoEfectivo() > 0) {
-      const e = this.f.destinoGastoEfectivo.value;
+      const e = this.f.planCuentasEfectivo.value;
       if (!(e && typeof e === 'object')) {
         return `Elige ${dg} para la porción de efectivo`;
       }
@@ -1020,8 +1069,28 @@ export class ReciboFormDialogComponent implements OnInit {
     return {};
   }
 
+  /** Medios del pago mixto (el principal por el resto + los otros), o
+   *  `undefined` si el recibo se mueve por un solo medio. */
+  private construirPagos(): MedioPagoRequest[] | undefined {
+    const v = this.form.getRawValue();
+    if (!v.idFormaPago) return undefined;
+    return leerPagosMixtos(
+      {
+        idFormaPago: v.idFormaPago,
+        ...(this.mostrarCamposBanco
+          ? {
+              idCuentaBancaria: v.idCuentaBancaria!,
+              nroComprobante: (v.nroComprobante ?? '').trim(),
+            }
+          : {}),
+      },
+      this.f.pagosAdicionales,
+      this.montoTotal(),
+    );
+  }
+
   /** Filas de reparto + fila EFECTIVO por el resto (si > 0). El destino del
-   *  gasto viaja dentro de cada línea (`idDestinoGasto`); la línea EFECTIVO
+   *  gasto viaja dentro de cada línea (`idPlanCuentas`); la línea EFECTIVO
    *  además lleva la contraparte (a quién se le entrega el efectivo). */
   private construirDetalles(
     cpEfectivo: {
@@ -1033,13 +1102,13 @@ export class ReciboFormDialogComponent implements OnInit {
     const detalles: DetalleReciboRequest[] = this.filas.map((fila) => {
       const fv = fila.getRawValue() as {
         destinatario: DestinatarioKardex;
-        destinoGasto: DestinoGasto;
+        planCuentas: PlanCuentas;
         monto: number | null;
       };
       const linea: DetalleReciboRequest = {
         destino: fv.destinatario.tipo,
         monto: this.redondear(Number(fv.monto)),
-        idDestinoGasto: fv.destinoGasto.id,
+        idPlanCuentas: fv.planCuentas.id,
       };
       if (fv.destinatario.tipo === 'PERSONAL') linea.idPersona = fv.destinatario.id;
       else if (fv.destinatario.tipo === 'ACTOR') linea.idActorProductivoMinero = fv.destinatario.id;
@@ -1054,8 +1123,8 @@ export class ReciboFormDialogComponent implements OnInit {
         monto: efectivo,
         ...cpEfectivo,
       };
-      const e = this.f.destinoGastoEfectivo.value;
-      if (e && typeof e === 'object') linea.idDestinoGasto = e.id;
+      const e = this.f.planCuentasEfectivo.value;
+      if (e && typeof e === 'object') linea.idPlanCuentas = e.id;
       detalles.push(linea);
     }
     return detalles;
@@ -1078,6 +1147,12 @@ export class ReciboFormDialogComponent implements OnInit {
         return;
       }
     }
+    const errorMixto = errorPagosMixtos(this.f.pagosAdicionales, this.montoTotal());
+    if (errorMixto) {
+      this.snackBar.open(errorMixto, 'Cerrar', { duration: 5000 });
+      return;
+    }
+    const pagos = this.construirPagos();
 
 
     
@@ -1094,6 +1169,7 @@ export class ReciboFormDialogComponent implements OnInit {
         proc.idCuentaBancaria = v.idCuentaBancaria!;
         proc.nroComprobante = (v.nroComprobante ?? '').trim();
       }
+      if (pagos) proc.pagos = pagos;
       request = proc;
     } else {
       const contraparte = this.resolverContraparte();
@@ -1125,6 +1201,7 @@ export class ReciboFormDialogComponent implements OnInit {
         gen.idCuentaBancaria = v.idCuentaBancaria!;
         gen.nroComprobante = (v.nroComprobante ?? '').trim();
       }
+      if (pagos) gen.pagos = pagos;
       // 'PROCESAR' directo → one-shot con detalles (queda PROCESADO).
       if (this.pideDetalles) {
         gen.detalles = this.construirDetalles(

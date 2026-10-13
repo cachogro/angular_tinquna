@@ -18,7 +18,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router, RouterModule } from '@angular/router';
 import { debounceTime, distinctUntilChanged, merge } from 'rxjs';
 import { AuthService } from 'src/app/core/auth/services/auth.service';
-import { RolCodigo } from 'src/app/core/auth/models/auth.models';
+import { PERMISO } from 'src/app/core/auth/models/permisos';
 import {
   ESTADOS_OPERACION,
   ESTADO_CANCELADO_ID,
@@ -161,12 +161,9 @@ export class RecepcionMineralComponent implements OnInit {
   readonly detalleProveedor = detalleProveedorRecepcion;
   readonly leyesTexto = leyesTextoRecepcion;
 
-  /** ADMINISTRADOR y OPERADOR pueden editar y cambiar estado; TÉCNICO solo lista y crea. */
+  /** Editar y cambiar estado es un permiso aparte del de listar y crear. */
   get puedeGestionar(): boolean {
-    return this.authService.hasRole(
-      RolCodigo.ADMINISTRADOR,
-      RolCodigo.OPERADOR,
-    );
+    return this.authService.hasPermiso(PERMISO.RECEPCION_GESTIONAR);
   }
 
   ngOnInit(): void {

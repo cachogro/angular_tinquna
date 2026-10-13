@@ -1,4 +1,4 @@
-// src/app/pages/contabilidad/reportes/reporte-destino-gasto.component.ts
+// src/app/pages/contabilidad/reportes/reporte-plan-cuentas.component.ts
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormControl, FormsModule } from '@angular/forms';
@@ -17,16 +17,16 @@ import {
 } from '../../configurations/parametricas/models/parametricas.models';
 import { ParametricasService } from '../../configurations/services/parametricas.service';
 import {
-  DetalleDestinoGasto,
-  FilaDestinoGasto,
-  FiltroReporteDestinoGasto,
-  ResumenDestinosGasto,
-} from '../models/reporte-destino-gasto.models';
-import { ReporteDestinoGastoService } from '../services/reporte-destino-gasto.service';
+  DetallePlanCuentas,
+  FilaPlanCuentas,
+  FiltroReportePlanCuentas,
+  ResumenCuentasPlan,
+} from '../models/reporte-plan-cuentas.models';
+import { ReportePlanCuentasService } from '../services/reporte-plan-cuentas.service';
 import { RangoFechasComponent } from '../../../shared/components/rango-fechas/rango-fechas.component';
 
 @Component({
-  selector: 'app-reporte-destino-gasto',
+  selector: 'app-reporte-plan-cuentas',
   standalone: true,
   imports: [
     RangoFechasComponent,
@@ -42,11 +42,11 @@ import { RangoFechasComponent } from '../../../shared/components/rango-fechas/ra
     MatTableModule,
     MatProgressSpinnerModule,
   ],
-  templateUrl: './reporte-destino-gasto.component.html',
-  styleUrl: './reporte-destino-gasto.component.scss',
+  templateUrl: './reporte-plan-cuentas.component.html',
+  styleUrl: './reporte-plan-cuentas.component.scss',
 })
-export class ReporteDestinoGastoComponent implements OnInit {
-  private readonly reporteService = inject(ReporteDestinoGastoService);
+export class ReportePlanCuentasComponent implements OnInit {
+  private readonly reporteService = inject(ReportePlanCuentasService);
   private readonly parametricasService = inject(ParametricasService);
 
   readonly columnasResumen = [
@@ -84,8 +84,8 @@ export class ReporteDestinoGastoComponent implements OnInit {
   readonly cargando = signal(false);
   readonly cargandoDetalle = signal(false);
   readonly error = signal<string | null>(null);
-  readonly resumen = signal<ResumenDestinosGasto | null>(null);
-  readonly detalle = signal<DetalleDestinoGasto | null>(null);
+  readonly resumen = signal<ResumenCuentasPlan | null>(null);
+  readonly detalle = signal<DetallePlanCuentas | null>(null);
   readonly destinoDetalleId = signal<number | null>(null);
 
   ngOnInit(): void {
@@ -98,7 +98,7 @@ export class ReporteDestinoGastoComponent implements OnInit {
   }
 
   /** Filtro vigente; el detalle se pide con el mismo. */
-  private filtro(): FiltroReporteDestinoGasto {
+  private filtro(): FiltroReportePlanCuentas {
     return {
       moneda: this.monedaSel(),
       idCaja: this.cajaSelId() ?? undefined,
@@ -125,12 +125,12 @@ export class ReporteDestinoGastoComponent implements OnInit {
     });
   }
 
-  verDetalle(fila: FilaDestinoGasto): void {
-    if (fila.idDestinoGasto === null) return;
+  verDetalle(fila: FilaPlanCuentas): void {
+    if (fila.idPlanCuentas === null) return;
     this.error.set(null);
     this.cargandoDetalle.set(true);
-    this.destinoDetalleId.set(fila.idDestinoGasto);
-    this.reporteService.detalle(fila.idDestinoGasto, this.filtro()).subscribe({
+    this.destinoDetalleId.set(fila.idPlanCuentas);
+    this.reporteService.detalle(fila.idPlanCuentas, this.filtro()).subscribe({
       next: (d) => {
         this.detalle.set(d);
         this.cargandoDetalle.set(false);

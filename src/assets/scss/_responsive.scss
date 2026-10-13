@@ -1,0 +1,83 @@
+// Ajustes globales para pantallas chicas. El punto de corte coincide con el
+// del layout (full.component.ts: el menú lateral pasa a superpuesto en 768px).
+
+// Los iconos no deben encogerse cuando el texto de al lado ocupa varias líneas.
+.mat-icon {
+  flex-shrink: 0;
+}
+
+@media (max-width: 767px) {
+  // En escritorio hay 45px de margen por lado más 30px de la tarjeta: en un
+  // teléfono eso deja poco más de la mitad del ancho para el contenido.
+  .body-wrapper {
+    margin-left: 6px;
+    margin-right: 6px;
+    border-radius: 14px;
+  }
+
+  .pageWrapper {
+    padding: 10px 6px;
+  }
+
+  html .mat-mdc-card {
+    margin-bottom: 16px;
+
+    .mat-mdc-card-header {
+      padding: 12px 14px !important;
+      // El título arriba y los botones de acción debajo, a todo el ancho.
+      flex-wrap: wrap;
+      gap: 10px 8px;
+
+      > div {
+        min-width: 0;
+        max-width: 100%;
+      }
+
+      > div[style*='margin-left: auto'] {
+        margin-left: 0 !important;
+        width: 100%;
+        flex-wrap: wrap;
+      }
+    }
+
+    > .mat-mdc-card-content {
+      padding: 14px !important;
+    }
+
+    .mdc-card__actions {
+      padding: 14px !important;
+    }
+  }
+
+  // Bandejas cuya tabla no tiene contenedor propio: se desliza la tabla y no
+  // toda la página.
+  [class*='-table-wrapper'] {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+
+    > table {
+      min-width: 620px;
+    }
+  }
+
+  // Botones de acción de la cabecera con texto largo ("Resumen de deudas ·
+  // Todos"): el botón crece en alto en vez de dejar el texto fuera del borde.
+  .mat-mdc-card-header .mat-mdc-button-base.mdc-button {
+    height: auto;
+    min-height: 40px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    white-space: normal;
+    line-height: 1.25;
+    text-align: left;
+  }
+}
+
+@media (max-width: 767px) {
+  // Grupos de opciones (Persona / Actor / Otro, Mensual / Anual...): si no
+  // entran en una fila, bajan de línea en vez de salirse de la pantalla.
+  .mat-button-toggle-group {
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+}

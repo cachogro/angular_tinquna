@@ -10,6 +10,19 @@
   </div>
   } @else {
   <form [formGroup]="form" class="mc-form">
+    @if (origen; as o) {
+    <div class="mc-aviso">
+      <mat-icon>info</mat-icon>
+      <span>Este movimiento lo generó: <strong>{{ o.etiqueta }}</strong>. Acá solo se puede cambiar el concepto y
+        el plan de cuentas; el monto, la fecha y el beneficiario se corrigen anulando ese documento.</span>
+    </div>
+    } @else if (cargadoDesdeKardex) {
+    <div class="mc-aviso">
+      <mat-icon>info</mat-icon>
+      <span>Este movimiento está cargado en un kardex: al guardar también se actualiza su línea y se recalcula el
+        saldo del kardex. La persona no se puede cambiar.</span>
+    </div>
+    }
     <div class="mc-form__row3">
       <mat-form-field appearance="outline">
         <mat-label>Fecha</mat-label>
@@ -48,6 +61,22 @@
       </mat-form-field>
     </div>
 
+    @if (esUsd) {
+    <mat-form-field appearance="outline" class="mc-form__full">
+      <mat-label>Tipo de cambio (Bs por 1 $us)</mat-label>
+      <input matInput type="text" inputmode="decimal" class="input-monto" formControlName="tipoCambio"
+        placeholder="Ej: 6.96" />
+      @if (f.tipoCambio.hasError('required') && f.tipoCambio.touched) {
+      <mat-error>Obligatorio en dólares</mat-error>
+      } @else if (f.tipoCambio.hasError('pattern') && f.tipoCambio.touched) {
+      <mat-error>Máximo 4 decimales</mat-error>
+      } @else if (f.tipoCambio.hasError('min') && f.tipoCambio.touched) {
+      <mat-error>Debe ser mayor a 0</mat-error>
+      }
+      <mat-hint>El del día de la transacción. Solo informativo: el saldo de la caja sigue en dólares.</mat-hint>
+    </mat-form-field>
+    }
+
     <mat-form-field appearance="outline" class="mc-form__full">
       <mat-label>Concepto</mat-label>
       <input matInput appMayusculas formControlName="concepto" maxlength="255" />
@@ -56,15 +85,22 @@
       }
     </mat-form-field>
 
-    <app-destino-gasto-field class="mc-form__full" [control]="f.idDestinoGasto" [opciones]="destinosGastoFiltrados"
-      [label]="f.tipo.value === 'INGRESO' ? 'Origen del ingreso (opcional)' : 'Destino del gasto (opcional)'" />
+    <app-plan-cuentas-field class="mc-form__full" [control]="f.idPlanCuentas" [opciones]="cuentasPlanFiltrados"
+      [label]="f.tipo.value === 'INGRESO' ? 'Origen del ingreso (opcional)' : 'Plan de cuentas (opcional)'" />
 
     <div class="mc-form__row2">
       <mat-form-field appearance="outline">
-        <mat-label>N° de comprobante (opcional)</mat-label>
-        <input matInput appMayusculas formControlName="nroComprobante" maxlength="30" class="nro-cpte" placeholder="Ej: REC:R-0084" />
+        <mat-label>Factura y/o recibo (opcional)</mat-label>
+        <input matInput appMayusculas formControlName="facturaRecibo" maxlength="100" class="nro-cpte" placeholder="Ej: FACT:19877" />
       </mat-form-field>
 
+      <mat-form-field appearance="outline">
+        <mat-label>N° de comprobante (opcional)</mat-label>
+        <input matInput appMayusculas formControlName="nroComprobante" maxlength="100" class="nro-cpte" placeholder="Ej: DEP:81139920" />
+      </mat-form-field>
+    </div>
+
+    <div class="mc-form__row2">
       <mat-form-field appearance="outline">
         <mat-label>Forma de pago (opcional)</mat-label>
         <mat-select formControlName="idFormaPago">

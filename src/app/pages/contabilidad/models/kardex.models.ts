@@ -8,6 +8,8 @@
 // (ligadas a otro actor, o sueltas — incluye null/vacío). El front decide
 // cuál mandar mirando `persona.idActorProductivoMinero` antes de abrir el
 // kardex; el back igual lo valida y rechaza si no coincide.
+import { ResumenInteresKardex } from './kardex-interes.models';
+
 export type TipoKardex = 'ACTOR' | 'ASOCIADO' | 'PERSONAL' | 'CLIENTE';
 export type EstadoKardex = 'ABIERTO' | 'CERRADO';
 
@@ -82,6 +84,8 @@ export interface Kardex {
   reactivadoPor?: string | null;
   /** Null en kardex cerrados o anulados. */
   actividad?: ActividadKardex | null;
+  /** Intereses por mora (van aparte del saldo). Null si nunca tuvo. */
+  interes?: ResumenInteresKardex | null;
   activo?: boolean;
   usuarioRegistro?: string | null;
   usuarioUltimaModificacion?: string | null;
@@ -97,6 +101,8 @@ export interface AbrirKardexRequest {
   idCliente?: string;
   descripcion?: string;
   gestion?: number;
+  /** "YYYY-MM-DD"; sin ella el back usa hoy. */
+  fechaApertura?: string;
   saldoInicial: number;
 }
 

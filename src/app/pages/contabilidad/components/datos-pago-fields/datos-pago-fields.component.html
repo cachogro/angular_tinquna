@@ -27,8 +27,12 @@
   <mat-form-field appearance="outline">
     <mat-label>Cuenta bancaria</mat-label>
     <mat-select formControlName="idCuentaBancaria">
-      @for (c of cuentas(); track c.idCuenta) {
+      @for (c of cuentasVisibles; track c.idCuenta) {
       <mat-option [value]="c.idCuenta">{{ etiquetaCuenta(c) }}</mat-option>
+      } @empty {
+      <mat-option disabled>
+        {{ pagoConCheque ? 'Ninguna cuenta tiene chequera habilitada' : 'Sin cuentas bancarias' }}
+      </mat-option>
       }
     </mat-select>
     @if (form.controls.idCuentaBancaria.hasError('required') && form.controls.idCuentaBancaria.touched) {
@@ -43,23 +47,31 @@
     <mat-error>Obligatorio para pagos bancarios</mat-error>
     }
   </mat-form-field>
+
+  <app-cheque-hint class="dp-full" [idCuentaBancaria]="form.controls.idCuentaBancaria.value"
+    [activo]="pagoConCheque" [control]="form.controls.nroComprobante" />
+  }
+
+  @if (montoTotal !== null) {
+  <app-pagos-adicionales-fields class="dp-full" [pagos]="form.controls.pagosAdicionales" [total]="montoTotal"
+    [esEgreso]="esEgreso" />
   }
 
   <mat-form-field appearance="outline" class="dp-full">
-    <mat-label>{{ esEgreso ? 'Destino del gasto' : 'Origen del ingreso' }} (opcional)</mat-label>
-    <input matInput formControlName="destinoGasto" [matAutocomplete]="autoDg"
+    <mat-label>{{ esEgreso ? 'Plan de cuentas' : 'Origen del ingreso' }} (opcional)</mat-label>
+    <input matInput formControlName="planCuentas" [matAutocomplete]="autoDg"
       #dgTrigger="matAutocompleteTrigger" (focus)="dgTrigger.openPanel()"
       placeholder="Escribe para buscar" />
-    <mat-autocomplete #autoDg="matAutocomplete" [displayWith]="displayDestinoGasto">
+    <mat-autocomplete #autoDg="matAutocomplete" [displayWith]="displayPlanCuentas">
       @for (d of destinosFiltrados(); track d.id) {
       <mat-option [value]="d">{{ d.nombre }}</mat-option>
       } @empty {
       <mat-option disabled>Sin coincidencias</mat-option>
       }
     </mat-autocomplete>
-    @if (form.controls.destinoGasto.hasError('noSeleccionado') && form.controls.destinoGasto.touched) {
+    @if (form.controls.planCuentas.hasError('noSeleccionado') && form.controls.planCuentas.touched) {
     <mat-error>Elige una opción de la lista (o déjalo vacío)</mat-error>
     }
-    <mat-hint>{{ form.controls.usaBanco.value ? 'Sale/entra por la libreta de la cuenta elegida' : 'Sale/entra en efectivo por la caja de flujo' }}</mat-hint>
+    <mat-hint>{{ form.controls.pagosAdicionales.length ? 'Pago mixto: cada medio sale/entra por la caja de flujo o por la libreta de su cuenta' : form.controls.usaBanco.value ? 'Sale/entra por la libreta de la cuenta elegida' : 'Sale/entra en efectivo por la caja de flujo' }}</mat-hint>
   </mat-form-field>
 </div>

@@ -23,3 +23,6 @@
 
 @use "pages/auth";
 @use "pages/dashboards";
+
+// siempre al final: ajustes para pantallas chicas
+@use "responsive";

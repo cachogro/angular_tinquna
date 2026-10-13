@@ -1,6 +1,7 @@
 // src/app/pages/contabilidad/libreta-bancaria/movimiento-form-dialog/movimiento-form-dialog.component.ts
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChequeHintComponent } from '../../components/cheque-hint/cheque-hint.component';
 import { toObservable } from '@angular/core/rxjs-interop';
 import {
   FormControl,
@@ -74,6 +75,7 @@ type ContraparteTipo = 'PERSONA' | 'ACTOR' | 'CLIENTE' | 'TEXTO';
     FechaInputDirective,
     MontoInputDirective,
     MayusculasDirective,
+    ChequeHintComponent,
     CommonModule,
     ReactiveFormsModule,
     MatDialogModule,
@@ -94,7 +96,7 @@ export class MovimientoFormDialogComponent implements OnInit {
   private readonly dialogRef = inject(
     MatDialogRef<MovimientoFormDialogComponent>,
   );
-  private readonly data = inject<MovimientoFormDialogData>(MAT_DIALOG_DATA);
+  readonly data = inject<MovimientoFormDialogData>(MAT_DIALOG_DATA);
   private readonly libretaService = inject(LibretaBancoService);
   private readonly personaService = inject(PersonaService);
   private readonly parametricasService = inject(ParametricasService);
@@ -103,7 +105,7 @@ export class MovimientoFormDialogComponent implements OnInit {
 
   readonly guardando = signal(false);
   readonly personas = signal<PersonaCI[]>([]);
-  /** Sugerencias de concepto: destinos de gasto + conceptos de recibos procesados. */
+  /** Sugerencias de concepto: cuentas del plan de cuentas + conceptos de recibos procesados. */
   readonly sugerenciasConcepto = signal<string[]>([]);
   /** Mismo catálogo de "Forma de pago" que usa Recibos, reutilizado acá como
    *  "Tipo de transacción" (el back no valida contra ningún catálogo, pero
@@ -183,6 +185,15 @@ export class MovimientoFormDialogComponent implements OnInit {
     idClienteContraparte: new FormControl<string | null>(null),
     textoContraparte: new FormControl<string | null>(null, [Validators.maxLength(255)]),
   });
+
+  /** Egreso nuevo con cheque: consume un cheque del talonario de la cuenta. */
+  get pagoConCheque(): boolean {
+    return (
+      !this.esEdicion &&
+      this.form.controls.tipo.value === 'DEBE' &&
+      (this.form.controls.tipoTransaccion.value ?? '').toUpperCase() === 'CHEQUE'
+    );
+  }
 
   get f() {
     return this.form.controls;
@@ -279,11 +290,11 @@ export class MovimientoFormDialogComponent implements OnInit {
 
   // ---------- Autocomplete concepto ----------
 
-  /** Junta el catálogo de destino de gasto con los conceptos de recibos ya
+  /** Junta el catálogo de plan de cuentas con los conceptos de recibos ya
    *  procesados, como sugerencias; el campo sigue siendo texto libre. */
   private cargarSugerenciasConcepto(): void {
     combineLatest([
-      this.parametricasService.obtenerDestinosGasto(),
+      this.parametricasService.obtenerCuentasPlan(),
       this.reciboService.listar({ estado: 'PROCESADO', limit: 500 }),
     ]).subscribe({
       next: ([destinos, recibos]) => {

@@ -121,3 +121,18 @@
   top: 0;
   z-index: 10;
 }
+
+/* ===== Pantallas chicas: los filtros bajan de línea en vez de salirse ===== */
+@media (max-width: 767px) {
+  .clientes-comp-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .clientes-comp-toolbar__search {
+    flex: 1 1 100%;
+  }
+
+  .clientes-comp-toolbar > mat-form-field:not(.clientes-comp-toolbar__search) {
+    flex: 1 1 calc(50% - 8px);
+  }
+}

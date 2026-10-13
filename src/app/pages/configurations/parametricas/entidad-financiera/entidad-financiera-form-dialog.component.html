@@ -64,6 +64,17 @@
               <input matInput formControlName="alias" maxlength="60" placeholder="Ej: Operativa Bs" />
             </mat-form-field>
 
+            <div class="cuenta-fila__cheques">
+              <mat-checkbox formControlName="manejaCheques" color="primary"
+                matTooltip="La cuenta tiene chequera: los pagos con cheque usarán sus talonarios">
+                Cheques
+              </mat-checkbox>
+              <button mat-icon-button type="button" color="primary" *ngIf="puedeVerChequeras(i)"
+                matTooltip="Ver chequeras: talonarios y cheques de la cuenta" (click)="abrirChequeras(i)">
+                <mat-icon>receipt_long</mat-icon>
+              </button>
+            </div>
+
             <div class="cuenta-fila__accion">
               <ng-container *ngIf="esCuentaNueva(i); else cuentaExistente">
                 <button mat-icon-button type="button" color="warn" matTooltip="Quitar cuenta"
@@ -130,7 +141,7 @@
                   <span class="chip-cuenta" *ngFor="let c of row.cuentas"
                     [class.chip-cuenta--inactiva]="c.activo === false"
                     [matTooltip]="c.activo === false ? 'Cuenta inactiva' : ''">
-                    {{ etiquetaMoneda(c.moneda) }} · {{ c.numeroCuenta }}<ng-container *ngIf="c.alias"> ({{ c.alias }})</ng-container>
+                    {{ etiquetaMoneda(c.moneda) }} · {{ c.numeroCuenta }}<ng-container *ngIf="c.alias"> ({{ c.alias }})</ng-container><ng-container *ngIf="c.manejaCheques"> · cheques</ng-container>
                   </span>
                 </ng-container>
                 <ng-template #sinCuentas>—</ng-template>

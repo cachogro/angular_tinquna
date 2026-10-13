@@ -8,7 +8,10 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { montoDosDecimales } from '../../../../shared/utils/numero.util';
+import {
+  montoDosDecimales,
+  tipoCambioCuatroDecimales,
+} from '../../../../shared/utils/numero.util';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDatepickerModule } from '@angular/material/datepicker';
@@ -26,7 +29,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { catchError, combineLatest, forkJoin, map, Observable, of, startWith } from 'rxjs';
 import { PersonaCI } from '../../../configurations/models/persona.models';
 import {
-  DestinoGasto,
+  PlanCuentas,
   FormaPago,
   MonedaCuenta,
 } from '../../../configurations/parametricas/models/parametricas.models';
@@ -35,6 +38,7 @@ import { PersonaService } from '../../../configurations/services/persona.service
 import {
   GuardarMovimientoCajaRequest,
   MovimientoCaja,
+  OrigenMovimiento,
   TipoMovimientoCaja,
 } from '../../models/movimiento-caja.models';
 import { PersonaMovimientoRef } from '../../models/libreta-banco.models';
@@ -42,7 +46,7 @@ import { MovimientoCajaService } from '../../services/movimiento-caja.service';
 import { FechaInputDirective } from '../../../../shared/directives/fecha-input.directive';
 import { MontoInputDirective } from '../../../../shared/directives/monto-input.directive';
 import { MayusculasDirective } from '../../../../shared/directives/mayusculas.directive';
-import { DestinoGastoFieldComponent } from '../../components/destino-gasto-field/destino-gasto-field.component';
+import { PlanCuentasFieldComponent } from '../../components/plan-cuentas-field/plan-cuentas-field.component';
 
 export interface MovimientoCajaFormDialogData {
   idCaja: number;
@@ -61,7 +65,7 @@ type Beneficiario = PersonaCI | PersonaMovimientoRef | string | null;
     FechaInputDirective,
     MontoInputDirective,
     MayusculasDirective,
-    DestinoGastoFieldComponent,
+    PlanCuentasFieldComponent,
     CommonModule,
     ReactiveFormsModule,
     MatDialogModule,
@@ -92,10 +96,23 @@ export class MovimientoCajaFormDialogComponent implements OnInit {
 
   readonly formasPago = signal<FormaPago[]>([]);
   readonly personas = signal<PersonaCI[]>([]);
-  readonly destinosGasto = signal<DestinoGasto[]>([]);
+  readonly cuentasPlan = signal<PlanCuentas[]>([]);
 
   get esEdicion(): boolean {
     return !!this.data.movimiento;
+  }
+
+  /** Documento que generó el movimiento: solo deja reclasificarlo. */
+  get origen(): OrigenMovimiento | null {
+    return this.data.movimiento?.origen ?? null;
+  }
+
+  get esUsd(): boolean {
+    return this.data.moneda === 'USD';
+  }
+
+  get cargadoDesdeKardex(): boolean {
+    return !!this.data.movimiento?.idMovimientoKardex && !this.origen;
   }
 
   readonly form = new FormGroup({
@@ -108,13 +125,22 @@ export class MovimientoCajaFormDialogComponent implements OnInit {
       montoDosDecimales,
       Validators.min(0.01),
     ]),
+    // Bs por 1 USD del día: obligatorio solo en la caja en dólares.
+    tipoCambio: new FormControl<number | string | null>(
+      null,
+      this.data.moneda === 'USD'
+        ? [Validators.required, tipoCambioCuatroDecimales, Validators.min(0.0001)]
+        : [],
+    ),
     concepto: new FormControl('', [
       Validators.required,
       Validators.maxLength(255),
     ]),
-    // Destino del gasto (EGRESO) u origen del ingreso (INGRESO), del catálogo.
-    idDestinoGasto: new FormControl<number | null>(null),
-    nroComprobante: new FormControl('', [Validators.maxLength(30)]),
+    // Plan de cuentas (EGRESO) u origen del ingreso (INGRESO), del catálogo.
+    idPlanCuentas: new FormControl<number | null>(null),
+    nroComprobante: new FormControl('', [Validators.maxLength(100)]),
+    // "FACTURA Y/O RECIBO": documento que respalda el movimiento.
+    facturaRecibo: new FormControl('', [Validators.maxLength(100)]),
     idFormaPago: new FormControl<number | null>(null),
     beneficiario: new FormControl<Beneficiario>(null, [
       Validators.maxLength(255),
@@ -149,9 +175,9 @@ export class MovimientoCajaFormDialogComponent implements OnInit {
     // Al cambiar INGRESO/EGRESO cambia la lista: el destino que ya no
     // corresponde se limpia.
     this.f.tipo.valueChanges.subscribe(() => {
-      const id = this.f.idDestinoGasto.value;
-      if (id != null && !this.destinosGastoFiltrados.some((d) => d.id === id)) {
-        this.f.idDestinoGasto.setValue(null);
+      const id = this.f.idPlanCuentas.value;
+      if (id != null && !this.cuentasPlanFiltrados.some((d) => d.id === id)) {
+        this.f.idPlanCuentas.setValue(null);
       }
     });
     this.f.beneficiario.valueChanges.subscribe((v) => {
@@ -168,13 +194,13 @@ export class MovimientoCajaFormDialogComponent implements OnInit {
         activo: true,
       }),
       // Es opcional: si falla, el formulario igual carga sin destinos.
-      destinosGasto: this.parametricasService
-        .obtenerDestinosGasto()
-        .pipe(catchError(() => of([] as DestinoGasto[]))),
+      cuentasPlan: this.parametricasService
+        .obtenerCuentasPlan()
+        .pipe(catchError(() => of([] as PlanCuentas[]))),
     }).subscribe({
-      next: ({ formasPago, personas, destinosGasto }) => {
+      next: ({ formasPago, personas, cuentasPlan }) => {
         this.formasPago.set(formasPago.filter((f) => f.activo !== false));
-        this.destinosGasto.set(destinosGasto.filter((d) => d.activo !== false));
+        this.cuentasPlan.set(cuentasPlan.filter((d) => d.activo !== false));
         this.personas.set(personas.data ?? []);
         this.cargandoCatalogos.set(false);
         this.precargarSiEdicion();
@@ -197,16 +223,35 @@ export class MovimientoCajaFormDialogComponent implements OnInit {
         fecha: this.parseFecha(m.fecha),
         tipo: ingreso > 0 ? 'INGRESO' : 'EGRESO',
         monto: ingreso > 0 ? ingreso : Number(m.egreso),
+        tipoCambio: m.tipoCambio != null ? Number(m.tipoCambio) : null,
         concepto: m.concepto,
-        idDestinoGasto:
-          m.idDestinoGasto ??
-          (m.destinoGasto && typeof m.destinoGasto === 'object'
-            ? m.destinoGasto.id
+        idPlanCuentas:
+          m.idPlanCuentas ??
+          (m.planCuentas && typeof m.planCuentas === 'object'
+            ? m.planCuentas.id
             : null),
         nroComprobante: m.nroComprobante ?? '',
+        facturaRecibo: m.facturaRecibo ?? '',
         idFormaPago: m.idFormaPago ?? null,
         beneficiario: m.persona ?? m.entregaFondosA ?? '',
       });
+      if (this.origen) {
+        // El back solo aplica concepto y plan de cuentas en estas filas.
+        for (const control of [
+          this.f.fecha,
+          this.f.tipo,
+          this.f.monto,
+          this.f.tipoCambio,
+          this.f.nroComprobante,
+          this.f.facturaRecibo,
+          this.f.idFormaPago,
+          this.f.beneficiario,
+        ]) {
+          control.disable({ emitEvent: false });
+        }
+      } else if (this.cargadoDesdeKardex) {
+        this.f.beneficiario.disable({ emitEvent: false });
+      }
     } else if (this.data.fechaSugerida) {
       this.form.controls.fecha.setValue(this.parseFecha(this.data.fechaSugerida));
     }
@@ -214,11 +259,11 @@ export class MovimientoCajaFormDialogComponent implements OnInit {
 
   /** EGRESO pide un destino de egreso; INGRESO, uno de ingreso — mismo
    *  criterio que recibos y traspasos. Sin tipo elegido se listan todos. */
-  get destinosGastoFiltrados(): DestinoGasto[] {
+  get cuentasPlanFiltrados(): PlanCuentas[] {
     const tipo = this.f.tipo.value;
-    if (!tipo) return this.destinosGasto();
+    if (!tipo) return this.cuentasPlan();
     const quiero = tipo === 'EGRESO';
-    return this.destinosGasto().filter((d) => d.esEgreso === quiero);
+    return this.cuentasPlan().filter((d) => d.esEgreso === quiero);
   }
 
   // ---------- Autocomplete beneficiario ----------
@@ -280,10 +325,15 @@ export class MovimientoCajaFormDialogComponent implements OnInit {
       tipo: v.tipo!,
       monto: Number(v.monto),
     };
+    if (this.esUsd && v.tipoCambio != null && v.tipoCambio !== '') {
+      request.tipoCambio = Number(v.tipoCambio);
+    }
 
     const nroComprobante = (v.nroComprobante ?? '').trim();
     if (nroComprobante) request.nroComprobante = nroComprobante;
-    if (v.idDestinoGasto != null) request.idDestinoGasto = v.idDestinoGasto;
+    // Siempre se envía (aunque vacío) para poder borrarla al editar.
+    request.facturaRecibo = (v.facturaRecibo ?? '').trim();
+    if (v.idPlanCuentas != null) request.idPlanCuentas = v.idPlanCuentas;
     if (v.idFormaPago) request.idFormaPago = v.idFormaPago;
 
     const b = v.beneficiario;

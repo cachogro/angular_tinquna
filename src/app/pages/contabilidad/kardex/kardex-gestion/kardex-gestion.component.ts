@@ -37,6 +37,15 @@ import {
   BienesDacionDialogData,
 } from '../bienes-dacion-dialog/bienes-dacion-dialog.component';
 import {
+  CerrarKardexDialogComponent,
+  CerrarKardexDialogData,
+} from '../cerrar-kardex-dialog/cerrar-kardex-dialog.component';
+import { formatFechaIso } from '../../components/personal-interno.util';
+import {
+  KardexInteresDialogComponent,
+  KardexInteresDialogData,
+} from '../kardex-interes-dialog/kardex-interes-dialog.component';
+import {
   MovimientoKardexFormDialogComponent,
   MovimientoKardexFormDialogData,
 } from '../movimiento-kardex-form-dialog/movimiento-kardex-form-dialog.component';
@@ -48,6 +57,8 @@ import {
   FormatoReporte,
   mensajeErrorBlob,
 } from '../../../../shared/utils/descarga-archivo.util';
+import { tienePermiso } from 'src/app/core/auth/permiso-signal';
+import { PERMISO } from 'src/app/core/auth/models/permisos';
 
 export interface KardexGestionData {
   tipo: TipoKardex;
@@ -99,6 +110,12 @@ export function irAGestionKardex(router: Router, d: KardexGestionData): void {
   styleUrl: './kardex-gestion.component.scss',
 })
 export class KardexGestionComponent implements OnInit {
+  /** El Excel de los reportes es un permiso aparte (Roles y Permisos); el
+   *  PDF lo descarga cualquiera que entre a la pantalla. */
+  readonly puedeDescargarExcel = tienePermiso(
+    PERMISO.DESCARGAR_EXCEL_CONTABILIDAD,
+  );
+
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly location = inject(Location);
@@ -128,6 +145,9 @@ export class KardexGestionComponent implements OnInit {
   readonly soportaBienes = this.data.tipo !== 'CLIENTE';
   readonly bienesTotal = signal(0);
   readonly bienesEnPosesion = signal(0);
+
+  /** Intereses por mora: solo actor, asociado y personal (no cliente). */
+  readonly soportaIntereses = this.data.tipo !== 'CLIENTE';
 
   /** Más reciente primero (N° de línea descendente); el saldo de cada fila
    *  sigue siendo el de su momento. */
@@ -194,8 +214,8 @@ export class KardexGestionComponent implements OnInit {
 
   readonly form = new FormGroup({
     descripcion: new FormControl('', [Validators.maxLength(150)]),
-    /** Fecha de apertura completa (día/mes/año); al guardar solo se envía
-     *  el año como `gestion` (es lo único que pide el back). */
+    /** Fecha de apertura (día/mes/año): hoy, o una pasada al cargar un
+     *  kardex histórico. Su año es la gestión del kardex. */
     fechaApertura: new FormControl<Date | null>(new Date(), [
       Validators.required,
     ]),
@@ -385,6 +405,30 @@ export class KardexGestionComponent implements OnInit {
       });
   }
 
+  /** Sección de intereses por mora del kardex (aplicar, ver mes a mes,
+   *  cambiar la tasa, condonar o cargarlos al kardex). */
+  abrirIntereses(k: Kardex): void {
+    if (!this.soportaIntereses) return;
+    const data: KardexInteresDialogData = {
+      idKardex: k.id,
+      codigoKardex: k.codigo,
+      nombreDestinatario: this.data.nombreDestinatario,
+    };
+    this.dialog
+      .open(KardexInteresDialogComponent, {
+        data,
+        width: '980px',
+        maxWidth: '95vw',
+        autoFocus: false,
+      })
+      .afterClosed()
+      .subscribe((huboCambios) => {
+        // Cargar o revertir postea en el kardex: recargar saldo, intereses
+        // y movimientos.
+        if (huboCambios) this.cargar();
+      });
+  }
+
   abrir(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -402,6 +446,7 @@ export class KardexGestionComponent implements OnInit {
         idCliente: this.data.idCliente,
         ...(descripcion ? { descripcion } : {}),
         gestion: v.fechaApertura!.getFullYear(),
+        fechaApertura: formatFechaIso(v.fechaApertura!),
         saldoInicial: Number(v.saldoInicial),
       })
       .subscribe({
@@ -424,27 +469,22 @@ export class KardexGestionComponent implements OnInit {
   }
 
   cerrar(k: Kardex): void {
+    const data: CerrarKardexDialogData = {
+      kardex: k,
+      saldoTexto: this.num(k.saldoActual).toFixed(2),
+    };
     this.dialog
-      .open(ConfirmDialogComponent, {
-        data: {
-          title: 'Cerrar kardex',
-          message: `¿Confirmas cerrar el kardex ${k.codigo} (N°${k.numero})? El saldo actual (Bs ${this.num(k.saldoActual).toFixed(2)}) queda como saldo de cierre y se abre el N°${k.numero + 1} arrastrándolo.`,
-          confirmLabel: 'Cerrar',
-          cancelLabel: 'Cancelar',
-          tone: 'default',
-          icon: 'lock',
-        },
-      })
+      .open(CerrarKardexDialogComponent, { data, autoFocus: false })
       .afterClosed()
-      .subscribe((ok: boolean) => {
-        if (!ok) return;
+      .subscribe((fechaCierre?: string) => {
+        if (!fechaCierre) return;
         this.guardando.set(true);
-        this.kardexService.cerrar(k.id).subscribe({
+        this.kardexService.cerrar(k.id, fechaCierre).subscribe({
           next: (res) => {
             this.guardando.set(false);
             this.movPageIndex = 0; // cambia el kardex abierto
             this.snackBar.open(
-              `Cerrado ${res.cerrado?.codigo ?? k.codigo}. Abierto ${res.nuevo?.codigo ?? `N°${k.numero + 1}`}`,
+              `Cerrado ${k.codigo} N°${k.numero}. Abierto N°${res.nuevo?.numero ?? k.numero + 1}`,
               'Cerrar',
               { duration: 4000 },
             );
@@ -593,7 +633,7 @@ export class KardexGestionComponent implements OnInit {
       .open(ConfirmDialogComponent, {
         data: {
           title: 'Desactivar movimiento',
-          message: `¿Confirmas desactivar el movimiento "${m.detalle}"? Se recalcula el saldo del kardex sin él.`,
+          message: `¿Confirmas desactivar el movimiento "${m.detalle}"? Se recalcula el saldo del kardex sin él y también se da de baja su movimiento en la caja de flujo o en la libreta bancaria.`,
           confirmLabel: 'Desactivar',
           cancelLabel: 'Cancelar',
           tone: 'danger',
@@ -629,7 +669,7 @@ export class KardexGestionComponent implements OnInit {
         // Mismo nombre con el que lo sirve el back: kardex-KA-001.xlsx / .pdf
         descargarBlob(
           blob,
-          `kardex-${k.codigo ?? 'N' + k.numero}.${extensionReporte(formato)}`,
+          `kardex-${k.codigo ? k.codigo + '-' : ''}N${k.numero}.${extensionReporte(formato)}`,
         );
       },
       error: async (err) => {

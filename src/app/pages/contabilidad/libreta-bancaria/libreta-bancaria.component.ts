@@ -4,6 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import {
+  ChequerasDialogComponent,
+  ChequerasDialogData,
+} from '../cheques/chequeras-dialog/chequeras-dialog.component';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -42,6 +46,8 @@ import {
   SaldoInicialDialogComponent,
   SaldoInicialDialogData,
 } from './saldo-inicial-dialog/saldo-inicial-dialog.component';
+import { tienePermiso } from 'src/app/core/auth/permiso-signal';
+import { PERMISO } from 'src/app/core/auth/models/permisos';
 
 interface CuentaOpcion {
   idCuenta: number;
@@ -53,6 +59,7 @@ interface CuentaOpcion {
   nombreEntidad: string;
   siglaEntidad: string;
   activo: boolean;
+  manejaCheques: boolean;
 }
 
 const MESES = [
@@ -90,6 +97,12 @@ const MESES = [
   styleUrl: './libreta-bancaria.component.scss',
 })
 export class LibretaBancariaComponent implements OnInit {
+  /** El Excel de los reportes es un permiso aparte (Roles y Permisos); el
+   *  PDF lo descarga cualquiera que entre a la pantalla. */
+  readonly puedeDescargarExcel = tienePermiso(
+    PERMISO.DESCARGAR_EXCEL_CONTABILIDAD,
+  );
+
   private readonly parametricasService = inject(ParametricasService);
   private readonly libretaService = inject(LibretaBancoService);
   private readonly dialog = inject(MatDialog);
@@ -208,6 +221,7 @@ export class LibretaBancariaComponent implements OnInit {
               nombreEntidad: e.nombre,
               siglaEntidad: e.sigla,
               activo: c.activo !== false,
+              manejaCheques: !!c.manejaCheques,
             });
           }
         }
@@ -322,6 +336,22 @@ export class LibretaBancariaComponent implements OnInit {
     this.cargarLibreta();
     // Refresca el saldo inicial de la cuenta en el selector.
     this.refrescarCuentaSel();
+  }
+
+  /** Talonarios y cheques de la cuenta elegida (si maneja chequera). */
+  abrirChequeras(): void {
+    const cuenta = this.cuentaSel();
+    if (!cuenta) return;
+    this.dialog.open<ChequerasDialogComponent, ChequerasDialogData>(
+      ChequerasDialogComponent,
+      {
+        maxWidth: '96vw',
+        data: {
+          idCuentaBancaria: cuenta.idCuenta,
+          etiqueta: this.etiquetaCuenta(cuenta),
+        },
+      },
+    );
   }
 
   private refrescarCuentaSel(): void {

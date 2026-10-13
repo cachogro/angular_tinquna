@@ -26,7 +26,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { forkJoin } from 'rxjs';
 import {
-  DestinoGasto,
+  PlanCuentas,
   MonedaCuentaBancaria,
   SIMBOLO_MONEDA,
   etiquetaMonedaCuenta,
@@ -44,7 +44,7 @@ import { TraspasoService } from '../../services/traspaso.service';
 import { FechaInputDirective } from '../../../../shared/directives/fecha-input.directive';
 import { MontoInputDirective } from '../../../../shared/directives/monto-input.directive';
 import { MayusculasDirective } from '../../../../shared/directives/mayusculas.directive';
-import { DestinoGastoFieldComponent } from '../../components/destino-gasto-field/destino-gasto-field.component';
+import { PlanCuentasFieldComponent } from '../../components/plan-cuentas-field/plan-cuentas-field.component';
 
 export interface TraspasoFormDialogData {
   tipo: TipoTraspaso;
@@ -66,7 +66,7 @@ interface CuentaOpcion {
     FechaInputDirective,
     MontoInputDirective,
     MayusculasDirective,
-    DestinoGastoFieldComponent,
+    PlanCuentasFieldComponent,
     CommonModule,
     ReactiveFormsModule,
     MatDialogModule,
@@ -95,7 +95,7 @@ export class TraspasoFormDialogComponent implements OnInit {
   readonly guardando = signal(false);
 
   readonly cuentas = signal<CuentaOpcion[]>([]);
-  readonly destinosGasto = signal<DestinoGasto[]>([]);
+  readonly cuentasPlan = signal<PlanCuentas[]>([]);
   /** Personas autorizadas + (en edición) el autorizador guardado en el
    *  traspaso aunque ya no figure como autorizado: el back conserva sus
    *  datos si se reenvía el mismo id. */
@@ -118,7 +118,7 @@ export class TraspasoFormDialogComponent implements OnInit {
       Validators.required,
     ]),
     nroComprobante: new FormControl('', [Validators.maxLength(30)]),
-    idDestinoGasto: new FormControl<number | null>(null),
+    idPlanCuentas: new FormControl<number | null>(null),
     concepto: new FormControl('', [
       Validators.required,
       Validators.maxLength(255),
@@ -155,11 +155,11 @@ export class TraspasoFormDialogComponent implements OnInit {
 
     forkJoin({
       entidades: this.parametricasService.obtenerEntidadesFinancieras(),
-      destinosGasto: this.parametricasService.obtenerDestinosGasto(),
+      cuentasPlan: this.parametricasService.obtenerCuentasPlan(),
       personasAutorizadas: this.personaService.listarPersonasAutorizadas(),
     }).subscribe({
-      next: ({ entidades, destinosGasto, personasAutorizadas }) => {
-        this.destinosGasto.set(destinosGasto.filter((d) => d.activo !== false));
+      next: ({ entidades, cuentasPlan, personasAutorizadas }) => {
+        this.cuentasPlan.set(cuentasPlan.filter((d) => d.activo !== false));
         this.personasAutorizadas.set(
           this.opcionesAutorizo(personasAutorizadas ?? []),
         );
@@ -197,7 +197,7 @@ export class TraspasoFormDialogComponent implements OnInit {
       fecha: this.parseFecha(t.fecha),
       idCuentaBancaria: t.idCuentaBancaria,
       nroComprobante: t.nroComprobante ?? '',
-      idDestinoGasto: t.idDestinoGasto ?? null,
+      idPlanCuentas: t.idPlanCuentas ?? null,
       concepto: t.concepto,
       monto: Number(t.monto),
       // Traspasos en USD anteriores a la 084 vienen sin T.C.: hay que cargarlo.
@@ -288,9 +288,9 @@ export class TraspasoFormDialogComponent implements OnInit {
 
   /** DEPOSITO (sale de caja) exige un destino de egreso; RETIRO (entra a
    *  caja) exige uno de ingreso — mismo criterio que la pantalla de recibos. */
-  get destinosGastoFiltrados(): DestinoGasto[] {
+  get cuentasPlanFiltrados(): PlanCuentas[] {
     const quiero = this.data.tipo === 'DEPOSITO';
-    return this.destinosGasto().filter((d) => d.esEgreso === quiero);
+    return this.cuentasPlan().filter((d) => d.esEgreso === quiero);
   }
 
   // ---------- Guardar ----------
@@ -320,7 +320,7 @@ export class TraspasoFormDialogComponent implements OnInit {
 
     const nroComprobante = (v.nroComprobante ?? '').trim();
     if (nroComprobante) request.nroComprobante = nroComprobante;
-    if (v.idDestinoGasto != null) request.idDestinoGasto = v.idDestinoGasto;
+    if (v.idPlanCuentas != null) request.idPlanCuentas = v.idPlanCuentas;
 
     this.traspasoService.guardar(request).subscribe({
       next: (traspaso) => {

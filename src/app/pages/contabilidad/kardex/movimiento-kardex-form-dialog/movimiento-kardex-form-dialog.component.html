@@ -13,6 +13,27 @@
   </div>
   } @else {
   <form [formGroup]="form" class="mk-form">
+    @if (origen; as o) {
+    <div class="mk-aviso">
+      <mat-icon>info</mat-icon>
+      <span>Esta línea la generó: <strong>{{ o.etiqueta }}</strong>. Acá solo se puede cambiar el detalle, el lote, la
+        subcuenta, el plan de cuentas y el cobrador; los importes se corrigen desde ese documento.</span>
+    </div>
+    } @else if (esEdicion) {
+    <div class="mk-aviso">
+      <mat-icon>info</mat-icon>
+      <span>Al guardar también se corrige su movimiento en la caja de flujo o en la libreta bancaria. La moneda y el
+        medio (efectivo o cuenta bancaria) no se pueden cambiar: para eso desactiva la línea y regístrala de
+        nuevo.</span>
+    </div>
+    }
+    @if (generaRecibo) {
+    <div class="mk-aviso">
+      <mat-icon>receipt_long</mat-icon>
+      <span>Este pago genera un <strong>recibo de ingreso</strong> ya procesado: al registrar se abre para
+        imprimirlo. Para corregirlo después hay que anular el recibo.</span>
+    </div>
+    }
     <div class="mk-form__row3">
       <mat-form-field appearance="outline">
         <mat-label>Fecha</mat-label>
@@ -129,12 +150,12 @@
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>Destino del gasto (opcional)</mat-label>
-        <input matInput formControlName="destinoGasto" [matAutocomplete]="autoDg"
+        <mat-label>Plan de cuentas (opcional)</mat-label>
+        <input matInput formControlName="planCuentas" [matAutocomplete]="autoDg"
           #dgTrigger="matAutocompleteTrigger" (focus)="dgTrigger.openPanel()"
           placeholder="Escribe para buscar" />
-        <mat-autocomplete #autoDg="matAutocomplete" [displayWith]="displayDestinoGasto">
-          @for (dg of destinosGastoOpciones(); track dg.id) {
+        <mat-autocomplete #autoDg="matAutocomplete" [displayWith]="displayPlanCuentas">
+          @for (dg of cuentasPlanOpciones(); track dg.id) {
           <mat-option [value]="dg">{{ dg.nombre }}</mat-option>
           } @empty {
           <mat-option disabled>{{ f.tipo.value ? 'Sin coincidencias' : 'Elige primero DEBE o HABER' }}</mat-option>
@@ -157,7 +178,7 @@
           }
         </mat-optgroup>
         } @empty {
-        <mat-option disabled>Sin cuentas en {{ simbolo }}</mat-option>
+        <mat-option disabled>{{ pagoConCheque ? 'Ninguna cuenta en ' + simbolo + ' tiene chequera habilitada' : 'Sin cuentas en ' + simbolo }}</mat-option>
         }
       </mat-select>
       @if (f.idCuentaBancaria.hasError('required') && f.idCuentaBancaria.touched) {

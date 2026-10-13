@@ -39,6 +39,8 @@ import {
   TraspasoDetalleDialogComponent,
   TraspasoDetalleDialogData,
 } from './traspaso-detalle-dialog/traspaso-detalle-dialog.component';
+import { tienePermiso } from 'src/app/core/auth/permiso-signal';
+import { PERMISO } from 'src/app/core/auth/models/permisos';
 
 interface CuentaOpcion {
   idCuenta: number;
@@ -71,6 +73,12 @@ interface CuentaOpcion {
   styleUrl: './traspaso-list.component.scss',
 })
 export class TraspasoListComponent implements OnInit {
+  /** El Excel de los reportes es un permiso aparte (Roles y Permisos); el
+   *  PDF lo descarga cualquiera que entre a la pantalla. */
+  readonly puedeDescargarExcel = tienePermiso(
+    PERMISO.DESCARGAR_EXCEL_CONTABILIDAD,
+  );
+
   private readonly parametricasService = inject(ParametricasService);
   private readonly traspasoService = inject(TraspasoService);
   private readonly dialog = inject(MatDialog);
@@ -82,7 +90,7 @@ export class TraspasoListComponent implements OnInit {
     'cuentaBancaria',
     'nroComprobante',
     'concepto',
-    'destinoGasto',
+    'planCuentas',
     'personaAutorizo',
     'usuarioRegistro',
     'monto',

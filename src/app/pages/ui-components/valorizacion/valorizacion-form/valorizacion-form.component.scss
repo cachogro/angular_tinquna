@@ -740,3 +740,84 @@
     border-color: rgba(40, 199, 111, 0.4) !important;
   }
 }
+/* ===== Pantallas chicas =====
+ * Las filas de ley son grillas de 5 a 8 columnas con cada campo ubicado en
+ * una celda fija: en un teléfono se reacomodan en 2 columnas (el mineral
+ * arriba, a todo el ancho) en vez de salirse por la derecha. */
+@media (max-width: 767px) {
+  .valorizacion-form__ley-fila,
+  .valorizacion-form__ley-fila-bcl,
+  .valorizacion-form__ley-fila--ram {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: none;
+    padding: 10px 8px;
+
+    > * {
+      grid-column: auto !important;
+      grid-row: auto !important;
+    }
+
+    > .valorizacion-form__ley-campo--mineral {
+      grid-column: 1 / -1 !important;
+    }
+  }
+
+  .form-grid {
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  }
+
+  .form-grid--peso-neto-bcl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .valorizacion-form__campo-porcentaje,
+  .valorizacion-form__campo-porcentaje--merma {
+    max-width: none;
+  }
+
+  .valorizacion-form__aportes-tabla {
+    min-width: 640px;
+  }
+
+  .valorizacion-form__totales,
+  .valorizacion-form__ley-totales-item {
+    max-width: none;
+  }
+
+  .valorizacion-form__pie {
+    grid-template-columns: 1fr;
+  }
+
+  .valorizacion-form__botones-finales {
+    grid-column: 1;
+  }
+
+  .valorizacion-form__titulo--con-accion {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* El stepper vertical reserva 36px + 24px a la izquierda de cada paso. */
+  .valorizacion-form__stepper {
+    ::ng-deep .mat-vertical-content-container {
+      margin-left: 14px;
+    }
+
+    ::ng-deep .mat-vertical-content {
+      padding: 0 4px 16px 10px;
+    }
+
+    ::ng-deep .mat-step-header {
+      padding: 12px 0;
+    }
+  }
+}
+
+/* Datos de la recepción: en escritorio cada dato cabe en un renglón; en un
+ * teléfono se parte en dos y con el interlineado compacto quedaban encimados. */
+@media (max-width: 767px) {
+  .valorizacion-form__datos-recepcion p.small {
+    line-height: 1.35;
+    margin: 0 0 6px;
+  }
+}

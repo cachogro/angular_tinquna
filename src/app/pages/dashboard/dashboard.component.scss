@@ -793,6 +793,53 @@
   transition: width 0.4s ease;
 }
 
+// ---------------- Chequeras ----------------
+
+.db-cheques {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px 24px;
+}
+
+.db-cheque {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.db-cheque__linea {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+
+  strong small {
+    font-weight: 400;
+    color: var(--texto-tenue);
+  }
+}
+
+.db-cheque__cuenta {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.db-cheque__detalle {
+  font-size: 12px;
+  color: var(--texto-tenue);
+}
+
+.db-cheque--alerta .db-cheque__linea strong,
+.db-cheque__rojo {
+  color: var(--estado-alta);
+}
+
+.db-cheque--alerta .db-ranking__barra {
+  background: var(--estado-alta);
+}
+
 // ---------------- Adaptable ----------------
 
 @media (max-width: 1199px) {

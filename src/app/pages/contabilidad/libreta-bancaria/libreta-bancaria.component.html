@@ -5,6 +5,12 @@
       <mat-card-subtitle class="m-b-0">Contabilidad</mat-card-subtitle>
     </div>
     <div class="lb-header__actions">
+      @if (cuentaSel()?.manejaCheques) {
+      <button mat-stroked-button color="primary" (click)="abrirChequeras()"
+        matTooltip="Talonarios y cheques de esta cuenta">
+        <mat-icon>receipt_long</mat-icon> Chequeras
+      </button>
+      }
       <button mat-flat-button color="primary" (click)="nuevoMovimiento()"
         [disabled]="cuentaSelId() === null || !saldoInicialConfigurado">
         <mat-icon>add</mat-icon> Nuevo movimiento
@@ -123,6 +129,7 @@
           <mat-icon>lock_open</mat-icon> Reabrir mes
         </button>
         }
+        @if (puedeDescargarExcel()) {
         <button mat-stroked-button color="primary" class="lb-periodo__excel" [disabled]="descargandoExcel()"
           (click)="descargarExcel()" matTooltip="Excel de la libreta bancaria del mes">
           @if (descargandoExcel()) {
@@ -132,6 +139,7 @@
           }
           {{ descargandoExcel() ? 'Generando...' : 'Excel libreta bancaria' }}
         </button>
+        }
         <button mat-stroked-button color="primary" class="lb-periodo__excel" [disabled]="descargandoExcel()"
           (click)="descargarExcel('PDF')" matTooltip="PDF de la libreta bancaria del mes">
           <mat-icon>picture_as_pdf</mat-icon>
@@ -268,15 +276,21 @@
               <button mat-icon-button matTooltip="Ver detalle" (click)="verDetalle(m)">
                 <mat-icon>visibility</mat-icon>
               </button>
-              @if (movimientoEditable(m)) {
+              @if (m.activo === false) {
+              <mat-icon class="lb-lock" matTooltip="Movimiento desactivado">block</mat-icon>
+              } @else if (!movimientoEditable(m)) {
+              <mat-icon class="lb-lock" matTooltip="Período cerrado">lock</mat-icon>
+              } @else if (m.origen) {
+              <!-- Lo generó otro documento: se anula o corrige desde ahí. -->
+              <mat-icon class="lb-lock"
+                [matTooltip]="m.origen.etiqueta + ': se anula o corrige desde su documento de origen'">link</mat-icon>
+              } @else {
               <button mat-icon-button color="primary" matTooltip="Editar" (click)="editarMovimiento(m)">
                 <mat-icon>edit</mat-icon>
               </button>
               <button mat-icon-button color="warn" matTooltip="Desactivar" (click)="desactivarMovimiento(m)">
                 <mat-icon>block</mat-icon>
               </button>
-              } @else {
-              <mat-icon class="lb-lock" matTooltip="Período cerrado">lock</mat-icon>
               }
             </td>
           </ng-container>

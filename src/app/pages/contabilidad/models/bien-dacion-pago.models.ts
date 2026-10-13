@@ -10,7 +10,7 @@
 //   DEVUELTO       → se le devolvió; no genera nada.
 //
 // Resultado para la empresa = precio de venta − amortizado − gastos.
-import { DestinoGasto } from '../../configurations/parametricas/models/parametricas.models';
+import { PlanCuentas } from '../../configurations/parametricas/models/parametricas.models';
 import { DatosPagoRequest } from './prestamo-personal.models';
 
 export type EstadoBienDacion =
@@ -28,8 +28,8 @@ export interface GastoBienDacion {
   fecha: string;
   concepto: string;
   monto: number | string;
-  idDestinoGasto?: number | null;
-  destinoGasto?: DestinoGasto | null;
+  idPlanCuentas?: number | null;
+  planCuentas?: PlanCuentas | null;
   /** Uno de los dos: por dónde salió el dinero. */
   idMovimientoCaja?: string | null;
   idLibretaBanco?: string | null;

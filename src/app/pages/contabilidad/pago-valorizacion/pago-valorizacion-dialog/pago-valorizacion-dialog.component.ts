@@ -42,10 +42,16 @@ import { montoDosDecimales } from '../../../../shared/utils/numero.util';
 import {
   DatosPagoFieldsComponent,
   crearFormDatosPago,
+  errorDatosPago,
   leerDatosPago,
 } from '../../components/datos-pago-fields/datos-pago-fields.component';
 import { formatFechaIso } from '../../components/personal-interno.util';
 import { Kardex, KardexPaginado } from '../../models/kardex.models';
+import {
+  MedioPago,
+  descripcionMedioPago,
+  mediosMixtos,
+} from '../../models/medio-pago.models';
 import {
   ConceptoPagoValorizacion,
   DestinoKardexPago,
@@ -300,8 +306,16 @@ export class PagoValorizacionDialogComponent implements OnInit {
     return `${k.codigo} · ${nombre}`;
   }
 
+  /** Medios del pago si fue mixto (efectivo + QR, etc.); vacío si no. */
+  medios(p: PagoValorizacion): MedioPago[] {
+    return mediosMixtos(p.medios);
+  }
+
+  readonly descripcionMedio = descripcionMedioPago;
+
   origenPago(p: PagoValorizacion): string {
     if (this.num(p.montoPagado) <= 0) return 'No salió dinero: todo quedó en kardex';
+    if (this.medios(p).length) return 'Pago mixto';
     if (p.cuentaBancaria) {
       const banco =
         p.cuentaBancaria.entidadFinanciera?.sigla ||
@@ -379,6 +393,11 @@ export class PagoValorizacionDialogComponent implements OnInit {
       );
       return;
     }
+    const errorMixto = saleDinero ? errorDatosPago(this.pago, this.aPagar()) : null;
+    if (errorMixto) {
+      this.snackBar.open(errorMixto, 'Cerrar', { duration: 5000 });
+      return;
+    }
     const kardexElegidos = this.filas.map(
       (f) => (f.getRawValue().kardex as OpcionKardex).idKardex,
     );
@@ -393,7 +412,7 @@ export class PagoValorizacionDialogComponent implements OnInit {
 
     const request: RegistrarPagoValorizacionRequest = {
       ...(saleDinero
-        ? leerDatosPago(this.pago)
+        ? leerDatosPago(this.pago, this.aPagar())
         : { idPersonaAutorizo: this.pago.controls.idPersonaAutorizo.value! }),
       idValorizacionMineral: prep.idValorizacionMineral,
       fecha: formatFechaIso(this.fecha.value!),

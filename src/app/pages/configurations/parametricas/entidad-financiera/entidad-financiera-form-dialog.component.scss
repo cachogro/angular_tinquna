@@ -53,9 +53,16 @@ CUENTAS
 
 .cuenta-fila {
   display: grid;
-  grid-template-columns: 1.4fr .8fr 1.6fr auto;
+  grid-template-columns: 1.4fr .8fr 1.6fr auto auto;
   gap: 12px;
   align-items: start;
+}
+
+.cuenta-fila__cheques {
+  display: flex;
+  align-items: center;
+  height: 56px;
+  white-space: nowrap;
 }
 
 .cuenta-fila--inactiva {
@@ -221,8 +228,11 @@ RESPONSIVE
     grid-column: 1 / -1;
   }
 
+  .cuenta-fila__cheques {
+    height: auto;
+  }
+
   .cuenta-fila__accion {
-    grid-column: 1 / -1;
     height: auto;
     justify-content: flex-end;
   }

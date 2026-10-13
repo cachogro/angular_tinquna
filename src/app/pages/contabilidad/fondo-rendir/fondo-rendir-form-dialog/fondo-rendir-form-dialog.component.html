@@ -105,7 +105,7 @@
         }
       </mat-form-field>
 
-      <app-destino-gasto-field [control]="f.idDestinoGasto" [opciones]="destinosGasto()" />
+      <app-plan-cuentas-field [control]="f.idPlanCuentas" [opciones]="cuentasPlan()" />
     </div>
 
     @if (requiereCuentaBancaria) {
@@ -113,10 +113,10 @@
       <mat-form-field appearance="outline">
         <mat-label>Cuenta bancaria</mat-label>
         <mat-select formControlName="idCuentaBancaria">
-          @for (c of cuentas(); track c.idCuenta) {
+          @for (c of cuentasVisibles; track c.idCuenta) {
           <mat-option [value]="c.idCuenta">{{ etiquetaCuenta(c) }}</mat-option>
           } @empty {
-          <mat-option disabled>Sin cuentas bancarias activas</mat-option>
+          <mat-option disabled>{{ pagoConCheque ? 'Ninguna cuenta tiene chequera habilitada' : 'Sin cuentas bancarias activas' }}</mat-option>
           }
         </mat-select>
         @if (f.idCuentaBancaria.hasError('required') && f.idCuentaBancaria.touched) {

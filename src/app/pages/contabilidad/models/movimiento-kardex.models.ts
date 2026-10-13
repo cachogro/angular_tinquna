@@ -3,14 +3,14 @@
 //   DEBE  = anticipo entregado (sube la deuda del destinatario)
 //   HABER = pago / descuento (la baja)
 import {
-  DestinoGasto,
+  PlanCuentas,
   FormaPago,
   KardexSubcuenta,
   MonedaCuenta,
 } from '../../configurations/parametricas/models/parametricas.models';
 import { Kardex } from './kardex.models';
 
-export type { DestinoGasto, FormaPago, KardexSubcuenta };
+export type { PlanCuentas, FormaPago, KardexSubcuenta };
 
 export type TipoMovimientoKardexLinea = 'DEBE' | 'HABER';
 
@@ -45,9 +45,9 @@ export interface MovimientoKardex {
     alias?: string | null;
     entidadFinanciera?: { id: number; nombre: string; sigla: string } | null;
   } | null;
-  /** Categoría contable (catálogo destino-gasto). */
-  idDestinoGasto?: number | null;
-  destinoGasto?: DestinoGasto | null;
+  /** Categoría contable (catálogo plan-cuentas). */
+  idPlanCuentas?: number | null;
+  planCuentas?: PlanCuentas | null;
   idCobrador?: string | null;
   cobrador?: PersonaEnMovimientoKardex | null;
   idValorizacion?: string | null;
@@ -64,6 +64,15 @@ export interface MovimientoKardex {
   debe: string;
   haber: string;
   saldo: string;
+  /** Documento que generó la línea (recibo, pago de valorización, bien en
+   *  dación, fondo a rendir, venta de lote, préstamo): no se desactiva acá y
+   *  solo se reclasifica. null = cargada a mano (su movimiento de caja o de
+   *  libreta se corrige junto con ella). */
+  origen?: { tipo: string; id: string; etiqueta: string } | null;
+  /** Solo en la respuesta de registrar el pago de una deuda personal (HABER
+   *  en un kardex PERSONAL/ASOCIADO): el recibo de ingreso, ya PROCESADO,
+   *  que se generó en el mismo paso. */
+  recibo?: { id: string; serie: string; numero: number; estado: string } | null;
   activo?: boolean;
   usuarioRegistro?: string | null;
   usuarioUltimaModificacion?: string | null;
@@ -85,7 +94,7 @@ export interface GuardarMovimientoKardexRequest {
   idFormaPago?: number;
   /** Obligatorio cuando la forma de pago es bancaria (transacción, QR, cheque…). */
   idCuentaBancaria?: number;
-  idDestinoGasto?: number;
+  idPlanCuentas?: number;
   idCobrador?: string;
   idValorizacion?: string;
   tipo: TipoMovimientoKardexLinea;

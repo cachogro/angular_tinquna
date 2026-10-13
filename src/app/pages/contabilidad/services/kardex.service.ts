@@ -51,11 +51,13 @@ export class KardexService {
     return this.http.post<Kardex>(this.baseUrl, data);
   }
 
-  /** Cierra y abre el siguiente número con el arrastre del saldo. */
-  cerrar(id: string): Observable<CerrarKardexResponse> {
+  /** Cierra y abre el siguiente número con el arrastre del saldo.
+   *  `fechaCierre` ("YYYY-MM-DD") es también la apertura del siguiente; sin
+   *  ella el back usa hoy. */
+  cerrar(id: string, fechaCierre?: string): Observable<CerrarKardexResponse> {
     return this.http.patch<CerrarKardexResponse>(
       `${this.baseUrl}/${id}/cerrar`,
-      {},
+      fechaCierre ? { fechaCierre } : {},
     );
   }
 

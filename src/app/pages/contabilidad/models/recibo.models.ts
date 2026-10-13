@@ -11,10 +11,11 @@
 // generar los dos movimientos de caja a la vez (`movimientosCaja`, 0 a 2
 // elementos) — independiente de si el recibo en sí es INGRESO o EGRESO.
 import {
-  DestinoGasto,
+  PlanCuentas,
   FormaPago,
   MonedaCuenta,
 } from '../../configurations/parametricas/models/parametricas.models';
+import { MedioPago, MedioPagoRequest } from './medio-pago.models';
 import { MovimientoCaja } from './movimiento-caja.models';
 
 export type TipoRecibo = 'INGRESO' | 'EGRESO';
@@ -74,8 +75,8 @@ export interface DetalleReciboRequest {
   idActorProductivoMinero?: string;
   idCliente?: string;
   monto: number;
-  /** Categoría contable de ESTA porción (catálogo destino-gasto). */
-  idDestinoGasto?: number;
+  /** Categoría contable de ESTA porción (catálogo plan-cuentas). */
+  idPlanCuentas?: number;
   /** Código de lote que queda en la línea del kardex (ej. cobro de venta de lote). */
   lote?: string;
 }
@@ -90,8 +91,8 @@ export interface DetalleRecibo {
   idCliente?: string | null;
   cliente?: ClienteEnRecibo | null;
   monto: string;
-  idDestinoGasto?: number | null;
-  destinoGasto?: DestinoGasto | null;
+  idPlanCuentas?: number | null;
+  planCuentas?: PlanCuentas | null;
   /** Línea de kardex generada por esta porción; null si destino=EFECTIVO. */
   idMovimientoKardex?: string | null;
 }
@@ -119,6 +120,10 @@ export interface Recibo {
   cuentaBancaria?: CuentaBancariaEnRecibo | null;
   /** N° de comprobante / transacción del pago bancario. */
   nroComprobante?: string | null;
+  /** Medios de un pago mixto (efectivo + QR, etc.). Vacío si se pagó por un
+   *  solo medio: ese es `formaPago` / `cuentaBancaria` / `nroComprobante`,
+   *  que en un pago mixto llevan los datos del primero. */
+  pagos?: MedioPago[];
   /** Quién autorizó el recibo — obligatoria, debe salir de
    *  `GET /comercio_interno/persona_ci/autorizadas`. Fija desde que se crea
    *  el recibo (no se corrige al procesar un BORRADOR). */
@@ -193,8 +198,11 @@ export interface GenerarReciboRequest extends ContraparteReciboRequest {
   idCuentaBancaria?: number;
   /** N° de comprobante / transacción; obligatorio con forma de pago bancaria. */
   nroComprobante?: string;
+  /** Pago mixto: medios por los que se mueve el dinero (suma == montoTotal).
+   *  Solo se envía con dos medios o más. */
+  pagos?: MedioPagoRequest[];
   /** Si viene, el recibo se procesa en el acto (no pasa por BORRADOR).
-   *  El destino del gasto va por línea, en `detalles[].idDestinoGasto`. */
+   *  El plan de cuentas va por línea, en `detalles[].idPlanCuentas`. */
   detalles?: DetalleReciboRequest[];
 }
 
@@ -205,11 +213,13 @@ export interface GenerarReciboRequest extends ContraparteReciboRequest {
  *  lo que tuviera el borrador. NO permite corregir fecha, montoTotal, concepto
  *  ni la contraparte (quedan fijos desde que se creó el BORRADOR). */
 export interface ProcesarReciboRequest {
-  /** El destino del gasto va por línea, en `detalles[].idDestinoGasto`. */
+  /** El plan de cuentas va por línea, en `detalles[].idPlanCuentas`. */
   detalles: DetalleReciboRequest[];
   idFormaPago?: number;
   idCuentaBancaria?: number;
   nroComprobante?: string;
+  /** Pago mixto (suma == montoTotal del recibo); reemplaza al del borrador. */
+  pagos?: MedioPagoRequest[];
 }
 
 export type OrdenRecibo = 'id' | 'fecha' | 'monto' | 'numero';

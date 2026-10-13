@@ -5,10 +5,11 @@
 // lo que el proveedor deja a kardex, y los anticipos que la valorización ya
 // le descontó, se anotan como HABER. Los montos vienen como string.
 import {
-  DestinoGasto,
+  PlanCuentas,
   FormaPago,
 } from '../../configurations/parametricas/models/parametricas.models';
 import { TipoKardex } from './kardex.models';
+import { MedioPago } from './medio-pago.models';
 import { DatosPagoRequest } from './prestamo-personal.models';
 
 /** Dueño de un kardex abierto: persona (PERSONAL o ASOCIADO), actor o cliente. */
@@ -85,7 +86,10 @@ export interface PagoValorizacion {
     entidadFinanciera?: { nombre: string; sigla?: string | null } | null;
   } | null;
   nroComprobante?: string | null;
-  destinoGasto?: DestinoGasto | null;
+  /** Medios de un pago mixto; vacío si salió por un solo medio (ese es
+   *  `formaPago` / `cuentaBancaria` / `nroComprobante`). */
+  medios?: MedioPago[];
+  planCuentas?: PlanCuentas | null;
   personaAutorizo?: {
     id: string;
     nombres: string;

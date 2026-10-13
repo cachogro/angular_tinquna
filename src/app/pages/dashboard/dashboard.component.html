@@ -301,10 +301,10 @@
           </div>
         </div>
 
-        @if (fl.ganancia.sinDestino.ingresoBs || fl.ganancia.sinDestino.egresoBs) {
+        @if (fl.ganancia.sinPlanCuentas.ingresoBs || fl.ganancia.sinPlanCuentas.egresoBs) {
         <small class="db-texto-alerta">
-          Movimientos sin destino de gasto (no entran en la ganancia): ingresos
-          {{ bs(fl.ganancia.sinDestino.ingresoBs) }}, egresos {{ bs(fl.ganancia.sinDestino.egresoBs) }}.
+          Movimientos sin plan de cuentas (no entran en la ganancia): ingresos
+          {{ bs(fl.ganancia.sinPlanCuentas.ingresoBs) }}, egresos {{ bs(fl.ganancia.sinPlanCuentas.egresoBs) }}.
         </small>
         }
 
@@ -336,7 +336,7 @@
         }
 
         <a mat-button routerLink="/configuraciones/parametricas" class="db-enlace-pie">
-          Revisar categorías de los destinos de gasto <mat-icon iconPositionEnd>chevron_right</mat-icon>
+          Revisar categorías de los cuentas del plan de cuentas <mat-icon iconPositionEnd>chevron_right</mat-icon>
         </a>
       </mat-card>
     </section>
@@ -590,6 +590,49 @@
         </div>
       </mat-card>
     </section>
+
+    <!-- ================= CHEQUERAS ================= -->
+    @if (d.cheques?.length) {
+    <section class="db-fila">
+      <mat-card class="cardWithShadow db-panel tema-contabilidad">
+        <div class="db-panel__cabecera">
+          <div>
+            <h2>Chequeras</h2>
+            <small>Cheques que quedan en cada cuenta y cheques emitidos que todavía no se cobraron</small>
+          </div>
+          <a mat-button routerLink="/contabilidad/libreta-bancaria">Ver en Libreta Bancaria</a>
+        </div>
+        <div class="db-cheques">
+          @for (c of d.cheques; track c.idCuentaBancaria) {
+          <div class="db-cheque" [class.db-cheque--alerta]="c.disponibles === 0 || c.vencidos > 0">
+            <div class="db-cheque__linea">
+              <span class="db-cheque__cuenta">
+                {{ c.entidadFinanciera }} · {{ c.alias || c.numeroCuenta }} ({{ c.moneda }})
+              </span>
+              <strong>
+                {{ c.disponibles === 0 ? 'Sin cheques' : plural(c.disponibles, 'cheque') }}
+                <small>de {{ c.total }}</small>
+              </strong>
+            </div>
+            <div class="db-ranking__pista">
+              <span class="db-ranking__barra" [style.width.%]="pctCheques(c)"></span>
+            </div>
+            <small class="db-cheque__detalle">
+              @if (c.emitidosSinCobrar) {
+              {{ plural(c.emitidosSinCobrar, 'emitido') }} sin cobrar
+              @if (c.vencidos) { · <b class="db-cheque__rojo">{{ plural(c.vencidos, 'vencido') }}</b> }
+              @if (c.porVencer) { · {{ c.porVencer }} por vencer }
+              } @else {
+              Sin cheques pendientes de cobro
+              }
+              @if (c.talonarioVence) { · talonario vence el {{ fechaCorta(c.talonarioVence) }} }
+            </small>
+          </div>
+          }
+        </div>
+      </mat-card>
+    </section>
+    }
 
     <!-- ================= RANKINGS ================= -->
     <section class="db-fila db-fila--6-6">

@@ -43,13 +43,25 @@
       <strong>Bs {{ num(pago.montoPagado) | number:'1.2-2' }}</strong>
     </div>
     @if (num(pago.montoPagado) > 0) {
+    @for (m of medios(pago); track m.id) {
+    <div class="pv-linea">
+      <span>{{ descripcionMedio(m) }}</span>
+      <span>Bs {{ num(m.monto) | number:'1.2-2' }}</span>
+    </div>
+    } @empty {
     <div class="pv-linea">
       <span>
         {{ pago.formaPago?.nombre || 'Efectivo' }}
         @if (pago.nroComprobante) { · N° {{ pago.nroComprobante }} }
-        @if (pago.destinoGasto) { · {{ pago.destinoGasto.nombre }} }
+        @if (pago.planCuentas) { · {{ pago.planCuentas.nombre }} }
       </span>
     </div>
+    }
+    @if (medios(pago).length && pago.planCuentas) {
+    <div class="pv-linea">
+      <span>Plan de cuentas: {{ pago.planCuentas.nombre }}</span>
+    </div>
+    }
     }
     @for (d of pago.detalles ?? []; track d.id) {
     <div class="pv-linea">
@@ -194,7 +206,7 @@
     @if (aPagar() <= 0) {
     <p class="pv-nota">No sale dinero: no hace falta forma de pago, solo quién autorizó.</p>
     }
-    <app-datos-pago-fields [form]="pago" [esEgreso]="true" />
+    <app-datos-pago-fields [form]="pago" [esEgreso]="true" [montoTotal]="aPagar() > 0 ? aPagar() : null" />
   </div>
   }
   }

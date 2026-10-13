@@ -19,7 +19,7 @@ import {
   CrearCotizacionRequest,
   CrearEscalaPrecioRequest,
   CuentaFinanciera,
-  DestinoGasto,
+  PlanCuentas,
   EntidadAporte,
   EntidadFinanciera,
   EscalaPrecio,
@@ -32,7 +32,7 @@ import {
   GuardarCajaRequest,
   GuardarClienteRequest,
   GuardarCodificacionLoteRequest,
-  GuardarDestinoGastoRequest,
+  GuardarPlanCuentasRequest,
   GuardarEntidadAporteRequest,
   GuardarEntidadFinancieraRequest,
   GuardarFormaPagoRequest,
@@ -796,17 +796,17 @@ export class ParametricasService {
       .pipe(tap(() => this.cargarLugaresAcopio()));
   }
 
-  private destinosGasto$?: Observable<DestinoGasto[]>;
+  private cuentasPlan$?: Observable<PlanCuentas[]>;
 
-  /** Catálogo cacheado de destinos de gasto (categoría contable del recibo).
+  /** Catálogo cacheado de cuentas del plan de cuentas (categoría contable del recibo).
    *  Trae todos; filtrar por `esEgreso` según el tipo de recibo. */
-  obtenerDestinosGasto(): Observable<DestinoGasto[]> {
-    if (!this.destinosGasto$) {
-      this.destinosGasto$ = this.http
-        .get<DestinoGasto[]>(`${this.baseUrl}/destino-gasto`)
+  obtenerCuentasPlan(): Observable<PlanCuentas[]> {
+    if (!this.cuentasPlan$) {
+      this.cuentasPlan$ = this.http
+        .get<PlanCuentas[]>(`${this.baseUrl}/plan-cuentas`)
         .pipe(shareReplay(1));
     }
-    return this.destinosGasto$;
+    return this.cuentasPlan$;
   }
 
   private kardexSubcuentas$?: Observable<KardexSubcuenta[]>;
@@ -864,46 +864,46 @@ export class ParametricasService {
   }
 
   // ==========================================================
-  // DESTINO DEL GASTO — administración (Contabilidad).
-  // El catálogo cacheado `obtenerDestinosGasto()` (solo activos) es el que
+  // PLAN DE CUENTAS — administración (Contabilidad).
+  // El catálogo cacheado `obtenerCuentasPlan()` (solo activos) es el que
   // consumen caja y recibos; aquí se lista todo, incluidos los inactivos.
   // ==========================================================
 
-  private readonly destinoGastoUrl = `${this.baseUrl}/destino-gasto`;
+  private readonly planCuentasUrl = `${this.baseUrl}/plan-cuentas`;
 
-  readonly destinosGastoAdmin = signal<DestinoGasto[]>([]);
-  readonly cargandoDestinosGastoAdmin = signal<boolean>(false);
+  readonly cuentasPlanAdmin = signal<PlanCuentas[]>([]);
+  readonly cargandoCuentasPlanAdmin = signal<boolean>(false);
 
   /** Un solo POST: sin `id` crea, con `id` actualiza. */
-  guardarDestinoGasto(data: GuardarDestinoGastoRequest): Observable<DestinoGasto> {
+  guardarPlanCuentas(data: GuardarPlanCuentasRequest): Observable<PlanCuentas> {
     return this.http
-      .post<DestinoGasto>(this.destinoGastoUrl, data)
-      .pipe(tap(() => this.refrescarDestinosGasto()));
+      .post<PlanCuentas>(this.planCuentasUrl, data)
+      .pipe(tap(() => this.refrescarCuentasPlan()));
   }
 
-  cambiarEstadoDestinoGasto(id: number, activo: boolean): Observable<DestinoGasto> {
+  cambiarEstadoPlanCuentas(id: number, activo: boolean): Observable<PlanCuentas> {
     return this.http
-      .patch<DestinoGasto>(`${this.destinoGastoUrl}/cambiar_estado/${id}`, { activo })
-      .pipe(tap(() => this.refrescarDestinosGasto()));
+      .patch<PlanCuentas>(`${this.planCuentasUrl}/cambiar_estado/${id}`, { activo })
+      .pipe(tap(() => this.refrescarCuentasPlan()));
   }
 
-  cargarDestinosGastoAdmin(): void {
-    this.cargandoDestinosGastoAdmin.set(true);
+  cargarCuentasPlanAdmin(): void {
+    this.cargandoCuentasPlanAdmin.set(true);
     this.http
-      .get<DestinoGasto[]>(this.destinoGastoUrl, { params: { todos: 'true' } })
+      .get<PlanCuentas[]>(this.planCuentasUrl, { params: { todos: 'true' } })
       .subscribe({
         next: (data) => {
-          this.destinosGastoAdmin.set(data);
-          this.cargandoDestinosGastoAdmin.set(false);
+          this.cuentasPlanAdmin.set(data);
+          this.cargandoCuentasPlanAdmin.set(false);
         },
-        error: () => this.cargandoDestinosGastoAdmin.set(false),
+        error: () => this.cargandoCuentasPlanAdmin.set(false),
       });
   }
 
   /** Tras un cambio: recarga la tabla y descarta la caché de los selectores. */
-  private refrescarDestinosGasto(): void {
-    this.destinosGasto$ = undefined;
-    this.cargarDestinosGastoAdmin();
+  private refrescarCuentasPlan(): void {
+    this.cuentasPlan$ = undefined;
+    this.cargarCuentasPlanAdmin();
   }
 
   // ==========================================================

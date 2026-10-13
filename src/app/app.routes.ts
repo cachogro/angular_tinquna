@@ -3,8 +3,8 @@ import { Routes } from '@angular/router';
 import { BlankComponent } from './layouts/blank/blank.component';
 import { FullComponent } from './layouts/full/full.component';
 import { guestGuard, authGuard } from './core/auth/guards/auth.guard'; // <-- NUEVO
-import { roleMatchGuard } from './core/auth/guards/role.guard';
-import { PERMISOS_MODULO } from './core/auth/models/permisos-modulo';
+import { permisoMatchGuard } from './core/auth/guards/permiso.guard';
+import { PERMISOS_MODULO } from './core/auth/models/permisos';
 
 export const routes: Routes = [
   {
@@ -38,8 +38,8 @@ export const routes: Routes = [
       },
       {
         path: 'ui-components',
-        canMatch: [roleMatchGuard],
-        data: { roles: PERMISOS_MODULO.comercioInterno },
+        canMatch: [permisoMatchGuard],
+        data: { permisos: PERMISOS_MODULO.comercioInterno },
         loadChildren: () =>
           import('./pages/ui-components/ui-components.routes').then(
             (m) => m.UiComponentsRoutes,
@@ -47,8 +47,8 @@ export const routes: Routes = [
       },
       {
         path: 'configuraciones',
-        canMatch: [roleMatchGuard],
-        data: { roles: PERMISOS_MODULO.configuraciones },
+        canMatch: [permisoMatchGuard],
+        data: { permisos: PERMISOS_MODULO.configuraciones },
         loadChildren: () =>
           import('./pages/configurations/configuration.routes').then(
             (m) => m.ConfiguracionesRoutes,
@@ -56,8 +56,8 @@ export const routes: Routes = [
       },
       {
         path: 'contabilidad',
-        canMatch: [roleMatchGuard],
-        data: { roles: PERMISOS_MODULO.contabilidad },
+        canMatch: [permisoMatchGuard],
+        data: { permisos: PERMISOS_MODULO.contabilidad },
         loadChildren: () =>
           import('./pages/contabilidad/contabilidad.routes').then(
             (m) => m.ContabilidadRoutes,
@@ -77,7 +77,7 @@ export const routes: Routes = [
  * TODOS sus hijos (dashboard, ui-components, extra) quedan protegidos
  * automáticamente. No necesitas repetir authGuard en cada hijo.
  *
- * Si más adelante quieres que SOLO "dashboard/usuarios" (por ejemplo) sea
- * exclusivo de ADMINISTRADOR, agrega roleGuard + data:{roles:[...]} en esa
- * ruta específica dentro de pages.routes.ts (ver rutas-ejemplo.md, sección 2).
+ * El acceso a cada módulo y pantalla va por permisos (permisoMatchGuard /
+ * permisoGuard + data:{permisos:[...]}), que se asignan a los roles desde
+ * Configuraciones > Roles y Permisos.
  */

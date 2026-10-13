@@ -38,6 +38,8 @@ import {
   FormatoReporte,
   mensajeErrorBlob,
 } from '../../../../shared/utils/descarga-archivo.util';
+import { tienePermiso } from 'src/app/core/auth/permiso-signal';
+import { PERMISO } from 'src/app/core/auth/models/permisos';
 
 type DestinatarioTipo = 'PERSONA' | 'ACTOR';
 type Periodo = 'MENSUAL' | 'ANUAL';
@@ -70,6 +72,12 @@ export interface FondoRendirExcelDialogData {
   styleUrl: './fondo-rendir-excel-dialog.component.scss',
 })
 export class FondoRendirExcelDialogComponent implements OnInit {
+  /** El Excel de los reportes es un permiso aparte (Roles y Permisos); el
+   *  PDF lo descarga cualquiera que entre a la pantalla. */
+  readonly puedeDescargarExcel = tienePermiso(
+    PERMISO.DESCARGAR_EXCEL_CONTABILIDAD,
+  );
+
   private readonly dialogRef = inject(
     MatDialogRef<FondoRendirExcelDialogComponent>,
   );

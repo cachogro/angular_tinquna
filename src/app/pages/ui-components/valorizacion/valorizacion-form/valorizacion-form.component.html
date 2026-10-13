@@ -59,7 +59,8 @@
             : esCodificacionAc() ?
             'Los siguientes minerales no tienen precio vigente (cotización o tabla de escala de precio). No se puede
             valorizar hasta registrarlo:'
-            : 'Los siguientes minerales no tienen cotización vigente. Registra la de hoy o elige una anterior para valorizar:' }}
+            : 'Los siguientes minerales no tienen cotización vigente. Registra la de hoy o elige una anterior para
+            valorizar:' }}
           </span>
           @for (m of mineralesSinPrecioVigente; track m.id) {
           <div class="valorizacion-preview__mineral-sin-cotizacion">

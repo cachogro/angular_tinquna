@@ -10,6 +10,7 @@
     <div class="bd-tile"><small>Estado</small><strong [class.bd-anulada]="b.estado === 'ANULADA'">{{ b.estado }}</strong></div>
     <div class="bd-tile"><small>Periodo</small><strong>{{ fechaFmt(b.fechaDesde) }} al {{ fechaFmt(b.fechaHasta) }}</strong></div>
     <div class="bd-tile"><small>Fecha de pago</small><strong>{{ fechaFmt(b.fechaPago) }}</strong></div>
+    <div class="bd-tile"><small>Emitida</small><strong>{{ b.fechaHoraGeneracion ? (b.fechaHoraGeneracion | date:'dd/MM/yyyy HH:mm') : '—' }}</strong></div>
     <div class="bd-tile"><small>Días trabajados</small><strong>{{ b.diasTrabajados ?? '—' }}</strong></div>
   </div>
   <p class="bd-linea"><strong>Concepto:</strong> {{ b.concepto }}</p>

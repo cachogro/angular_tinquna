@@ -42,7 +42,7 @@
       @if (f.fechaApertura.hasError('required') && f.fechaApertura.touched) {
       <mat-error>Obligatorio</mat-error>
       }
-      <mat-hint>Define la gestión (año) del kardex</mat-hint>
+      <mat-hint>Su año es la gestión del kardex</mat-hint>
     </mat-form-field>
 
     <mat-form-field appearance="outline">
@@ -90,6 +90,13 @@
         <small>Total anticipos por cobrar (saldo actual)</small>
         <strong>Bs {{ num(ka.saldoActual) | number:'1.2-2' }}</strong>
       </div>
+      @if (ka.interes; as it) {
+      <div class="kx-tile kx-tile--interes" (click)="abrirIntereses(ka)" matTooltip="Ver la sección de intereses">
+        <small>Intereses por mora pendientes{{ it.estado === 'VIGENTE' ? ' · ' + it.tasaMensual + ' % mensual' : '' }}</small>
+        <strong>Bs {{ it.pendiente | number:'1.2-2' }}</strong>
+        <small>Total con intereses: Bs {{ it.totalConIntereses | number:'1.2-2' }}</small>
+      </div>
+      }
       @if (soportaBienes && bienesTotal() > 0) {
       <div class="kx-tile kx-tile--bienes">
         <small>Bienes en retención</small>
@@ -104,6 +111,12 @@
         <mat-icon>inventory_2</mat-icon> Bienes en dación  555
       </button>
       }
+      @if (soportaIntereses) {
+      <button mat-stroked-button (click)="abrirIntereses(ka)">
+        <mat-icon>percent</mat-icon> Intereses
+      </button>
+      }
+      @if (puedeDescargarExcel()) {
       <button mat-stroked-button [disabled]="descargandoExcel()" (click)="descargarExcel(ka)">
         @if (descargandoExcel()) {
         <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
@@ -112,6 +125,7 @@
         }
         Descargar Excel
       </button>
+      }
       <button mat-stroked-button [disabled]="descargandoExcel()" (click)="descargarExcel(ka, 'PDF')">
         <mat-icon>picture_as_pdf</mat-icon>
         Descargar PDF
@@ -216,12 +230,25 @@
         <ng-container matColumnDef="acciones">
           <th mat-header-cell *matHeaderCellDef>Acciones</th>
           <td mat-cell *matCellDef="let m">
+            @if (m.activo === false) {
+            <mat-icon class="kx-lock" matTooltip="Línea desactivada">block</mat-icon>
+            } @else if (m.origen) {
+            <!-- La generó otro documento: se anula o corrige desde ahí. Acá
+                 solo se reclasifica. -->
+            <mat-icon class="kx-lock"
+              [matTooltip]="m.origen.etiqueta + (m.facturaRecibo ? ' ' + m.facturaRecibo : '') + ': se anula o corrige desde su documento de origen'">link</mat-icon>
+            <button mat-icon-button color="primary" matTooltip="Editar detalle, subcuenta y plan de cuentas"
+              (click)="editarMovimiento(m)">
+              <mat-icon>edit</mat-icon>
+            </button>
+            } @else {
             <button mat-icon-button color="primary" matTooltip="Editar" (click)="editarMovimiento(m)">
               <mat-icon>edit</mat-icon>
             </button>
             <button mat-icon-button color="warn" matTooltip="Desactivar" (click)="desactivarMovimiento(m)">
               <mat-icon>block</mat-icon>
             </button>
+            }
           </td>
         </ng-container>
 
@@ -298,6 +325,11 @@
         <ng-container matColumnDef="acciones">
           <th mat-header-cell *matHeaderCellDef>Acciones</th>
           <td mat-cell *matCellDef="let k">
+            @if (soportaIntereses && k.interes) {
+            <button mat-icon-button matTooltip="Intereses por mora" (click)="abrirIntereses(k)">
+              <mat-icon>percent</mat-icon>
+            </button>
+            }
             @if (k.estado === 'ABIERTO') {
             <button mat-icon-button matTooltip="Cerrar" [disabled]="guardando()" (click)="cerrar(k)">
               <mat-icon>lock</mat-icon>

@@ -1,4 +1,4 @@
-// src/app/pages/configurations/parametricas/destino-gasto/destino-gasto-form-dialog.component.ts
+// src/app/pages/configurations/parametricas/plan-cuentas/plan-cuentas-form-dialog.component.ts
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import {
@@ -22,11 +22,11 @@ import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog
 
 import { ParametricaDialogShellComponent } from '../shared/parametrica-dialog-shell.component';
 import {
-  CATEGORIAS_DESTINO_GASTO,
-  CategoriaDestinoGasto,
-  CategoriaDestinoGastoOpcion,
-  DestinoGasto,
-  nombreCategoriaDestinoGasto,
+  CATEGORIAS_PLAN_CUENTAS,
+  CategoriaPlanCuentas,
+  CategoriaPlanCuentasOpcion,
+  PlanCuentas,
+  nombreCategoriaPlanCuentas,
 } from '../models/parametricas.models';
 import { ParametricasService } from '../../services/parametricas.service';
 
@@ -36,7 +36,7 @@ const CHARSET_NOMBRE = /^[A-ZÁÉÍÓÚÑÜ0-9":\-_' ]*$/;
 const CARACTERES_INVALIDOS_NOMBRE = /[^A-ZÁÉÍÓÚÑÜ0-9":\-_' ]/g;
 
 @Component({
-  selector: 'app-destino-gasto-form-dialog',
+  selector: 'app-plan-cuentas-form-dialog',
   standalone: true,
   imports: [
     CommonModule,
@@ -53,10 +53,10 @@ const CARACTERES_INVALIDOS_NOMBRE = /[^A-ZÁÉÍÓÚÑÜ0-9":\-_' ]/g;
     MatCardModule,
     ParametricaDialogShellComponent,
   ],
-  templateUrl: './destino-gasto-form-dialog.component.html',
-  styleUrl: './destino-gasto-form-dialog.component.scss',
+  templateUrl: './plan-cuentas-form-dialog.component.html',
+  styleUrl: './plan-cuentas-form-dialog.component.scss',
 })
-export class DestinoGastoFormDialogComponent implements OnInit {
+export class PlanCuentasFormDialogComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly parametricasService = inject(ParametricasService);
   private readonly snackBar = inject(MatSnackBar);
@@ -65,7 +65,7 @@ export class DestinoGastoFormDialogComponent implements OnInit {
   guardando = false;
   columnas = ['id', 'nombre', 'tipo', 'categoria', 'estado', 'acciones'];
 
-  destinoEditando: DestinoGasto | null = null;
+  destinoEditando: PlanCuentas | null = null;
 
   get modoEdicion(): boolean {
     return !!this.destinoEditando;
@@ -82,28 +82,28 @@ export class DestinoGastoFormDialogComponent implements OnInit {
     ],
     esEgreso: [true, Validators.required],
     // Cómo cuenta en la ganancia estimada del dashboard.
-    categoria: ['GASTO_OPERATIVO' as CategoriaDestinoGasto, Validators.required],
+    categoria: ['GASTO_OPERATIVO' as CategoriaPlanCuentas, Validators.required],
   });
 
   /** Categorías que aplican al tipo elegido (egreso o ingreso). */
-  get categoriasDisponibles(): CategoriaDestinoGastoOpcion[] {
+  get categoriasDisponibles(): CategoriaPlanCuentasOpcion[] {
     const esEgreso = this.form.get('esEgreso')?.value !== false;
-    return CATEGORIAS_DESTINO_GASTO.filter((c) =>
+    return CATEGORIAS_PLAN_CUENTAS.filter((c) =>
       esEgreso ? c.paraEgreso : c.paraIngreso,
     );
   }
 
   get efectoCategoria(): string {
     const categoria = this.form.get('categoria')?.value;
-    return CATEGORIAS_DESTINO_GASTO.find((c) => c.valor === categoria)?.efecto ?? '';
+    return CATEGORIAS_PLAN_CUENTAS.find((c) => c.valor === categoria)?.efecto ?? '';
   }
 
   nombreCategoria(categoria: string): string {
-    return nombreCategoriaDestinoGasto(categoria);
+    return nombreCategoriaPlanCuentas(categoria);
   }
 
   ngOnInit(): void {
-    this.parametricasService.cargarDestinosGastoAdmin();
+    this.parametricasService.cargarCuentasPlanAdmin();
 
     // Al cambiar entre egreso e ingreso, si la categoría elegida ya no
     // aplica se pasa a la habitual de ese tipo.
@@ -136,8 +136,8 @@ export class DestinoGastoFormDialogComponent implements OnInit {
       .open(ConfirmDialogComponent, {
         data: {
           title: this.modoEdicion
-            ? 'Actualizar destino del gasto'
-            : 'Crear destino del gasto',
+            ? 'Actualizar plan de cuentas'
+            : 'Crear plan de cuentas',
           message: this.modoEdicion
             ? `¿Confirmas actualizar "${nombre}"?`
             : `¿Confirmas crear "${nombre}"?`,
@@ -159,7 +159,7 @@ export class DestinoGastoFormDialogComponent implements OnInit {
 
     // Un solo POST: con id actualiza (se envían todos los campos), sin id crea.
     this.parametricasService
-      .guardarDestinoGasto({
+      .guardarPlanCuentas({
         id: this.destinoEditando?.id,
         nombre,
         esEgreso,
@@ -169,8 +169,8 @@ export class DestinoGastoFormDialogComponent implements OnInit {
         next: () => {
           this.snackBar.open(
             this.modoEdicion
-              ? 'Destino del gasto actualizado correctamente'
-              : 'Destino del gasto creado correctamente',
+              ? 'Plan de cuentas actualizado correctamente'
+              : 'Plan de cuentas creado correctamente',
             'Cerrar',
             { duration: 3000 },
           );
@@ -188,7 +188,7 @@ export class DestinoGastoFormDialogComponent implements OnInit {
       });
   }
 
-  editar(destino: DestinoGasto): void {
+  editar(destino: PlanCuentas): void {
     this.destinoEditando = destino;
     this.form.patchValue({
       nombre: destino.nombre,
@@ -207,7 +207,7 @@ export class DestinoGastoFormDialogComponent implements OnInit {
     this.limpiar();
   }
 
-  cambiarEstado(destino: DestinoGasto): void {
+  cambiarEstado(destino: PlanCuentas): void {
     const activo = destino.activo !== false;
     this.dialog
       .open(ConfirmDialogComponent, {
@@ -224,7 +224,7 @@ export class DestinoGastoFormDialogComponent implements OnInit {
       .subscribe((confirmado: boolean) => {
         if (!confirmado) return;
         this.parametricasService
-          .cambiarEstadoDestinoGasto(destino.id, !activo)
+          .cambiarEstadoPlanCuentas(destino.id, !activo)
           .subscribe({
             next: () =>
               this.snackBar.open(
@@ -248,13 +248,13 @@ export class DestinoGastoFormDialogComponent implements OnInit {
     return (Array.isArray(msg) ? msg.join(', ') : msg) ?? porDefecto;
   }
 
-  get destinos(): DestinoGasto[] {
-    return [...this.parametricasService.destinosGastoAdmin()].sort(
+  get destinos(): PlanCuentas[] {
+    return [...this.parametricasService.cuentasPlanAdmin()].sort(
       (a, b) => b.id - a.id,
     );
   }
 
   get cargando(): boolean {
-    return this.parametricasService.cargandoDestinosGastoAdmin();
+    return this.parametricasService.cargandoCuentasPlanAdmin();
   }
 }

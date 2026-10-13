@@ -6,6 +6,7 @@ import {
   ViewChild,
   ViewEncapsulation,
   effect, // <-- Importado para reaccionar a la Signal
+  inject,
 } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { MatSidenav, MatSidenavContent } from '@angular/material/sidenav';
@@ -25,7 +26,7 @@ import { navItems } from './sidebar/sidebar-data';
 import { MatButtonModule } from '@angular/material/button';
 import { AuthService } from 'src/app/core/auth/services/auth.service';
 import { OverlayContainer } from '@angular/cdk/overlay'; // <-- Importado para los diálogos
-import { FilterByRolePipe } from 'src/app/shared/pipes/filter-by-role.pipe';
+import { FilterByPermisoPipe } from 'src/app/shared/pipes/filter-by-permiso.pipe';
 
 type TemaModulo = 'tema-comercio' | 'tema-contabilidad' | 'tema-configuracion';
 
@@ -53,7 +54,7 @@ const TABLET_VIEW = 'screen and (min-width: 769px) and (max-width: 1024px)';
     TablerIconsModule,
     HeaderComponent,
     MatButtonModule,
-    FilterByRolePipe,
+    FilterByPermisoPipe,
   ],
   templateUrl: './full.component.html',
   styleUrls: [],
@@ -82,7 +83,7 @@ export class FullComponent implements OnInit {
   private isCollapsedWidthFixed = false;
   private htmlElement!: HTMLHtmlElement;
 
-  private authService: AuthService;
+  private readonly authService = inject(AuthService);
 
   get isOver(): boolean {
     return this.isMobileScreen;
@@ -160,7 +161,10 @@ export class FullComponent implements OnInit {
     return null;
   }
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    // Trae los permisos al día (por si se cambiaron en Roles y Permisos).
+    this.authService.refrescarSesion();
+  }
 
   ngOnDestroy() {
     this.layoutChangesSubscription.unsubscribe();

@@ -31,7 +31,7 @@
     </div>
     <div class="rd-tile">
       <small>Forma de pago</small>
-      <strong>{{ r.formaPago?.nombre || '—' }}</strong>
+      <strong>{{ pagosMixtos(r).length ? 'Pago mixto' : (r.formaPago?.nombre || '—') }}</strong>
     </div>
     <div class="rd-tile">
       <small>Autorizó</small>
@@ -49,7 +49,16 @@
 
   <p class="rd-concepto"><strong>Concepto:</strong> {{ r.concepto }}</p>
 
-  @if (r.cuentaBancaria || r.nroComprobante) {
+  @if (pagosMixtos(r).length) {
+  <div class="rd-tipo-mov">
+    <strong>Pago mixto:</strong>
+    @for (m of pagosMixtos(r); track m.id) {
+    <div>
+      {{ descripcionMedio(m) }} — {{ r.moneda === 'USD' ? '$us' : 'Bs' }} {{ num(m.monto) | number:'1.2-2' }}
+    </div>
+    }
+  </div>
+  } @else if (r.cuentaBancaria || r.nroComprobante) {
   <p class="rd-tipo-mov">
     <strong>Comprobante:</strong>
     @if (r.cuentaBancaria) { {{ nombreCuenta(r) }} · }
@@ -78,9 +87,9 @@
         <td mat-cell *matCellDef="let d">{{ destinatarioDetalle(d) }}</td>
       </ng-container>
 
-      <ng-container matColumnDef="destinoGasto">
-        <th mat-header-cell *matHeaderCellDef>Destino del gasto</th>
-        <td mat-cell *matCellDef="let d">{{ d.destinoGasto?.nombre || '—' }}</td>
+      <ng-container matColumnDef="planCuentas">
+        <th mat-header-cell *matHeaderCellDef>Plan de cuentas</th>
+        <td mat-cell *matCellDef="let d">{{ d.planCuentas?.nombre || '—' }}</td>
       </ng-container>
 
       <ng-container matColumnDef="monto">

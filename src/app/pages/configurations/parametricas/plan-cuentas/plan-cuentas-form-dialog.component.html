@@ -1,5 +1,5 @@
 <div class="blue_theme tema-configuracion">
-  <app-parametrica-dialog-shell [titulo]="modoEdicion ? 'Modificar Destino del Gasto' : 'Nuevo Destino del Gasto'">
+  <app-parametrica-dialog-shell [titulo]="modoEdicion ? 'Modificar Plan de Cuentas' : 'Nuevo Plan de Cuentas'">
 
     <!-- ==================== FORMULARIO ==================== -->
     <form [formGroup]="form" (ngSubmit)="guardar()" class="destino-form">
@@ -43,7 +43,7 @@
 
     <!-- ==================== TABLA ==================== -->
     <mat-card class="tabla-card">
-      <mat-card-title>Destinos del gasto registrados</mat-card-title>
+      <mat-card-title>Plan de cuentas registrados</mat-card-title>
 
       <mat-card-content>
 
@@ -98,7 +98,7 @@
         </div>
 
         <p *ngIf="!cargando && destinos.length === 0" class="sin-datos">
-          No hay destinos del gasto registrados.
+          No hay cuentas del plan de cuentas registrados.
         </p>
 
       </mat-card-content>

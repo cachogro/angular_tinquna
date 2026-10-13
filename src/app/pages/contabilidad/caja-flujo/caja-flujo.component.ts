@@ -12,6 +12,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { Router } from '@angular/router';
 import { Observable } from 'rxjs';
 import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog/confirm-dialog.component';
 import {
@@ -21,6 +22,7 @@ import {
 import { ParametricasService } from '../../configurations/services/parametricas.service';
 import {
   CajaFlujoResponse,
+  DESTINO_ORIGEN_MOVIMIENTO,
   MovimientoCaja,
   PeriodoCaja,
 } from '../models/movimiento-caja.models';
@@ -34,6 +36,8 @@ import {
   FormatoReporte,
   mensajeErrorBlob,
 } from '../../../shared/utils/descarga-archivo.util';
+import { tienePermiso } from 'src/app/core/auth/permiso-signal';
+import { PERMISO } from 'src/app/core/auth/models/permisos';
 
 const MESES = [
   'Enero',
@@ -70,23 +74,32 @@ const MESES = [
   styleUrl: './caja-flujo.component.scss',
 })
 export class CajaFlujoComponent implements OnInit {
+  /** El Excel de los reportes es un permiso aparte (Roles y Permisos); el
+   *  PDF lo descarga cualquiera que entre a la pantalla. */
+  readonly puedeDescargarExcel = tienePermiso(
+    PERMISO.DESCARGAR_EXCEL_CONTABILIDAD,
+  );
+
   private readonly parametricasService = inject(ParametricasService);
   private readonly movimientoCajaService = inject(MovimientoCajaService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly router = inject(Router);
 
-  readonly columnas = [
+  // La columna de tipo de cambio solo existe en la caja en dólares.
+  readonly columnas = computed(() => [
     'folio',
     'fecha',
     'nroComprobante',
     'entregaFondosA',
     'concepto',
-    'destinoGasto',
+    'planCuentas',
     'ingreso',
     'egreso',
     'saldo',
+    ...(this.monedaSel() === 'USD' ? ['tipoCambio'] : []),
     'acciones',
-  ];
+  ]);
 
   readonly cargando = signal(false);
   readonly cargandoCajas = signal(true);
@@ -359,12 +372,31 @@ export class CajaFlujoComponent implements OnInit {
       });
   }
 
+  iconoOrigen(m: MovimientoCaja): string {
+    return m.origen ? DESTINO_ORIGEN_MOVIMIENTO[m.origen.tipo].icono : '';
+  }
+
+  tooltipOrigen(m: MovimientoCaja): string {
+    if (!m.origen) return '';
+    const referencia = m.facturaRecibo ? ` ${m.facturaRecibo}` : '';
+    const { pantalla } = DESTINO_ORIGEN_MOVIMIENTO[m.origen.tipo];
+    return `${m.origen.etiqueta}${referencia}: se anula o corrige desde ${pantalla}. Clic para ir.`;
+  }
+
+  irAOrigen(m: MovimientoCaja): void {
+    if (!m.origen) return;
+    this.router.navigateByUrl(DESTINO_ORIGEN_MOVIMIENTO[m.origen.tipo].ruta);
+  }
+
   desactivarMovimiento(m: MovimientoCaja): void {
+    const avisoKardex = m.idMovimientoKardex
+      ? ' También se dará de baja su línea en el kardex y se recalculará su saldo.'
+      : '';
     this.dialog
       .open(ConfirmDialogComponent, {
         data: {
           title: 'Desactivar movimiento',
-          message: `¿Confirmas desactivar el movimiento folio ${m.folio} — "${m.concepto}"? Dejará de sumar al saldo del mes.`,
+          message: `¿Confirmas desactivar el movimiento folio ${m.folio} — "${m.concepto}"? Dejará de sumar al saldo del mes.${avisoKardex}`,
           confirmLabel: 'Desactivar',
           cancelLabel: 'Cancelar',
           tone: 'danger',
@@ -600,10 +632,10 @@ export class CajaFlujoComponent implements OnInit {
     return Number.isFinite(n) ? n : 0;
   }
 
-  /** El destino del gasto puede venir como objeto del catálogo (movimiento de
+  /** El plan de cuentas puede venir como objeto del catálogo (movimiento de
    *  recibo) o como texto libre (carga manual). */
-  destinoGastoLabel(m: MovimientoCaja): string {
-    const d = m.destinoGasto;
+  planCuentasLabel(m: MovimientoCaja): string {
+    const d = m.planCuentas;
     if (!d) return '—';
     return typeof d === 'string' ? d : d.nombre || '—';
   }

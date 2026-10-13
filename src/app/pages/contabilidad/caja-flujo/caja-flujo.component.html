@@ -113,6 +113,7 @@
         </div>
       </div>
       <div class="cf-periodo__acciones">
+        @if (puedeDescargarExcel()) {
         <button mat-stroked-button [disabled]="descargandoExcel()" (click)="descargarExcel()">
           @if (descargandoExcel()) {
           <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
@@ -121,11 +122,13 @@
           }
           Descargar Excel
         </button>
+        }
         <button mat-stroked-button [disabled]="descargandoExcel()" (click)="descargarExcel('PDF')"
           matTooltip="La misma caja de flujo del mes, en PDF">
           <mat-icon>picture_as_pdf</mat-icon>
           Descargar PDF
         </button>
+        @if (puedeDescargarExcel()) {
         <button mat-stroked-button [disabled]="descargandoExcelCompleto()" (click)="descargarExcelCompleto()"
           matTooltip="Caja en Bs, caja en $us y todas las cuentas bancarias del mes">
           @if (descargandoExcelCompleto()) {
@@ -135,6 +138,7 @@
           }
           Descargar Excel completo
         </button>
+        }
         <button mat-stroked-button [disabled]="descargandoExcelCompleto()" (click)="descargarExcelCompleto('PDF')"
           matTooltip="Caja en Bs, caja en $us y todas las cuentas bancarias del mes, en PDF">
           <mat-icon>picture_as_pdf</mat-icon>
@@ -253,6 +257,12 @@
               @if (m.idTraspaso) {
               <mat-icon class="cf-traspaso-ico" matTooltip="Generado desde un traspaso">sync_alt</mat-icon>
               }
+              @if (m.origen && !m.idRecibo && !m.idTraspaso) {
+              <mat-icon class="cf-recibo-ico" [matTooltip]="'Generado desde: ' + m.origen.etiqueta">{{ iconoOrigen(m) }}</mat-icon>
+              }
+              @if (m.idMovimientoKardex && !m.origen) {
+              <mat-icon class="cf-recibo-ico" matTooltip="Cargado desde un kardex">menu_book</mat-icon>
+              }
               {{ m.entregaFondosA || '—' }}
             </td>
           </ng-container>
@@ -262,9 +272,9 @@
             <td mat-cell *matCellDef="let m">{{ m.concepto }}</td>
           </ng-container>
 
-          <ng-container matColumnDef="destinoGasto">
-            <th mat-header-cell *matHeaderCellDef>Destino del gasto</th>
-            <td mat-cell *matCellDef="let m">{{ destinoGastoLabel(m) }}</td>
+          <ng-container matColumnDef="planCuentas">
+            <th mat-header-cell *matHeaderCellDef>Plan de cuentas</th>
+            <td mat-cell *matCellDef="let m">{{ planCuentasLabel(m) }}</td>
           </ng-container>
 
           <ng-container matColumnDef="ingreso">
@@ -286,24 +296,43 @@
             <td mat-cell *matCellDef="let m" class="cf-num">{{ num(m.saldo) | number:'1.2-2' }}</td>
           </ng-container>
 
+          <ng-container matColumnDef="tipoCambio">
+            <th mat-header-cell *matHeaderCellDef class="cf-num" matTooltip="Bs por 1 $us del día (informativo)">T.C.</th>
+            <td mat-cell *matCellDef="let m" class="cf-num">
+              {{ m.tipoCambio != null ? (num(m.tipoCambio) | number:'1.2-4') : '—' }}
+            </td>
+          </ng-container>
+
           <ng-container matColumnDef="acciones">
             <th mat-header-cell *matHeaderCellDef>Acciones</th>
             <td mat-cell *matCellDef="let m">
-              @if (movimientoEditable(m)) {
+              @if (m.activo === false) {
+              <mat-icon class="cf-lock" matTooltip="Movimiento desactivado">block</mat-icon>
+              } @else if (!movimientoEditable(m)) {
+              <mat-icon class="cf-lock" matTooltip="Período cerrado">lock</mat-icon>
+              } @else if (m.origen) {
+              <!-- Lo generó otro documento: se anula o corrige desde ahí. Acá
+                   solo se reclasifica (concepto y plan de cuentas). -->
+              <button mat-icon-button [matTooltip]="tooltipOrigen(m)" (click)="irAOrigen(m)">
+                <mat-icon>{{ iconoOrigen(m) }}</mat-icon>
+              </button>
+              <button mat-icon-button color="primary" matTooltip="Editar concepto y plan de cuentas"
+                (click)="editarMovimiento(m)">
+                <mat-icon>edit</mat-icon>
+              </button>
+              } @else {
               <button mat-icon-button color="primary" matTooltip="Editar" (click)="editarMovimiento(m)">
                 <mat-icon>edit</mat-icon>
               </button>
               <button mat-icon-button color="warn" matTooltip="Desactivar" (click)="desactivarMovimiento(m)">
                 <mat-icon>block</mat-icon>
               </button>
-              } @else {
-              <mat-icon class="cf-lock" matTooltip="Período cerrado">lock</mat-icon>
               }
             </td>
           </ng-container>
 
-          <tr mat-header-row *matHeaderRowDef="columnas"></tr>
-          <tr mat-row *matRowDef="let m; columns: columnas"
+          <tr mat-header-row *matHeaderRowDef="columnas()"></tr>
+          <tr mat-row *matRowDef="let m; columns: columnas()"
             [class.cf-row-inactiva]="m.activo === false"></tr>
         </table>
       </div>

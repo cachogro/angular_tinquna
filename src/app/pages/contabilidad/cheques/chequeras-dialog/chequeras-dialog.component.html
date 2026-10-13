@@ -1,0 +1,308 @@
+<h2 mat-dialog-title>
+  <mat-icon>receipt_long</mat-icon>
+  Chequeras · {{ data.etiqueta }}
+</h2>
+
+<mat-dialog-content class="chq-content">
+  @if (cargando()) {
+  <div class="chq-estado">
+    <mat-spinner diameter="32"></mat-spinner>
+    <span>Cargando chequeras...</span>
+  </div>
+  } @else {
+
+  <!-- ==================== RESUMEN ==================== -->
+  <div class="chq-tiles">
+    <div class="chq-tile" [class.chq-tile--alerta]="disponibles() === 0">
+      <small>Cheques disponibles</small>
+      <strong>{{ disponibles() }}</strong>
+    </div>
+    <div class="chq-tile">
+      <small>Siguiente cheque</small>
+      <strong>{{ siguiente()?.siguienteNumero ?? '—' }}</strong>
+    </div>
+    <div class="chq-tile">
+      <small>Emitidos sin cobrar</small>
+      <strong>{{ sinCobrar() }}</strong>
+    </div>
+    <div class="chq-tile" [class.chq-tile--alerta]="vencidos() > 0">
+      <small>Vencidos sin cobrar</small>
+      <strong>{{ vencidos() }}</strong>
+    </div>
+  </div>
+
+  <!-- ==================== TALONARIOS ==================== -->
+  <div class="chq-seccion">
+    <div class="chq-seccion__head">
+      <span class="chq-seccion__titulo">Talonarios</span>
+      <button mat-stroked-button color="primary" type="button" (click)="nuevoTalonario()" [disabled]="ocupado()">
+        <mat-icon>add</mat-icon> Registrar talonario
+      </button>
+    </div>
+
+    @if (mostrarFormTalonario) {
+    <form [formGroup]="talonarioForm" class="chq-form" (ngSubmit)="guardarTalonario()">
+      <mat-form-field appearance="outline">
+        <mat-label>Serie (opcional)</mat-label>
+        <input matInput formControlName="serie" maxlength="20" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>N° inicial</mat-label>
+        <input matInput type="number" formControlName="numeroInicial" min="1" />
+        @if (talonarioForm.controls.numeroInicial.invalid && talonarioForm.controls.numeroInicial.touched) {
+        <mat-error>Obligatorio</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>N° final</mat-label>
+        <input matInput type="number" formControlName="numeroFinal" min="1" />
+        @if (talonarioForm.controls.numeroFinal.invalid && talonarioForm.controls.numeroFinal.touched) {
+        <mat-error>Obligatorio</mat-error>
+        }
+        @if (cantidadRango; as cantidad) {
+        <mat-hint>{{ cantidad }} cheque{{ cantidad === 1 ? '' : 's' }}</mat-hint>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha de recepción</mat-label>
+        <input matInput type="date" formControlName="fechaRecepcion" [max]="hoy" />
+        @if (talonarioForm.controls.fechaRecepcion.invalid && talonarioForm.controls.fechaRecepcion.touched) {
+        <mat-error>Obligatoria</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Vencimiento (opcional)</mat-label>
+        <input matInput type="date" formControlName="fechaVencimiento" />
+        <mat-hint>Solo si el banco lo fija</mat-hint>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="chq-form__ancho">
+        <mat-label>Observación (opcional)</mat-label>
+        <input matInput formControlName="observacion" maxlength="255" />
+      </mat-form-field>
+
+      <div class="chq-form__acciones">
+        <button mat-button type="button" (click)="cancelarTalonario()" [disabled]="ocupado()">Cancelar</button>
+        <button mat-flat-button color="primary" type="submit" [disabled]="ocupado()">
+          {{ talonarioEditando ? 'Actualizar' : 'Guardar' }}
+        </button>
+      </div>
+    </form>
+    }
+
+    @if (talonarios().length === 0) {
+    <p class="chq-vacio">
+      Esta cuenta todavía no tiene talonarios. Registra el que te entregó el banco para empezar a pagar con cheque.
+    </p>
+    } @else {
+    <div class="chq-scroll">
+      <table class="chq-tabla">
+        <thead>
+          <tr>
+            <th>Rango</th>
+            <th>Recibido</th>
+            <th>Vence</th>
+            <th class="chq-num">Total</th>
+            <th class="chq-num">Usados</th>
+            <th class="chq-num">Quedan</th>
+            <th>Estado</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (t of talonarios(); track t.id) {
+          <tr [class.chq-fila--inactiva]="!t.activo">
+            <td>
+              {{ rango(t) }}
+              @if (t.observacion) {
+              <small class="chq-sub">{{ t.observacion }}</small>
+              }
+            </td>
+            <td>{{ fecha(t.fechaRecepcion) }}</td>
+            <td [class.chq-alerta]="talonarioVencido(t)">
+              {{ t.fechaVencimiento ? fecha(t.fechaVencimiento) : 'No vence' }}
+            </td>
+            <td class="chq-num">{{ t.total }}</td>
+            <td class="chq-num"
+              [matTooltip]="'Emitidos: ' + t.emitidos + ' · Cobrados: ' + t.cobrados + ' · Anulados: ' + t.anulados">
+              {{ t.total - t.disponibles }}
+            </td>
+            <td class="chq-num"><strong>{{ t.disponibles }}</strong></td>
+            <td>
+              <span class="chq-badge" [class.chq-badge--ok]="t.activo && t.disponibles > 0"
+                [class.chq-badge--gris]="!t.activo || t.disponibles === 0">
+                {{ !t.activo ? 'Inactivo' : t.disponibles === 0 ? 'Terminado' : 'En uso' }}
+              </span>
+            </td>
+            <td class="chq-acciones">
+              <button mat-icon-button color="primary" matTooltip="Editar" (click)="editarTalonario(t)"
+                [disabled]="ocupado()">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button [color]="t.activo ? 'warn' : 'primary'"
+                [matTooltip]="t.activo ? 'Desactivar' : 'Activar'" (click)="cambiarEstadoTalonario(t)"
+                [disabled]="ocupado()">
+                <mat-icon>{{ t.activo ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+              </button>
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    }
+  </div>
+
+  <!-- ==================== CHEQUES ==================== -->
+  <div class="chq-seccion">
+    <div class="chq-seccion__head">
+      <span class="chq-seccion__titulo">Cheques usados</span>
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="chq-filtro">
+        <mat-label>Estado</mat-label>
+        <mat-select [ngModel]="filtroEstado()" (ngModelChange)="filtroEstado.set($event)">
+          <mat-option value="TODOS">Todos</mat-option>
+          <mat-option value="EMITIDO">Emitidos</mat-option>
+          <mat-option value="COBRADO">Cobrados</mat-option>
+          <mat-option value="ANULADO">Anulados</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="chq-filtro">
+        <mat-label>Fecha de cobro</mat-label>
+        <input matInput type="date" [(ngModel)]="fechaCobro" [max]="hoy" />
+      </mat-form-field>
+
+      <button mat-stroked-button type="button" (click)="abrirAnular()" [disabled]="ocupado() || !siguiente()"
+        matTooltip="Para un cheque dañado, mal llenado o extraviado que no se usó en un pago">
+        <mat-icon>block</mat-icon> Anular cheque sin usar
+      </button>
+    </div>
+
+    @if (mostrarFormAnular) {
+    <form [formGroup]="anularForm" class="chq-form" (ngSubmit)="anular()">
+      <mat-form-field appearance="outline">
+        <mat-label>Talonario</mat-label>
+        <mat-select formControlName="idTalonarioCheque">
+          @for (t of talonarios(); track t.id) {
+          @if (t.activo) {
+          <mat-option [value]="t.id">{{ rango(t) }}</mat-option>
+          }
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>N° de cheque</mat-label>
+        <input matInput type="number" formControlName="numero" min="1" />
+        @if (anularForm.controls.numero.invalid && anularForm.controls.numero.touched) {
+        <mat-error>Obligatorio</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="chq-form__ancho">
+        <mat-label>Motivo</mat-label>
+        <input matInput formControlName="motivo" maxlength="255" placeholder="Ej: dañado al llenarlo" />
+        @if (anularForm.controls.motivo.invalid && anularForm.controls.motivo.touched) {
+        <mat-error>Obligatorio</mat-error>
+        }
+      </mat-form-field>
+
+      <div class="chq-form__acciones">
+        <button mat-button type="button" (click)="mostrarFormAnular = false" [disabled]="ocupado()">Cancelar</button>
+        <button mat-flat-button color="warn" type="submit" [disabled]="ocupado()">Anular</button>
+      </div>
+    </form>
+    }
+
+    @if (chequesFiltrados().length === 0) {
+    <p class="chq-vacio">
+      {{ cheques().length === 0
+        ? 'Todavía no se usó ningún cheque. Se registran solos al pagar con forma de pago CHEQUE desde esta cuenta.'
+        : 'No hay cheques en ese estado.' }}
+    </p>
+    } @else {
+    <div class="chq-scroll">
+      <table class="chq-tabla">
+        <thead>
+          <tr>
+            <th>N°</th>
+            <th>Estado</th>
+            <th>Emitido</th>
+            <th>Límite de cobro</th>
+            <th class="chq-num">Monto</th>
+            <th>Beneficiario / concepto</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of chequesFiltrados(); track c.id) {
+          <tr>
+            <td><strong>{{ c.serie ? c.serie + ' ' : '' }}{{ c.numero }}</strong></td>
+            <td>
+              <span class="chq-badge" [class.chq-badge--ok]="c.estado === 'COBRADO'"
+                [class.chq-badge--pendiente]="c.estado === 'EMITIDO' && !c.vencido"
+                [class.chq-badge--alerta]="c.vencido" [class.chq-badge--gris]="c.estado === 'ANULADO'">
+                {{ c.vencido ? 'VENCIDO' : c.estado }}
+              </span>
+            </td>
+            <td>{{ fecha(c.fechaEmision) }}</td>
+            <td>
+              @if (c.estado === 'EMITIDO') {
+              {{ fecha(c.fechaLimiteCobro) }}
+              <small class="chq-sub" [class.chq-alerta]="c.vencido">
+                {{ plazo(c) }}{{ c.fechaRevalidacion ? ' · revalidado' : '' }}
+              </small>
+              } @else if (c.estado === 'COBRADO') {
+              <small class="chq-sub">cobrado el {{ fecha(c.fechaCobro) }}</small>
+              } @else {
+              —
+              }
+            </td>
+            <td class="chq-num">{{ c.monto !== null ? (c.monto | number: '1.2-2') : '—' }}</td>
+            <td>
+              {{ c.beneficiario || '—' }}
+              @if (c.estado === 'ANULADO' && c.motivoAnulacion) {
+              <small class="chq-sub">{{ c.motivoAnulacion }}</small>
+              } @else if (c.concepto) {
+              <small class="chq-sub">{{ c.concepto }}</small>
+              }
+            </td>
+            <td class="chq-acciones">
+              @if (c.estado === 'EMITIDO') {
+              <button mat-icon-button color="primary" matTooltip="Marcar como cobrado" (click)="cobrar(c)"
+                [disabled]="ocupado()">
+                <mat-icon>task_alt</mat-icon>
+              </button>
+              <button mat-icon-button matTooltip="Revalidar ({{ diasCobro }} días más)" (click)="revalidar(c)"
+                [disabled]="ocupado()">
+                <mat-icon>update</mat-icon>
+              </button>
+              } @else if (c.estado === 'COBRADO') {
+              <button mat-icon-button matTooltip="Deshacer cobro" (click)="deshacerCobro(c)" [disabled]="ocupado()">
+                <mat-icon>undo</mat-icon>
+              </button>
+              }
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    }
+
+    <p class="chq-nota">
+      Un cheque emitido debe cobrarse dentro de los {{ diasCobro }} días de su fecha; pasado ese plazo se puede
+      revalidar. Para anular un cheque ya emitido, anula el pago que lo generó.
+    </p>
+  </div>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close>Cerrar</button>
+</mat-dialog-actions>

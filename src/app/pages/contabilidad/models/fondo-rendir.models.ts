@@ -4,7 +4,7 @@
 // El back devuelve los montos como number (a diferencia de recibo/traspaso,
 // que los devuelven como string).
 import {
-  DestinoGasto,
+  PlanCuentas,
   FormaPago,
 } from '../../configurations/parametricas/models/parametricas.models';
 
@@ -67,8 +67,8 @@ export interface DetalleFondoRendir {
   monto: number;
   nroComprobante?: string | null;
   facturaRecibo?: string | null;
-  idDestinoGasto?: number | null;
-  destinoGasto?: DestinoGasto | null;
+  idPlanCuentas?: number | null;
+  planCuentas?: PlanCuentas | null;
   tipo?: TipoDetalleFondoRendir;
   /** Solo en SALDO_FAVOR: fondo del que viene el excedente. */
   idFondoOrigen?: string | null;
@@ -92,8 +92,8 @@ export interface FondoRendirCuentas {
   /** Recibo generado al entregar el fondo. */
   idRecibo?: string | null;
   recibo?: ReciboEnFondoRendir | null;
-  idDestinoGasto?: number | null;
-  destinoGasto?: DestinoGasto | null;
+  idPlanCuentas?: number | null;
+  planCuentas?: PlanCuentas | null;
   idPersonaAutorizo: string;
   personaAutorizo?: PersonaEnFondoRendir | null;
   /** "YYYY-MM-DD" — solo informativo. */
@@ -146,7 +146,7 @@ export interface EntregarFondoRendirRequest {
    *  caja en efectivo. */
   idCuentaBancaria?: number;
   nroComprobante?: string;
-  idDestinoGasto?: number;
+  idPlanCuentas?: number;
   idPersonaAutorizo: string;
   /** "YYYY-MM-DD" — solo informativo. */
   fechaLimite?: string;
@@ -165,7 +165,7 @@ export interface GuardarDetalleFondoRendirRequest {
   monto: number;
   nroComprobante?: string;
   facturaRecibo?: string;
-  idDestinoGasto?: number;
+  idPlanCuentas?: number;
 }
 
 /** POST /contabilidad/fondo-rendir/:id/reponer — devuelve al destinatario el
@@ -178,7 +178,7 @@ export interface ReponerFondoRendirRequest {
   idCuentaBancaria?: number;
   nroComprobante?: string;
   /** Si se omite, el back usa el de la cabecera del fondo. */
-  idDestinoGasto?: number;
+  idPlanCuentas?: number;
   idPersonaAutorizo: string;
 }
 

@@ -100,6 +100,8 @@
         <input matInput appMayusculas formControlName="nroTransaccion" maxlength="30" class="nro-cpte" />
       </mat-form-field>
     </div>
+    <app-cheque-hint [idCuentaBancaria]="data.idCuentaBancaria" [activo]="pagoConCheque"
+      [control]="f.nroTransaccion" />
 
     <mat-form-field appearance="outline" class="mov-form__full">
       <mat-label>Factura y/o recibo (opcional)</mat-label>

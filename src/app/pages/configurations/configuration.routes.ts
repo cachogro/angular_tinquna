@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
-import { roleGuard } from 'src/app/core/auth/guards/role.guard';
-import { RolCodigo } from 'src/app/core/auth/models/auth.models';
+import { permisoGuard } from 'src/app/core/auth/guards/permiso.guard';
+import { PERMISO } from 'src/app/core/auth/models/permisos';
 import { PanelUserFormComponent } from './gestion-usuarios/panel-user-form/panel-user-form.component';
 import { GestionUsuariosComponent } from './gestion-usuarios/gestion-usuarios.component';
 
@@ -15,6 +15,8 @@ export const ConfiguracionesRoutes: Routes = [
       // },
       {
         path: 'parametricas',
+        canActivate: [permisoGuard],
+        data: { permisos: [PERMISO.PARAMETRICAS] },
         loadComponent: () =>
           import('./parametricas/parametricas.component').then(
             (m) => m.ParametricasComponent,
@@ -22,10 +24,9 @@ export const ConfiguracionesRoutes: Routes = [
       },
 
       {
-        // <-- NUEVO: 'users' pasa de ruta simple a grupo con hijos
         path: 'gestion-usuarios',
-        canActivate: [roleGuard],
-        data: { roles: [RolCodigo.ADMINISTRADOR] }, // solo admin (operador no gestiona usuarios)
+        canActivate: [permisoGuard],
+        data: { permisos: [PERMISO.USUARIOS] }, // solo administrador
         children: [
           {
             path: '',
@@ -38,14 +39,14 @@ export const ConfiguracionesRoutes: Routes = [
           {
             path: 'editar/:id',
             component: PanelUserFormComponent,
-            canActivate: [roleGuard],
-            data: { roles: [RolCodigo.ADMINISTRADOR] }, // editar — SOLO admin
           },
         ],
       },
 
       {
         path: 'actores-clientes',
+        canActivate: [permisoGuard],
+        data: { permisos: [PERMISO.ACTORES_CLIENTES] },
         loadComponent: () =>
           import('./actores-clientes/actores-clientes.component').then(
             (m) => m.ActoresClientesComponent,
@@ -61,11 +62,21 @@ export const ConfiguracionesRoutes: Routes = [
 
       {
         path: 'historial-accesos',
-        canActivate: [roleGuard],
-        data: { roles: [RolCodigo.ADMINISTRADOR] },
+        canActivate: [permisoGuard],
+        data: { permisos: [PERMISO.HISTORIAL_ACCESOS] }, // solo administrador
         loadComponent: () =>
           import('./historial-accesos/historial-accesos.component').then(
             (m) => m.HistorialAccesosComponent,
+          ),
+      },
+
+      {
+        path: 'roles-permisos',
+        canActivate: [permisoGuard],
+        data: { permisos: [PERMISO.ROLES_PERMISOS] }, // solo administrador
+        loadComponent: () =>
+          import('./roles-permisos/roles-permisos.component').then(
+            (m) => m.RolesPermisosComponent,
           ),
       },
     ],

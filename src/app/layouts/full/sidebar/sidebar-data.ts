@@ -1,5 +1,4 @@
-import { PERMISOS_MODULO } from 'src/app/core/auth/models/permisos-modulo';
-import { RolCodigo } from 'src/app/core/auth/models/auth.models';
+import { PERMISO, PERMISOS_MODULO } from 'src/app/core/auth/models/permisos';
 import { NavItem } from './nav-item/nav-item';
 
 export const navItems: NavItem[] = [
@@ -14,38 +13,38 @@ export const navItems: NavItem[] = [
   },
   {
     navCap: 'Comercio Interno',
-    roles: PERMISOS_MODULO.comercioInterno,
+    permisos: PERMISOS_MODULO.comercioInterno,
     divider: true,
   },
   {
     displayName: 'Recepcion de Minerales',
     iconName: 'solar:inbox-in-line-duotone',
     route: '/ui-components/recepcion-minerales',
-    roles: PERMISOS_MODULO.comercioInterno,
+    permisos: [PERMISO.RECEPCION],
   },
   {
     displayName: 'Valorizacion',
     iconName: 'solar:tag-price-line-duotone',
     route: '/ui-components/valorizacion',
-    roles: [RolCodigo.ADMINISTRADOR, RolCodigo.OPERADOR], // igual que la ruta: sin técnico
+    permisos: [PERMISO.VALORIZACION],
   },
   {
     displayName: 'Promedios',
     iconName: 'solar:calculator-line-duotone',
     route: '/ui-components/promedios',
-    roles: [RolCodigo.ADMINISTRADOR, RolCodigo.OPERADOR], // igual que la ruta: sin técnico
+    permisos: [PERMISO.PROMEDIOS],
   },
   {
     displayName: 'Ventas de Lote',
     iconName: 'solar:cart-large-2-line-duotone',
     route: '/ui-components/ventas-lote',
-    roles: [RolCodigo.ADMINISTRADOR, RolCodigo.OPERADOR], // igual que la ruta: sin técnico
+    permisos: [PERMISO.VENTAS_LOTE],
   },
   {
     displayName: 'Reportes',
     iconName: 'solar:documents-line-duotone',
     route: '/ui-components/reportes',
-    roles: PERMISOS_MODULO.comercioInterno,
+    permisos: [PERMISO.REPORTES_COMERCIO],
     children: [
       {
         displayName: 'Recepción de Minerales',
@@ -69,63 +68,63 @@ export const navItems: NavItem[] = [
   },
   {
     navCap: 'Contabilidad',
-    roles: PERMISOS_MODULO.contabilidad,
+    permisos: PERMISOS_MODULO.contabilidad,
     divider: true,
   },
   {
     displayName: 'Recibos',
     iconName: 'solar:bill-list-line-duotone',
     route: '/contabilidad/recibos',
-    roles: PERMISOS_MODULO.contabilidad,
+    permisos: [PERMISO.RECIBOS],
   },
   {
     displayName: 'Traspasos',
     iconName: 'solar:transfer-horizontal-line-duotone',
     route: '/contabilidad/traspasos',
-    roles: PERMISOS_MODULO.contabilidad,
+    permisos: [PERMISO.TRASPASOS],
   },
   {
     displayName: 'Fondo a Rendir Cuentas',
     iconName: 'solar:wallet-money-line-duotone',
     route: '/contabilidad/fondo-rendir',
-    roles: PERMISOS_MODULO.contabilidad,
+    permisos: [PERMISO.FONDO_RENDIR],
   },
   {
     displayName: 'Libreta Bancaria',
     iconName: 'solar:notebook-line-duotone',
     route: '/contabilidad/libreta-bancaria',
-    roles: PERMISOS_MODULO.contabilidad,
+    permisos: [PERMISO.LIBRETA_BANCARIA],
   },
   {
     displayName: 'Kardex',
     iconName: 'solar:clipboard-text-line-duotone',
     route: '/contabilidad/kardex',
-    roles: PERMISOS_MODULO.contabilidad,
+    permisos: [PERMISO.KARDEX],
   },
   {
     displayName: 'Caja de Flujo',
     iconName: 'solar:safe-square-line-duotone',
     route: '/contabilidad/caja-flujo',
-    roles: PERMISOS_MODULO.contabilidad,
+    permisos: [PERMISO.CAJA_FLUJO],
   },
   {
     displayName: 'Préstamos al Personal',
     iconName: 'solar:hand-money-line-duotone',
     route: '/contabilidad/prestamos',
-    roles: PERMISOS_MODULO.contabilidad,
+    permisos: [PERMISO.PRESTAMOS],
   },
   {
     displayName: 'Boletas de Pago',
     iconName: 'solar:bill-check-line-duotone',
     route: '/contabilidad/boletas-pago',
-    roles: PERMISOS_MODULO.contabilidad,
+    permisos: [PERMISO.BOLETAS_PAGO],
   },
 
   {
-    displayName: 'Reporte por Destino',
+    displayName: 'Reporte por Plan de Cuentas',
     iconName: 'solar:chart-2-line-duotone',
-    route: '/contabilidad/reportes/destino-gasto',
-    roles: PERMISOS_MODULO.contabilidad,
+    route: '/contabilidad/reportes/plan-cuentas',
+    permisos: [PERMISO.REPORTE_PLAN_CUENTAS],
   },
 
   //-----------MODULO LOGUIN NO SE PUEDE ACCEDER SI UYA ESTAS LOGUEADO
@@ -150,40 +149,52 @@ export const navItems: NavItem[] = [
   {
     divider: true,
     navCap: 'Configuraciones',
-    roles: PERMISOS_MODULO.configuraciones,
+    permisos: PERMISOS_MODULO.configuraciones,
   },
   {
     displayName: 'Actores y Clientes',
     iconName: 'solar:users-group-rounded-line-duotone',
     route: '/configuraciones/actores-clientes',
-    roles: PERMISOS_MODULO.configuraciones,
+    permisos: [PERMISO.ACTORES_CLIENTES],
   },
   {
     displayName: 'Configuraciones',
     iconName: 'solar:settings-line-duotone',
     route: '/authentication',
-    roles: PERMISOS_MODULO.configuraciones,
+    permisos: [
+      PERMISO.USUARIOS,
+      PERMISO.PARAMETRICAS,
+      PERMISO.HISTORIAL_ACCESOS,
+      PERMISO.ROLES_PERMISOS,
+    ],
     children: [
       {
         displayName: 'Gestion de Usuarios',
         subItemIcon: true,
         iconName: 'solar:user-plus-rounded-line-duotone',
         route: '/configuraciones/gestion-usuarios',
-        roles: [RolCodigo.ADMINISTRADOR],
+        permisos: [PERMISO.USUARIOS],
       },
       {
         displayName: 'Parametricas',
         subItemIcon: true,
         iconName: 'solar:tuning-2-line-duotone',
         route: '/configuraciones/parametricas',
-        roles: PERMISOS_MODULO.configuraciones,
+        permisos: [PERMISO.PARAMETRICAS],
       },
       {
         displayName: 'Historial de Accesos',
         subItemIcon: true,
         iconName: 'solar:shield-user-line-duotone',
         route: '/configuraciones/historial-accesos',
-        roles: [RolCodigo.ADMINISTRADOR],
+        permisos: [PERMISO.HISTORIAL_ACCESOS],
+      },
+      {
+        displayName: 'Roles y Permisos',
+        subItemIcon: true,
+        iconName: 'solar:shield-keyhole-line-duotone',
+        route: '/configuraciones/roles-permisos',
+        permisos: [PERMISO.ROLES_PERMISOS],
       },
     ],
   },

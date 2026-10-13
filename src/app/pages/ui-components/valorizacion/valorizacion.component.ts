@@ -22,7 +22,7 @@ import {
   horaFechaDeIso,
 } from 'src/app/shared/utils/fecha-bolivia.util';
 import { formatNumeroConMiles } from 'src/app/shared/utils/numero.util';
-import { RolCodigo } from 'src/app/core/auth/models/auth.models';
+import { PERMISO } from 'src/app/core/auth/models/permisos';
 import { AuthService } from 'src/app/core/auth/services/auth.service';
 import { Mineral } from 'src/app/pages/configurations/parametricas/models/parametricas.models';
 import { ParametricasService } from 'src/app/pages/configurations/services/parametricas.service';
@@ -143,12 +143,9 @@ export class ValorizacionComponent implements OnInit {
    *  del huso horario del navegador. */
   readonly formatFechaTabla = horaFechaDeIso;
 
-  /** Solo ADMINISTRADOR y OPERADOR tienen acceso al módulo de valorización. */
+  /** Quien entra a Valorización también puede gestionarla. */
   get puedeGestionar(): boolean {
-    return this.authService.hasRole(
-      RolCodigo.ADMINISTRADOR,
-      RolCodigo.OPERADOR,
-    );
+    return this.authService.hasPermiso(PERMISO.VALORIZACION);
   }
 
   ngOnInit(): void {

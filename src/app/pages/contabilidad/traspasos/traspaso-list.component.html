@@ -9,6 +9,7 @@
   <mat-card-content class="b-t-1">
 
     <div class="tl-acciones">
+      @if (puedeDescargarExcel()) {
       <button mat-stroked-button color="primary" (click)="descargarLibro()" [disabled]="descargandoLibro()"
         matTooltip="Excel con los traspasos de la cuenta, tipo y gestión filtrados">
         @if (descargandoLibro()) {
@@ -18,6 +19,7 @@
         }
         {{ descargandoLibro() ? 'Generando...' : 'Libro de traspasos (Excel)' }}
       </button>
+      }
       <button mat-stroked-button color="primary" (click)="descargarLibro('PDF')" [disabled]="descargandoLibro()"
         matTooltip="PDF con los traspasos de la cuenta, tipo y gestión filtrados">
         <mat-icon>picture_as_pdf</mat-icon>
@@ -132,10 +134,10 @@
             </td>
           </ng-container>
 
-          <ng-container matColumnDef="destinoGasto">
-            <th mat-header-cell *matHeaderCellDef>Destino del gasto</th>
+          <ng-container matColumnDef="planCuentas">
+            <th mat-header-cell *matHeaderCellDef>Plan de cuentas</th>
             <td mat-cell *matCellDef="let t">
-              <span class="tl-truncar tl-truncar--corto" [title]="t.destinoGasto?.nombre || ''">{{ t.destinoGasto?.nombre || '—' }}</span>
+              <span class="tl-truncar tl-truncar--corto" [title]="t.planCuentas?.nombre || ''">{{ t.planCuentas?.nombre || '—' }}</span>
             </td>
           </ng-container>
 

@@ -38,7 +38,7 @@ import {
 import { PersonaCI } from '../../../configurations/models/persona.models';
 import {
   CuentaFinanciera,
-  DestinoGasto,
+  PlanCuentas,
   EntidadFinanciera,
   FormaPago,
   KardexSubcuenta,
@@ -54,6 +54,8 @@ import {
   TipoMovimientoKardexLinea,
 } from '../../models/movimiento-kardex.models';
 import { MovimientoKardexService } from '../../services/movimiento-kardex.service';
+import { ReciboService } from '../../services/recibo.service';
+import { mensajeErrorBlob } from '../../../../shared/utils/descarga-archivo.util';
 import { FechaInputDirective } from '../../../../shared/directives/fecha-input.directive';
 import { MontoInputDirective } from '../../../../shared/directives/monto-input.directive';
 import { MayusculasDirective } from '../../../../shared/directives/mayusculas.directive';
@@ -76,9 +78,9 @@ export interface MovimientoKardexFormDialogData {
  *  suelto tecleado (se ignora al guardar), o nada. */
 type Cobrador = PersonaCI | PersonaEnMovimientoKardex | string | null;
 
-/** El autocomplete de destino de gasto guarda el objeto elegido, o el texto
+/** El autocomplete de plan de cuentas guarda el objeto elegido, o el texto
  *  suelto mientras se escribe (se ignora al guardar si no coincide). */
-type DestinoGastoControlValue = DestinoGasto | string | null;
+type PlanCuentasControlValue = PlanCuentas | string | null;
 
 @Component({
   selector: 'app-movimiento-kardex-form-dialog',
@@ -110,6 +112,7 @@ export class MovimientoKardexFormDialogComponent implements OnInit {
     MAT_DIALOG_DATA,
   );
   private readonly movimientoService = inject(MovimientoKardexService);
+  private readonly reciboService = inject(ReciboService);
   private readonly parametricasService = inject(ParametricasService);
   private readonly personaService = inject(PersonaService);
   private readonly snackBar = inject(MatSnackBar);
@@ -119,7 +122,7 @@ export class MovimientoKardexFormDialogComponent implements OnInit {
 
   readonly subcuentas = signal<KardexSubcuenta[]>([]);
   readonly formasPago = signal<FormaPago[]>([]);
-  readonly destinosGasto = signal<DestinoGasto[]>([]);
+  readonly cuentasPlan = signal<PlanCuentas[]>([]);
   readonly personas = signal<PersonaCI[]>([]);
   readonly entidadesFinancieras = signal<EntidadFinanciera[]>([]);
 
@@ -129,6 +132,11 @@ export class MovimientoKardexFormDialogComponent implements OnInit {
 
   get esEdicion(): boolean {
     return !!this.data.movimiento;
+  }
+
+  /** Documento que generó la línea: solo deja reclasificarla. */
+  get origen(): MovimientoKardex['origen'] {
+    return this.data.movimiento?.origen ?? null;
   }
 
   readonly form = new FormGroup({
@@ -156,7 +164,7 @@ export class MovimientoKardexFormDialogComponent implements OnInit {
     idFormaPago: new FormControl<number | null>(null),
     // Solo con forma de pago bancaria; validadores dinámicos.
     idCuentaBancaria: new FormControl<number | null>(null),
-    destinoGasto: new FormControl<DestinoGastoControlValue>(null),
+    planCuentas: new FormControl<PlanCuentasControlValue>(null),
     cobrador: new FormControl<Cobrador>(null),
   });
 
@@ -164,31 +172,31 @@ export class MovimientoKardexFormDialogComponent implements OnInit {
     return this.form.controls;
   }
 
-  /** Destinos de gasto según el signo de la línea: DEBE (anticipo, sale plata)
+  /** Plan de cuentas según el signo de la línea: DEBE (anticipo, sale plata)
    *  → `esEgreso === true`; HABER (pago/descuento, se recupera) → `false`.
    *  Vacío hasta elegir DEBE/HABER. */
-  get destinosGastoFiltrados(): DestinoGasto[] {
+  get cuentasPlanFiltrados(): PlanCuentas[] {
     if (this.f.tipo.value === 'DEBE') {
-      return this.destinosGasto().filter((d) => d.esEgreso);
+      return this.cuentasPlan().filter((d) => d.esEgreso);
     }
     if (this.f.tipo.value === 'HABER') {
-      return this.destinosGasto().filter((d) => !d.esEgreso);
+      return this.cuentasPlan().filter((d) => !d.esEgreso);
     }
     return [];
   }
 
-  displayDestinoGasto = (v: DestinoGastoControlValue): string => {
+  displayPlanCuentas = (v: PlanCuentasControlValue): string => {
     if (!v) return '';
     return typeof v === 'string' ? v : v.nombre;
   };
 
-  /** Opciones del autocomplete de destino de gasto según lo tecleado. */
-  destinosGastoOpciones(): DestinoGasto[] {
-    const v = this.f.destinoGasto.value;
+  /** Opciones del autocomplete de plan de cuentas según lo tecleado. */
+  cuentasPlanOpciones(): PlanCuentas[] {
+    const v = this.f.planCuentas.value;
     const texto = (typeof v === 'string' ? v : v ? v.nombre : '')
       .trim()
       .toLowerCase();
-    const lista = this.destinosGastoFiltrados;
+    const lista = this.cuentasPlanFiltrados;
     return texto
       ? lista.filter((d) => d.nombre.toLowerCase().includes(texto))
       : lista;
@@ -200,6 +208,18 @@ export class MovimientoKardexFormDialogComponent implements OnInit {
   }
 
   /** true cuando la forma de pago elegida exige cuenta bancaria + comprobante. */
+  /** El pago de una deuda personal (HABER nuevo en un kardex PERSONAL o
+   *  ASOCIADO, con una forma de pago que mueve dinero) genera en el mismo
+   *  paso un recibo de ingreso ya procesado. */
+  get generaRecibo(): boolean {
+    if (this.esEdicion || !this.data.idPersonaPropietario) return false;
+    if (this.f.tipo.value !== 'HABER') return false;
+    const formaPago = this.formasPago().find(
+      (fp) => fp.id === this.f.idFormaPago.value,
+    );
+    return formaPago?.afectaFondo !== false;
+  }
+
   get requiereCuentaBancaria(): boolean {
     const fp = this.formaPagoSeleccionada();
     return (
@@ -213,9 +233,32 @@ export class MovimientoKardexFormDialogComponent implements OnInit {
    *  una cuenta de otra moneda). */
   cuentasDe(e: EntidadFinanciera): CuentaFinanciera[] {
     const moneda = this.moneda;
+    // Pagando con cheque solo se ofrecen las cuentas que tienen chequera.
+    const soloChequera = this.pagoConCheque;
     return (e.cuentas ?? []).filter(
-      (c) => c.activo !== false && c.moneda === moneda,
+      (c) =>
+        c.activo !== false &&
+        c.moneda === moneda &&
+        (!soloChequera || !!c.manejaCheques),
     );
+  }
+
+  /** DEBE (sale plata como anticipo) pagado con cheque. */
+  get pagoConCheque(): boolean {
+    return (
+      this.f.tipo.value === 'DEBE' &&
+      (this.formaPagoSeleccionada()?.codigo ?? '').toUpperCase() === 'CHEQUE'
+    );
+  }
+
+  /** Al pasar a CHEQUE, si la cuenta elegida no tiene chequera se limpia. */
+  private descartarCuentaSinChequera(): void {
+    const id = this.f.idCuentaBancaria.value;
+    if (id == null) return;
+    const sigue = this.entidadesFinancieras().some((e) =>
+      this.cuentasDe(e).some((c) => c.id === id),
+    );
+    if (!sigue) this.f.idCuentaBancaria.setValue(null);
   }
 
   /** Bancos con al menos una cuenta en la moneda de la línea. */
@@ -322,22 +365,24 @@ export class MovimientoKardexFormDialogComponent implements OnInit {
       if (up !== v) this.f.facturaRecibo.setValue(up, { emitEvent: false });
     });
 
-    // Al cambiar DEBE/HABER cambia la lista de destino del gasto: se limpia el
+    // Al cambiar DEBE/HABER cambia la lista de plan de cuentas: se limpia el
     // elegido si ya no aplica.
     this.f.tipo.valueChanges.subscribe(() => {
-      const sel = this.f.destinoGasto.value;
+      const sel = this.f.planCuentas.value;
       if (
         sel &&
         typeof sel === 'object' &&
-        !this.destinosGastoFiltrados.some((d) => d.id === sel.id)
+        !this.cuentasPlanFiltrados.some((d) => d.id === sel.id)
       ) {
-        this.f.destinoGasto.setValue(null);
+        this.f.planCuentas.setValue(null);
       }
+      this.descartarCuentaSinChequera();
     });
     // Al cambiar la forma de pago se prende/apaga cuenta bancaria + comprobante.
-    this.f.idFormaPago.valueChanges.subscribe(() =>
-      this.sincronizarCamposBanco(),
-    );
+    this.f.idFormaPago.valueChanges.subscribe(() => {
+      this.sincronizarCamposBanco();
+      this.descartarCuentaSinChequera();
+    });
     // Al cambiar la moneda: T.C. obligatorio solo en USD y la cuenta elegida
     // se limpia (la lista se filtra por moneda).
     this.f.moneda.valueChanges.subscribe(() => {
@@ -354,9 +399,9 @@ export class MovimientoKardexFormDialogComponent implements OnInit {
       formasPago: this.parametricasService
         .obtenerFormasPago()
         .pipe(catchError(() => of([] as FormaPago[]))),
-      destinosGasto: this.parametricasService
-        .obtenerDestinosGasto()
-        .pipe(catchError(() => of([] as DestinoGasto[]))),
+      cuentasPlan: this.parametricasService
+        .obtenerCuentasPlan()
+        .pipe(catchError(() => of([] as PlanCuentas[]))),
       personas: this.personaService
         .listarPersonas({ page: 1, limit: 1000, activo: true })
         .pipe(catchError(() => of({ data: [] as PersonaCI[] }))),
@@ -367,14 +412,14 @@ export class MovimientoKardexFormDialogComponent implements OnInit {
       next: ({
         subcuentas,
         formasPago,
-        destinosGasto,
+        cuentasPlan,
         personas,
         entidadesFinancieras,
       }) => {
         this.subcuentas.set(subcuentas.filter((s) => s.activo !== false));
         this.formasPago.set(formasPago.filter((f) => f.activo !== false));
-        this.destinosGasto.set(
-          destinosGasto.filter((d) => d.activo !== false),
+        this.cuentasPlan.set(
+          cuentasPlan.filter((d) => d.activo !== false),
         );
         this.personas.set(personas.data ?? []);
         this.entidadesFinancieras.set(
@@ -409,9 +454,9 @@ export class MovimientoKardexFormDialogComponent implements OnInit {
         : debe > 0
           ? debe
           : Number(m.haber);
-      const destinoGasto =
-        m.destinoGasto ??
-        this.destinosGasto().find((d) => d.id === m.idDestinoGasto) ??
+      const planCuentas =
+        m.planCuentas ??
+        this.cuentasPlan().find((d) => d.id === m.idPlanCuentas) ??
         null;
       this.form.patchValue({
         fecha: this.parseFecha(m.fecha),
@@ -425,9 +470,25 @@ export class MovimientoKardexFormDialogComponent implements OnInit {
         idSubcuenta: m.subcuenta?.id ?? m.idSubcuenta ?? null,
         idFormaPago: m.formaPago?.id ?? m.idFormaPago ?? null,
         idCuentaBancaria: m.cuentaBancaria?.id ?? m.idCuentaBancaria ?? null,
-        destinoGasto,
+        planCuentas,
         cobrador: m.cobrador ?? null,
       });
+      if (this.origen) {
+        // El back solo aplica la clasificación de la línea en estas filas.
+        for (const control of [
+          this.f.fecha,
+          this.f.tipo,
+          this.f.monto,
+          this.f.moneda,
+          this.f.tipoCambio,
+          this.f.nroComprobante,
+          this.f.facturaRecibo,
+          this.f.idFormaPago,
+          this.f.idCuentaBancaria,
+        ]) {
+          control.disable({ emitEvent: false });
+        }
+      }
     } else {
       if (this.data.fechaSugerida) {
         this.form.controls.fecha.setValue(
@@ -517,8 +578,8 @@ export class MovimientoKardexFormDialogComponent implements OnInit {
     if (this.requiereCuentaBancaria && v.idCuentaBancaria) {
       request.idCuentaBancaria = v.idCuentaBancaria;
     }
-    if (v.destinoGasto && typeof v.destinoGasto === 'object') {
-      request.idDestinoGasto = v.destinoGasto.id;
+    if (v.planCuentas && typeof v.planCuentas === 'object') {
+      request.idPlanCuentas = v.planCuentas.id;
     }
 
     const cobrador = v.cobrador;
@@ -529,11 +590,17 @@ export class MovimientoKardexFormDialogComponent implements OnInit {
     this.movimientoService.guardar(request).subscribe({
       next: (movimiento) => {
         this.guardando.set(false);
+        const recibo = movimiento?.recibo;
         this.snackBar.open(
-          this.esEdicion ? 'Movimiento actualizado' : 'Movimiento registrado',
+          recibo
+            ? `Pago registrado: se generó el recibo ${recibo.serie}-${String(recibo.numero).padStart(4, '0')}`
+            : this.esEdicion
+              ? 'Movimiento actualizado'
+              : 'Movimiento registrado',
           'Cerrar',
-          { duration: 3000 },
+          { duration: recibo ? 5000 : 3000 },
         );
+        if (recibo) this.abrirPdfRecibo(recibo.id);
         this.dialogRef.close(movimiento ?? true);
       },
       error: (err) => {
@@ -542,6 +609,25 @@ export class MovimientoKardexFormDialogComponent implements OnInit {
           err?.error?.message ?? 'No se pudo guardar el movimiento',
           'Cerrar',
           { duration: 5000 },
+        );
+      },
+    });
+  }
+
+  /** Abre en otra pestaña el recibo de ingreso que generó el pago. */
+  private abrirPdfRecibo(idRecibo: string): void {
+    this.reciboService.obtenerPdfDetallado(idRecibo).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+      },
+      error: async (err) => {
+        this.snackBar.open(
+          (await mensajeErrorBlob(err)) ??
+            'El pago se registró, pero no se pudo abrir el PDF del recibo. Imprimilo desde Recibos.',
+          'Cerrar',
+          { duration: 6000 },
         );
       },
     });

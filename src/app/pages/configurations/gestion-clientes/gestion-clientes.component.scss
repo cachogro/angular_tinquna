@@ -186,3 +186,17 @@
 //   color: var(--mat-sys-on-primary) !important;
 //   font-weight: bold !important;
 // }
+/* ===== Pantallas chicas: los filtros bajan de línea en vez de salirse ===== */
+@media (max-width: 767px) {
+  .clientes-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .clientes-toolbar__search {
+    flex: 1 1 100%;
+  }
+
+  .clientes-toolbar > mat-form-field:not(.clientes-toolbar__search) {
+    flex: 1 1 calc(50% - 8px);
+  }
+}

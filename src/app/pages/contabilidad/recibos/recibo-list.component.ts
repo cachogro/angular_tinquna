@@ -41,6 +41,8 @@ import {
   FormatoReporte,
   mensajeErrorBlob,
 } from '../../../shared/utils/descarga-archivo.util';
+import { tienePermiso } from 'src/app/core/auth/permiso-signal';
+import { PERMISO } from 'src/app/core/auth/models/permisos';
 
 @Component({
   selector: 'app-recibo-list',
@@ -67,6 +69,12 @@ import {
   styleUrl: './recibo-list.component.scss',
 })
 export class ReciboListComponent implements OnInit {
+  /** El Excel de los reportes es un permiso aparte (Roles y Permisos); el
+   *  PDF lo descarga cualquiera que entre a la pantalla. */
+  readonly puedeDescargarExcel = tienePermiso(
+    PERMISO.DESCARGAR_EXCEL_CONTABILIDAD,
+  );
+
   private readonly reciboService = inject(ReciboService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
@@ -280,26 +288,35 @@ export class ReciboListComponent implements OnInit {
         data: {
           title: `Anular recibo ${this.codigoRecibo(r)}`,
           message:
-            'El recibo pasará a ANULADO. Solo se puede anular mientras está en borrador (no toca kardex ni caja).',
+            r.estado === 'PROCESADO'
+              ? 'El recibo pasará a ANULADO y se revertirá todo lo que movió: caja de flujo, libreta bancaria y kardex, recalculando sus saldos. No se puede deshacer.'
+              : 'El recibo pasará a ANULADO. Al estar en borrador todavía no movió kardex ni caja.',
           confirmLabel: 'Anular',
           tone: 'danger',
           icon: 'block',
         },
-        width: '400px',
+        width: '440px',
       })
       .afterClosed()
       .subscribe((ok) => {
         if (!ok) return;
+        const procesado = r.estado === 'PROCESADO';
         this.reciboService.anular(r.id).subscribe({
           next: () => {
-            this.snackBar.open('Recibo anulado', 'Cerrar', { duration: 3000 });
+            this.snackBar.open(
+              procesado
+                ? 'Recibo anulado: se revirtieron sus movimientos y se recalcularon los saldos'
+                : 'Recibo anulado',
+              'Cerrar',
+              { duration: 4000 },
+            );
             this.cargar();
           },
           error: (err) => {
             this.snackBar.open(
               err?.error?.message ?? 'No se pudo anular el recibo',
               'Cerrar',
-              { duration: 5000 },
+              { duration: 8000 },
             );
           },
         });

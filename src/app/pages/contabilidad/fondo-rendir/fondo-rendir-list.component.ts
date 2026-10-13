@@ -26,6 +26,8 @@ import { MatMenuModule } from '@angular/material/menu';
 import type { FondoRendirDetalleDialogData } from './fondo-rendir-detalle-dialog/fondo-rendir-detalle-dialog.component';
 import type { FondoRendirExcelDialogData } from './fondo-rendir-excel-dialog/fondo-rendir-excel-dialog.component';
 import { RangoFechasComponent } from '../../../shared/components/rango-fechas/rango-fechas.component';
+import { tienePermiso } from 'src/app/core/auth/permiso-signal';
+import { PERMISO } from 'src/app/core/auth/models/permisos';
 
 @Component({
   selector: 'app-fondo-rendir-list',
@@ -51,12 +53,19 @@ import { RangoFechasComponent } from '../../../shared/components/rango-fechas/ra
   styleUrl: './fondo-rendir-list.component.scss',
 })
 export class FondoRendirListComponent implements OnInit {
+  /** El Excel de los reportes es un permiso aparte (Roles y Permisos); el
+   *  PDF lo descarga cualquiera que entre a la pantalla. */
+  readonly puedeDescargarExcel = tienePermiso(
+    PERMISO.DESCARGAR_EXCEL_CONTABILIDAD,
+  );
+
   private readonly fondoRendirService = inject(FondoRendirService);
   private readonly reciboService = inject(ReciboService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
 
   readonly columnas = [
+    'numero',
     'fecha',
     'destinatario',
     'concepto',

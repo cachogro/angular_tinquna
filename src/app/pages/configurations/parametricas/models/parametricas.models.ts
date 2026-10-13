@@ -413,6 +413,8 @@ export interface CuentaFinanciera {
   saldoInicial?: string | null;
   /** "YYYY-MM-DD" — fecha del saldo inicial; null mientras no se configuró. */
   fechaSaldoInicial?: string | null;
+  /** La cuenta usa chequera: los pagos con CHEQUE consumen sus talonarios. */
+  manejaCheques?: boolean;
   activo?: boolean;
   usuarioUltimaModificacion?: string | null;
   fechaUltimaModificacion?: string | null;
@@ -443,6 +445,7 @@ export interface GuardarCuentaFinancieraRequest {
   saldoInicial?: number;
   /** "YYYY-MM-DD" */
   fechaSaldoInicial?: string;
+  manejaCheques?: boolean;
 }
 
 /** Un solo POST para crear y actualizar: sin `id` crea, con `id` actualiza.
@@ -607,11 +610,11 @@ export interface KardexSubcuenta {
   activo?: boolean;
 }
 
-/** parametrica.destino_gasto — categoría contable del recibo.
+/** parametrica.plan_cuentas — categoría contable del recibo.
  *  `esEgreso: true` → se ofrece en recibos de EGRESO; `false` → en INGRESO. */
 /** Cómo cuenta un destino en la ganancia estimada del dashboard: no todo lo
  *  que sale es gasto ni todo lo que entra es ganancia. */
-export type CategoriaDestinoGasto =
+export type CategoriaPlanCuentas =
   | 'GASTO_OPERATIVO'
   | 'SUELDOS'
   | 'OTRO_INGRESO'
@@ -621,8 +624,8 @@ export type CategoriaDestinoGasto =
   | 'PRESTAMO_ANTICIPO'
   | 'FINANCIERO';
 
-export interface CategoriaDestinoGastoOpcion {
-  valor: CategoriaDestinoGasto;
+export interface CategoriaPlanCuentasOpcion {
+  valor: CategoriaPlanCuentas;
   nombre: string;
   /** Qué hace en la ganancia estimada. */
   efecto: string;
@@ -631,7 +634,7 @@ export interface CategoriaDestinoGastoOpcion {
   paraIngreso: boolean;
 }
 
-export const CATEGORIAS_DESTINO_GASTO: ReadonlyArray<CategoriaDestinoGastoOpcion> = [
+export const CATEGORIAS_PLAN_CUENTAS: ReadonlyArray<CategoriaPlanCuentasOpcion> = [
   { valor: 'GASTO_OPERATIVO', nombre: 'Gasto operativo', efecto: 'Resta de la ganancia', paraEgreso: true, paraIngreso: false },
   { valor: 'SUELDOS', nombre: 'Sueldos', efecto: 'Resta de la ganancia', paraEgreso: true, paraIngreso: false },
   { valor: 'OTRO_INGRESO', nombre: 'Otro ingreso', efecto: 'Suma a la ganancia', paraEgreso: false, paraIngreso: true },
@@ -642,19 +645,19 @@ export const CATEGORIAS_DESTINO_GASTO: ReadonlyArray<CategoriaDestinoGastoOpcion
   { valor: 'FINANCIERO', nombre: 'Financiero', efecto: 'No cuenta: bancos, deudas, cambios de cheque', paraEgreso: true, paraIngreso: true },
 ];
 
-export function nombreCategoriaDestinoGasto(categoria: string | null | undefined): string {
+export function nombreCategoriaPlanCuentas(categoria: string | null | undefined): string {
   return (
-    CATEGORIAS_DESTINO_GASTO.find((c) => c.valor === categoria)?.nombre ??
-    'Sin destino'
+    CATEGORIAS_PLAN_CUENTAS.find((c) => c.valor === categoria)?.nombre ??
+    'Sin plan de cuentas'
   );
 }
 
-export interface DestinoGasto {
+export interface PlanCuentas {
   id: number;
   /** Único (sin distinguir mayúsculas); repetido -> 409. */
   nombre: string;
   esEgreso: boolean;
-  categoria: CategoriaDestinoGasto;
+  categoria: CategoriaPlanCuentas;
   activo?: boolean;
   usuarioRegistro?: string | null;
   usuarioUltimaModificacion?: string | null;
@@ -662,11 +665,11 @@ export interface DestinoGasto {
   fechaUltimaModificacion?: string | null;
 }
 
-export interface GuardarDestinoGastoRequest {
+export interface GuardarPlanCuentasRequest {
   id?: number;
   nombre: string;
   esEgreso: boolean;
-  categoria: CategoriaDestinoGasto;
+  categoria: CategoriaPlanCuentas;
 }
 
 // ==========================================================

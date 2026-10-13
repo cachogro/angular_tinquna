@@ -4,6 +4,8 @@
 // PERSONAL, para saber siempre cuánto se debe de ESE préstamo. El back
 // devuelve los montos como string ("12000.00").
 
+import { MedioPagoRequest } from './medio-pago.models';
+
 export type EstadoPrestamo = 'VIGENTE' | 'CANCELADO';
 export type TipoMovimientoPrestamo = 'OTORGAMIENTO' | 'DESCUENTO_SUELDO' | 'ABONO';
 
@@ -98,8 +100,11 @@ export interface DatosPagoRequest {
   idFormaPago?: number;
   idCuentaBancaria?: number;
   nroComprobante?: string;
+  /** Pago mixto (efectivo + QR, etc.): la suma debe ser igual a lo que se
+   *  paga. Los tres campos de arriba llevan los datos del primero. */
+  pagos?: MedioPagoRequest[];
   idPersonaAutorizo: string;
-  idDestinoGasto?: number;
+  idPlanCuentas?: number;
 }
 
 /** POST /contabilidad/prestamo-personal */
