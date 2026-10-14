@@ -1211,18 +1211,6 @@ export class ReciboFormDialogComponent implements OnInit {
       request = gen;
     }
 
-    // DEBUG: payload que se envía al backend en cada caso.
-    console.log('[recibo] guardar', {
-      modo: this.data.modo,
-      esBorrador: this.esBorrador,
-      pideDetalles: this.pideDetalles,
-      endpoint: this.esBorrador
-        ? `PATCH /contabilidad/recibo/${this.data.recibo!.id}/procesar`
-        : 'POST /contabilidad/recibo',
-      request,
-    });
-    console.log('[recibo] request JSON', JSON.stringify(request, null, 2));
-
     this.guardando.set(true);
     const envio = this.esBorrador
       ? this.reciboService.procesar(

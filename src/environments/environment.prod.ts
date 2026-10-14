@@ -1,7 +1,8 @@
-// TODO: antes de desplegar a producción real, reemplazar apiUrl por el
-// dominio HTTPS definitivo del backend (pendiente: certificado + dominio).
+// Producción: el front y la API salen por el mismo servidor (el proxy pasa
+// /api a NestJS), así que la URL es relativa y no depende de la IP ni del
+// dominio. Ver back-end/deploy/Caddyfile.
 export const environment = {
   production: true,
   envName: 'production',
-  apiUrl: 'https://TU_DOMINIO-paraproduccion_API/api',
+  apiUrl: '/api',
 };

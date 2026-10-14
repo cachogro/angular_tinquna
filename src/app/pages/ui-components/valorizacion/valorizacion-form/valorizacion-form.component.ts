@@ -752,10 +752,6 @@ export class ValorizacionFormComponent implements OnInit, OnDestroy {
   readonly form: FormGroup = this.fb.group({
     idLaboratorio: [null as number | null, [Validators.required]],
     fechaValorizacion: [this.fechaTransaccion, [Validators.required]],
-    // pesoNetoHumedoKilogramos: [
-    //   null as number | null,
-    //   [Validators.required, Validators.min(0)],
-    // ],
     taraKilogramos: [0, [Validators.min(0)]],
     humedadPorcentaje: [0, [Validators.min(0)]],
     mermaPorcentaje: [0, [Validators.min(0)]],

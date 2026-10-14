@@ -1,4 +1,4 @@
-import { BreakpointObserver, MediaMatcher } from '@angular/cdk/layout';
+import { BreakpointObserver } from '@angular/cdk/layout';
 import {
   Component,
   OnInit,

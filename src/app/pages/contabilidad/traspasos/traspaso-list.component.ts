@@ -322,7 +322,6 @@ export class TraspasoListComponent implements OnInit {
   }
 
   verDetalle(t: Traspaso): void {
-    console.log('verDetalle', t);
     const data: TraspasoDetalleDialogData = { id: t.id };
 
     this.dialog.open(TraspasoDetalleDialogComponent, {

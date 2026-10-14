@@ -165,8 +165,6 @@ export class AuthService {
     this.tokenStorage.setRefreshToken(response.refreshToken);
     this.tokenStorage.setUserRaw(JSON.stringify(response.user));
     this._user.set(response.user);
-
-    console.log('Sesión iniciada para usuario:', response.user);
   }
 
   private loadUserFromStorage(): Usuario | null {

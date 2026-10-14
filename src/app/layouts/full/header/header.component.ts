@@ -4,7 +4,6 @@ import {
   EventEmitter,
   Input,
   ViewEncapsulation,
-  signal,
   inject,
 } from '@angular/core';
 import { TablerIconsModule } from 'angular-tabler-icons';

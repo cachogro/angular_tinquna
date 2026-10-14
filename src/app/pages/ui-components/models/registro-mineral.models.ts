@@ -223,7 +223,6 @@ export interface GuardarRegistroMineralRequest {
   idLaboratorio?: string | null;
   fechaRecepcion: string; // ISO 8601 con offset, ej. '2026-07-22T14:35:00-04:00'
   observaciones: string;
-  // detalles: DetalleMineralRequest[];
 }
 
 export type OrdenDireccion = 'ASC' | 'DESC';

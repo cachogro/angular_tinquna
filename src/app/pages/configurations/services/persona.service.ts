@@ -29,28 +29,6 @@ export class PersonaService {
     return this.http.post<PersonaCI>(`${this.baseUrl}/persona_ci`, data);
   }
 
-  // listarPersonas(filtros: FiltrosPersona): Observable<PersonasPaginadas> {
-  //   let params = new HttpParams()
-  //     .set('page', filtros.page)
-  //     .set('limit', filtros.limit);
-  //   if (filtros.busqueda) params = params.set('busqueda', filtros.busqueda);
-  //   if (filtros.numeroDocumento)
-  //     params = params.set('numeroDocumento', filtros.numeroDocumento);
-  //   if (filtros.idTipoPersona)
-  //     params = params.set('idTipoPersona', filtros.idTipoPersona);
-  //   if (filtros.activo !== undefined)
-  //     params = params.set('activo', filtros.activo);
-
-  //   console.log(params);
-
-  //   const ruta = this.http.get<PersonasPaginadas>(`${this.baseUrl}/persona_ci`, {
-  //     params,
-  //   });
-
-  //     console.log('esta es la rutaaaa', ruta)
-  //   return ruta
-  // }
-
   listarPersonas(filtros: FiltrosPersona): Observable<PersonasPaginadas> {
     let params = new HttpParams()
       .set('page', filtros.page)

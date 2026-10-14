@@ -18,3 +18,10 @@ Thumbs.db
 # Archivos temporales de pruebas
 /cypress/screenshots/
 /cypress/videos/
+
+# Archivos que no son del front (documentos, planillas y respaldos)
+*.xlsx
+*.xls
+*.pdf
+*.docx
+*.sql

@@ -8,11 +8,6 @@ export const ConfiguracionesRoutes: Routes = [
   {
     path: '',
     children: [
-      // {
-      //   path: '',
-      //   redirectTo: 'parametricas',
-      //   pathMatch: 'full',
-      // },
       {
         path: 'parametricas',
         canActivate: [permisoGuard],

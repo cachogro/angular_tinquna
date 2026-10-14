@@ -3,7 +3,6 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -29,11 +28,6 @@ import {
 import { CatalogoItem } from './models/catalogos.models';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { ConfirmDialogComponent } from 'src/app/shared/components/confirm-dialog/confirm-dialog.component';
-
-interface OpcionOrden {
-  value: string;
-  label: string;
-}
 
 const AVATAR_PALETTE = [
   '#7367F0',
@@ -103,11 +97,6 @@ export class GestionUsuariosComponent implements OnInit {
   readonly rolControl = new FormControl<string | null>(null);
   readonly estadoControl = new FormControl<string | null>(null); // 'true' | 'false' | null
 
-  // readonly opcionesOrden: OpcionOrden[] = [
-  //   { value: 'id', label: 'ID' },
-  //   { value: 'usuario', label: 'Usuario' },
-  //   { value: 'nombres', label: 'Nombres' },
-  // ];
   readonly orderByControl = new FormControl<string>('id');
   readonly orderDirectionControl = new FormControl<'ASC' | 'DESC'>('DESC');
 

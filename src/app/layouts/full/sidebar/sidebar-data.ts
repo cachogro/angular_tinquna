@@ -127,25 +127,6 @@ export const navItems: NavItem[] = [
     permisos: [PERMISO.REPORTE_PLAN_CUENTAS],
   },
 
-  //-----------MODULO LOGUIN NO SE PUEDE ACCEDER SI UYA ESTAS LOGUEADO
-  // {
-  //   divider: true,
-  //   navCap: 'Auth',
-  // },
-  // {
-  //   displayName: 'Login',
-  //   iconName: 'solar:lock-keyhole-minimalistic-line-duotone',
-  //   route: '/authentication',
-  //   children: [
-  //     {
-  //       displayName: 'Login',
-  //        subItemIcon: true,
-  //       iconName: 'solar:round-alt-arrow-right-line-duotone',
-  //       route: '/authentication/login',
-  //     },
-  //   ],
-  // },
-
   {
     divider: true,
     navCap: 'Configuraciones',

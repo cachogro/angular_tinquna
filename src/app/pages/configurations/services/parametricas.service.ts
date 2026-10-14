@@ -314,7 +314,6 @@ export class ParametricasService {
     this.listarActoresProductivosMineros(filtros).subscribe({
       next: (res) => {
         this.actoresProductivosMineros.set(res.data);
-        console.log('actoresssss',this.actoresProductivosMineros);
         this.totalActoresProductivosMineros.set(res.total);
         this.cargandoActoresProductivosMineros.set(false);
       },
